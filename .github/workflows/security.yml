@@ -1,0 +1,43 @@
+name: Security
+
+# Scans are separate from CI and not required to merge, because a newly
+# published vulnerability can fail them with no code change.
+on:
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays at 06:17 UTC
+  workflow_dispatch:
+
+# The workflow only reads the repo, so it gets no permission to change it.
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # Only reads the lockfile, so no package code runs.
+      - run: npm audit --audit-level=high
+
+  nuget-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: backend/global.json
+      # NU1903 and NU1904 are high and critical. NU1900 means the vulnerability
+      # lookup failed, which must not look like a clean result.
+      - run: dotnet restore Savepoint.slnx -p:NuGetAuditMode=all -warnaserror:NU1900,NU1903,NU1904
