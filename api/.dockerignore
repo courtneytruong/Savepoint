@@ -1,0 +1,16 @@
+# Build output from the host would conflict with the container's own build.
+**/bin/
+**/obj/
+
+# Secrets and local settings
+**/.env
+**/.env.*
+**/*.user
+**/launchSettings.json
+
+# Not needed to build the image
+Dockerfile
+.dockerignore
+**/.vs/
+**/.vscode/
+**/TestResults/
