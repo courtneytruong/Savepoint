@@ -12,23 +12,31 @@ You need Docker Desktop.
    Copy-Item .env.example .env
    ```
 
-2. Build and start the database and API.
+2. Build and start the database, API and frontend.
 
    ```powershell
    docker compose up -d --build --wait
    ```
 
-3. Open <http://localhost:8080/health>. You should see `Healthy`, or `Unhealthy` with a 503 status if the API can't reach the database.
+3. Open <http://localhost:3000>. You should see one of these:
 
-The image holds a copy of the compiled code, so run the command in step 2 again to pick up code changes.
+   | Message | Meaning |
+   |---|---|
+   | All systems connected | The frontend, API and database are all working |
+   | The API is up, but it can't reach the database | Check the database with `docker compose ps` |
+   | Can't reach the API | Check the backend with `docker compose ps` and `docker compose logs backend` |
+
+   The page checks once when it loads, so reload it to check again.
+
+The images hold a copy of the built code, so run the command in step 2 again to pick up code changes.
 
 To stop everything, run `docker compose down`. Your data stays in a Docker volume. Adding `-v` to that command **deletes the volume and all your data**.
 
 If you change the password in `.env` after the database has been created, the database keeps the old one. Update it inside the database as well.
 
-## Run the frontend
+## Run the frontend outside Docker (optional)
 
-The frontend doesn't run in Docker yet. It needs Node.js 22.12 or newer, and the database and API running.
+This gives you instant reloading while you work on the frontend. It needs Node.js 22.12 or newer, and the API running. It can run at the same time as the frontend container.
 
 ```powershell
 cd frontend
@@ -36,15 +44,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. You should see one of these:
-
-| Message | Meaning |
-|---|---|
-| All systems connected | The frontend, API and database are all working |
-| The API is up, but it can't reach the database | Check the database with `docker compose ps` |
-| Can't reach the API | Check the backend with `docker compose ps` and `docker compose logs backend` |
-
-The page checks once when it loads, so reload it to check again.
+Open <http://localhost:5173>.
 
 ## Run the API outside Docker (optional)
 

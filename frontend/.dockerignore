@@ -1,0 +1,14 @@
+# Installed and built inside the image, so host copies would conflict.
+node_modules/
+dist/
+
+# Secrets and local settings
+**/.env
+**/.env.*
+*.local
+
+# Not needed to build the image
+Dockerfile
+.dockerignore
+.vscode/
+*.log
