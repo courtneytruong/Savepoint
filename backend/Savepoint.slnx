@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Savepoint.Api/Savepoint.Api.csproj" />
+  <Project Path="Savepoint.Api.Tests/Savepoint.Api.Tests.csproj" />
 </Solution>

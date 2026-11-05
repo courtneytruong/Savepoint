@@ -67,3 +67,12 @@ This needs the .NET 10 SDK, and the database still runs in Docker.
    ```powershell
    dotnet run --project backend/Savepoint.Api
    ```
+
+## Run the backend tests
+
+This needs the .NET 10 SDK. The tests don't need Docker or a running database. Run them from the `backend` folder, because the test runner setting is in `backend/global.json`.
+
+```powershell
+cd backend
+dotnet test --solution Savepoint.slnx
+```
