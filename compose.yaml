@@ -20,8 +20,8 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
-    build: ./api
+  backend:
+    build: ./backend
     environment:
       # Inside Compose's network, the database is reached by its service name.
       # The double underscore maps to the ConnectionStrings:Savepoint setting.
