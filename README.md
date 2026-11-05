@@ -76,3 +76,13 @@ This needs the .NET 10 SDK. The tests don't need Docker or a running database. R
 cd backend
 dotnet test --solution Savepoint.slnx
 ```
+
+## Run the frontend tests
+
+This needs Node.js 22.12 or newer. The tests don't need Docker or the API, because they replace the API's responses with their own.
+
+```powershell
+cd frontend
+npm install
+npm test
+```
