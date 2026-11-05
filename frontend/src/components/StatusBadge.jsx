@@ -1,13 +1,5 @@
 import { Badge } from './Badge.jsx'
-import { BacklogIcon, DroppedIcon, FinishedIcon, InProgressIcon } from './icons.js'
-
-// Keyed by the status values in docs/data-model.md.
-const STATUSES = {
-  Backlog: { label: 'Backlog', tone: 'neutral', Icon: BacklogIcon },
-  InProgress: { label: 'In progress', tone: 'accent', Icon: InProgressIcon },
-  Finished: { label: 'Finished', tone: 'success', Icon: FinishedIcon },
-  Dropped: { label: 'Dropped', tone: 'dropped', Icon: DroppedIcon },
-}
+import { STATUSES } from './statuses.js'
 
 /** An item's status, with its color, icon and readable name. */
 export function StatusBadge({ status, ...props }) {

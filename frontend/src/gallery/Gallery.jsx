@@ -67,14 +67,16 @@ import {
   Table,
   Text,
   Textarea,
+  Timeline,
   Tooltip,
   useToast,
 } from '../components/index.js'
 import styles from './Gallery.module.css'
 import { CalendarPage } from './CalendarPage.jsx'
 import { LibraryDemo } from './LibraryDemo.jsx'
+import { TimelinePage } from './TimelinePage.jsx'
 import { Palette } from './Palette.jsx'
-import { makeSampleSessions, SAMPLE_COLUMNS, SAMPLE_ITEMS } from './sampleData.jsx'
+import { makeSampleSessions, SAMPLE_COLUMNS, SAMPLE_ITEMS, TIMELINE_EXAMPLE } from './sampleData.jsx'
 
 const STATUSES = ['Backlog', 'InProgress', 'Finished', 'Dropped']
 
@@ -164,7 +166,7 @@ function AddItemModal({ open, onClose, onSaved }) {
 
 // The gallery has no router, so the panel's page comes from the address, as in
 // /components#calendar. The browser's back button then works too.
-const PAGES = ['library', 'calendar']
+const PAGES = ['library', 'timeline', 'calendar']
 const pageFromAddress = () => {
   const page = window.location.hash.slice(1)
   return PAGES.includes(page) ? page : 'library'
@@ -221,10 +223,12 @@ export default function Gallery() {
         <a href="#library" aria-current={current('library')}>
           Library
         </a>
+        <a href="#timeline" aria-current={current('timeline')}>
+          Timeline
+        </a>
         <a href="#calendar" aria-current={current('calendar')}>
           Calendar
         </a>
-        <a href="#timeline">Timeline</a>
       </Header>
 
       <main>
@@ -238,7 +242,7 @@ export default function Gallery() {
                       <SidebarLink href="#library" icon={<LibraryIcon />} count={11} active={page === 'library'}>
                         Library
                       </SidebarLink>
-                      <SidebarLink href="#timeline" icon={<TimelineIcon />}>
+                      <SidebarLink href="#timeline" icon={<TimelineIcon />} active={page === 'timeline'}>
                         Timeline
                       </SidebarLink>
                       <SidebarLink href="#calendar" icon={<CalendarIcon />} active={page === 'calendar'}>
@@ -259,7 +263,13 @@ export default function Gallery() {
                   </Sidebar>
                 }
               >
-                {page === 'calendar' ? <CalendarPage sessions={sessions} /> : <LibraryDemo />}
+                {page === 'calendar' ? (
+                  <CalendarPage sessions={sessions} />
+                ) : page === 'timeline' ? (
+                  <TimelinePage sessions={sessions} />
+                ) : (
+                  <LibraryDemo />
+                )}
               </SidebarLayout>
             </GlowFrame>
           }
@@ -458,6 +468,28 @@ export default function Gallery() {
         </Section>
 
         <Section>
+          <Heading size="medium">Timeline</Heading>
+          <Group title="Every kind of entry, oldest first" />
+          <Card>
+            <Timeline entries={TIMELINE_EXAMPLE} medium="Book" order="oldest" />
+          </Card>
+          <div className={styles.grid}>
+            <div className={styles.stack}>
+              <Group title="Loading" />
+              <Card>
+                <Timeline loading />
+              </Card>
+            </div>
+            <div className={styles.stack}>
+              <Group title="Empty" />
+              <Card>
+                <Timeline entries={[]} />
+              </Card>
+            </div>
+          </div>
+        </Section>
+
+        <Section>
           <Heading size="medium">Pagination</Heading>
           <PaginationDemo />
         </Section>
@@ -651,10 +683,12 @@ export default function Gallery() {
         <a href="#library" aria-current={current('library')}>
           Library
         </a>
+        <a href="#timeline" aria-current={current('timeline')}>
+          Timeline
+        </a>
         <a href="#calendar" aria-current={current('calendar')}>
           Calendar
         </a>
-        <a href="#timeline">Timeline</a>
         <a href="#settings">Settings</a>
       </Footer>
 

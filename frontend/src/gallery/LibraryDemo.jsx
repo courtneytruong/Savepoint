@@ -6,6 +6,8 @@ import {
   FilterPill,
   Heading,
   ItemCard,
+  matchesSearch,
+  SearchField,
   ItemGrid,
   pageAfterResize,
   paginate,
@@ -17,6 +19,7 @@ import {
   useStoredView,
   ViewToggle,
 } from '../components/index.js'
+import { classNames } from '../components/classNames.js'
 import { NoResultsIcon } from '../components/icons.js'
 import styles from './LibraryDemo.module.css'
 import { SAMPLE_COLUMNS, SAMPLE_ITEMS, SORT_OPTIONS } from './sampleData.jsx'
@@ -45,6 +48,7 @@ const sortName = (sort) => sort && `${sort.key}:${sort.direction}`
  */
 export function LibraryDemo() {
   const [view, setView] = useStoredView()
+  const [search, setSearch] = useState('')
   const [medium, setMedium] = useState(null)
   const [status, setStatus] = useState(null)
   const [sort, setSort] = useState(SORT_OPTIONS[0][1])
@@ -58,35 +62,50 @@ export function LibraryDemo() {
   }
 
   const filtered = SAMPLE_ITEMS.filter(
-    (item) => (!medium || item.medium === medium) && (!status || item.status === status),
+    (item) =>
+      (!medium || item.medium === medium) &&
+      (!status || item.status === status) &&
+      matchesSearch([item.title, item.creator], search),
   )
   const paged = paginate(sortRows(filtered, SAMPLE_COLUMNS, sort), page, pageSize)
+  const searching = search.trim() !== ''
+  const filtering = medium !== null || status !== null
 
   const noMatches = (
     <EmptyState
       icon={<NoResultsIcon />}
-      title="Nothing matches those filters"
+      title={searching ? `Nothing matches “${search.trim()}”` : 'Nothing matches those filters'}
       headingAs="h3"
       action={
         <Button
           variant="outline"
           onClick={() => {
-            update(setMedium)(null)
+            update(setSearch)('')
+            setMedium(null)
             setStatus(null)
           }}
         >
-          Clear filters
+          {searching && filtering ? 'Clear search and filters' : searching ? 'Clear search' : 'Clear filters'}
         </Button>
       }
     >
-      Try removing a filter to see more of your library.
+      {searching
+        ? 'Search looks at titles and creators. Check the spelling, or try part of a word.'
+        : 'Try removing a filter to see more of your library.'}
     </EmptyState>
   )
 
   return (
     <div>
-      <div className={styles.toolbar}>
+      <div className={classNames(styles.toolbar, styles.libraryToolbar)}>
         <Heading as="h2">Library</Heading>
+        <SearchField
+          label="Search your library"
+          placeholder="Search by title or creator"
+          className={styles.search}
+          value={search}
+          onChange={update(setSearch)}
+        />
         <ViewToggle value={view} onChange={setView} />
       </div>
       <div className={styles.filters}>

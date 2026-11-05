@@ -10,6 +10,7 @@ export {
   LuArrowRight as ArrowIcon,
   LuArrowUp as SortAscendingIcon,
   LuCalendarDays as CalendarIcon,
+  LuChevronDown as ExpandIcon,
   LuChevronLeft as PreviousIcon,
   LuChevronRight as NextIcon,
   LuChevronsUpDown as SortIcon,

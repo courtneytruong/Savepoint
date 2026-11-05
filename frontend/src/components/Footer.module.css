@@ -1,7 +1,7 @@
 /*
  * A full-width band across the bottom of the page: a line from edge to edge, a
  * slightly lit surface, and a faint pool of violet rising from the bottom. The
- * content inside lines up with the header's.
+ * content inside lines up with the header's, which is the same kind of band.
  */
 .footer {
   margin-top: var(--spacing-64);

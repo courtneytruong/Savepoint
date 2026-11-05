@@ -7,6 +7,26 @@
   border-bottom: 1px solid var(--color-hairline);
 }
 
+/* The search takes the room between the heading and the view switch. On phones it
+   drops to its own row, full width, so there's space to type. */
+.search {
+  flex: 1;
+  max-width: 420px;
+  margin-inline-start: auto;
+}
+
+@media (max-width: 600px) {
+  .libraryToolbar {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    flex-basis: 100%;
+    order: 1;
+    max-width: none;
+  }
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -35,6 +55,10 @@
   margin-inline-start: auto;
 }
 
+.picker {
+  width: min(280px, 100%);
+}
+
 .pagination {
   padding: var(--spacing-16) var(--spacing-24);
   border-top: 1px solid var(--color-hairline);
@@ -49,6 +73,33 @@
 
 .title:hover {
   text-decoration: underline;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-12) var(--spacing-24);
+  padding: var(--spacing-16) var(--spacing-24) 0;
+}
+
+.summaryTitle {
+  margin: 0;
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-size: var(--text-subheading);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.33;
+  letter-spacing: var(--tracking-subheading);
+}
+
+.summaryBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-12);
 }
 
 .creator {
