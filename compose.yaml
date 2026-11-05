@@ -20,5 +20,18 @@ services:
       timeout: 5s
       retries: 10
 
+  api:
+    build: ./api
+    environment:
+      # Inside Compose's network, the database is reached by its service name.
+      # The double underscore maps to the ConnectionStrings:Savepoint setting.
+      ConnectionStrings__Savepoint: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    ports:
+      # Bound to 127.0.0.1 so only this machine can reach the API.
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   db-data:
