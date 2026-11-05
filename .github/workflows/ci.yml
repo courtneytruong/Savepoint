@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# The workflow only reads the repo, so it gets no permission to change it.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: backend/global.json
+      - run: dotnet restore Savepoint.slnx
+      - run: dotnet build Savepoint.slnx --no-restore --configuration Release -warnaserror
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint -- --deny-warnings
+      - run: npm run build
+
+  full-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # The placeholder password is fine here: this database only exists for
+      # this run, and nothing outside the runner can reach it.
+      - run: cp .env.example .env
+      - run: docker compose up -d --build --wait
+      # Going through port 3000 proves nginx, the API and PostgreSQL all connect.
+      # The API has no container health check, so allow it time to start.
+      - name: Check /health through the frontend
+        run: |
+          response=$(curl --fail --silent --show-error --retry 10 --retry-delay 2 --retry-all-errors http://127.0.0.1:3000/health)
+          echo "Response: $response"
+          test "$response" = "Healthy"
+      - name: Show container logs
+        if: failure()
+        run: docker compose logs
