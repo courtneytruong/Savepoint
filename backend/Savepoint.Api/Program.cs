@@ -6,7 +6,7 @@ var connectionString = builder.Configuration.GetConnectionString("Savepoint");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
-        "Connection string 'Savepoint' is missing. See 'Run the API locally' in README.md.");
+        "Connection string 'Savepoint' is missing. See README.md.");
 }
 
 builder.Services.AddNpgsqlDataSource(connectionString);
