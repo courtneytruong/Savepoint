@@ -1,0 +1,58 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-16);
+  padding: var(--spacing-16) var(--spacing-24);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  /* Keeps the pills their own height when the taller sort field sits beside them. */
+  align-items: flex-end;
+  gap: var(--spacing-12) var(--spacing-24);
+  padding: var(--spacing-16) var(--spacing-24);
+}
+
+.grid {
+  padding: 0 var(--spacing-24) var(--spacing-24);
+}
+
+.page {
+  padding: var(--spacing-24);
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--spacing-16) var(--spacing-12);
+  }
+}
+
+.sort {
+  width: 200px;
+  margin-inline-start: auto;
+}
+
+.pagination {
+  padding: var(--spacing-16) var(--spacing-24);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.title {
+  display: block;
+  color: var(--color-soft-quartz);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.title:hover {
+  text-decoration: underline;
+}
+
+.creator {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-ash-lilac);
+}

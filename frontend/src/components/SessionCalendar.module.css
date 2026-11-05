@@ -1,0 +1,297 @@
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-12);
+}
+
+.month {
+  margin: 0;
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-size: var(--text-heading-sm);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.33;
+  letter-spacing: var(--tracking-heading-sm);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.step {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted-steel);
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.step:hover {
+  border-color: var(--color-lilac-beam);
+  color: var(--color-soft-quartz);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--spacing-24);
+  align-items: start;
+}
+
+.grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px;
+  table-layout: fixed;
+}
+
+.grid th {
+  padding-bottom: var(--spacing-4);
+  color: var(--color-ash-lilac);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.48px;
+  text-transform: uppercase;
+}
+
+.grid td {
+  padding: 0;
+  vertical-align: top;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-height: 76px;
+  padding: var(--spacing-8);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-overlay-cards);
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  text-align: left;
+}
+
+/* Days with sessions are lit, and can be chosen. */
+.active {
+  border-color: var(--color-border-card);
+  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
+  color: var(--color-soft-quartz);
+  font: inherit;
+  font-size: var(--text-caption);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.active:hover {
+  border-color: var(--color-lilac-beam);
+}
+
+.selected,
+.selected:hover {
+  border-color: var(--color-lilac-beam);
+  box-shadow:
+    inset 0 0 0 1px var(--color-lilac-beam),
+    0 0 24px -6px var(--color-horizon-glow);
+}
+
+.number {
+  font-weight: var(--font-weight-medium);
+}
+
+/* Today's number sits in a small violet circle. */
+.today .number {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: -3px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--color-horizon-glow);
+  color: var(--color-soft-quartz);
+}
+
+.dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8) var(--spacing-16);
+  margin: var(--spacing-12) 0 0;
+  padding: 0;
+  color: var(--color-ash-lilac);
+  font-size: 12px;
+  line-height: var(--leading-caption);
+  list-style: none;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.more {
+  color: var(--color-muted-steel);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.minutes {
+  margin-top: auto;
+  color: var(--color-muted-steel);
+  font-size: 12px;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+  padding: var(--spacing-20);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-cards);
+  background: var(--color-card-frosted);
+}
+
+.detailTitle {
+  margin: 0;
+  color: var(--color-soft-quartz);
+  font-size: var(--text-subheading);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-subheading);
+  letter-spacing: var(--tracking-subheading);
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  padding: var(--spacing-16);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-overlay-cards);
+  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
+}
+
+.sessionTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8);
+  margin-bottom: var(--spacing-4);
+}
+
+.sessionTitle {
+  margin: 0;
+  color: var(--color-soft-quartz);
+  font-weight: var(--font-weight-medium);
+}
+
+.sessionMeta,
+.notes {
+  margin: 0;
+  font-size: var(--text-caption);
+  line-height: 20px;
+  letter-spacing: var(--tracking-caption);
+}
+
+.sessionMeta {
+  color: var(--color-ash-lilac);
+}
+
+.notes {
+  color: var(--color-muted-steel);
+}
+
+/* On narrower screens the day list moves below, and the days keep only their dots. */
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .grid {
+    border-spacing: 2px;
+  }
+
+  .grid th {
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+
+  .day {
+    align-items: center;
+    min-height: 52px;
+    padding: 6px 2px;
+  }
+
+  .dots {
+    justify-content: center;
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .minutes {
+    display: none;
+  }
+
+  .today .number {
+    margin: -3px 0 0;
+  }
+}
+
+/* Read by screen readers, but takes up no space on screen. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,0 +1,106 @@
+.layout {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+}
+
+.content {
+  min-width: 0;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24);
+  padding: var(--spacing-16) var(--spacing-12);
+  border-right: 1px solid var(--color-hairline);
+}
+
+.title {
+  margin: 0 0 var(--spacing-8);
+  padding-inline: var(--spacing-12);
+  color: var(--color-ash-lilac);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: 0.96px;
+  text-transform: uppercase;
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-12);
+  padding: var(--spacing-8) var(--spacing-12);
+  border-radius: var(--radius-overlay-cards);
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.link:hover {
+  background: var(--color-glass-white-04);
+  color: var(--color-soft-quartz);
+}
+
+.active,
+.active:hover {
+  background: var(--color-tint-accent);
+  color: var(--color-soft-quartz);
+}
+
+.icon {
+  display: inline-flex;
+  font-size: var(--text-body);
+}
+
+.name {
+  flex: 1;
+}
+
+.count {
+  color: var(--color-ash-lilac);
+  font-weight: var(--font-weight-regular);
+}
+
+.active .count {
+  color: var(--color-muted-steel);
+}
+
+/* On small screens the sidebar becomes a strip of links that scrolls sideways. */
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    flex-direction: row;
+    gap: var(--spacing-8);
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+
+  .title {
+    display: none;
+  }
+
+  .links {
+    flex-direction: row;
+  }
+}

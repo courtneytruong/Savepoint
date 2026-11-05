@@ -1,0 +1,101 @@
+.heading {
+  margin: 0;
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+}
+
+/* The two big sizes shrink on small screens, where 72px would overflow. */
+.display {
+  font-size: clamp(40px, 8vw, var(--text-display));
+  line-height: 1.14;
+  letter-spacing: var(--tracking-display);
+}
+
+.large {
+  font-size: clamp(32px, 6vw, var(--text-heading-lg));
+  line-height: 1.32;
+  letter-spacing: var(--tracking-heading-lg);
+}
+
+/*
+ * The big sizes fade from white to pale lilac, as if lit from below. Sizing the
+ * gradient to one line repeats it, so wrapped lines all look the same.
+ */
+.display,
+.large {
+  background: linear-gradient(180deg, var(--color-soft-quartz) 30%, #c9c3dc 90%);
+  background-clip: text;
+  color: transparent;
+}
+
+.display {
+  background-size: 100% 1.14em;
+}
+
+.large {
+  background-size: 100% 1.32em;
+}
+
+/* High-contrast modes remove backgrounds, which would leave the text invisible. */
+@media (forced-colors: active) {
+  .display,
+  .large {
+    background: none;
+    color: CanvasText;
+  }
+}
+
+.medium {
+  font-family: var(--font-body);
+  font-stretch: normal;
+  font-size: var(--text-heading);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+}
+
+.small {
+  font-size: var(--text-heading-sm);
+  line-height: var(--leading-heading-sm);
+  letter-spacing: var(--tracking-heading-sm);
+}
+
+.text {
+  margin: 0;
+}
+
+.caption {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+.body {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+}
+
+.subheading {
+  font-size: var(--text-subheading);
+  line-height: var(--leading-subheading);
+  letter-spacing: var(--tracking-subheading);
+}
+
+.muted {
+  color: var(--color-ash-lilac);
+}
+
+.steel {
+  color: var(--color-muted-steel);
+}
+
+.strong {
+  color: var(--color-soft-quartz);
+}
+
+.faint {
+  color: var(--color-dim-fog);
+}

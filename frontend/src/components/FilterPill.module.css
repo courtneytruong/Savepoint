@@ -1,0 +1,60 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--spacing-4) 12px;
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+  background: transparent;
+  color: var(--color-muted-steel);
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-subheading);
+  letter-spacing: var(--tracking-caption);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.pill:hover {
+  border-color: var(--color-lilac-beam);
+  color: var(--color-soft-quartz);
+}
+
+.selected {
+  border-color: var(--color-border-accent);
+  background: var(--color-tint-accent);
+  color: var(--color-soft-quartz);
+}
+
+.colored svg {
+  color: var(--pill-color);
+}
+
+.colored:hover {
+  border-color: var(--pill-color);
+}
+
+.colored.selected {
+  border-color: var(--pill-color);
+  background: color-mix(in srgb, var(--pill-color) 22%, transparent);
+  color: var(--pill-color);
+}
+
+.count {
+  color: var(--color-ash-lilac);
+  font-weight: var(--font-weight-regular);
+}
+
+.selected .count {
+  color: var(--color-muted-steel);
+}

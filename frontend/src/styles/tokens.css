@@ -1,0 +1,176 @@
+/*
+ * Design tokens, from docs/design.md and the reference screenshot it was written
+ * from. Where the two disagree, the screenshot wins. Differences from the document:
+ * - The glass tokens hold their real translucent values, not plain #ffffff.
+ * - Line heights have px units, because a bare 21 would mean 21 times the size.
+ * - The glow and panel colors are measured from the screenshot.
+ * - Feedback colors and the focus ring are additions, as it doesn't define them.
+ */
+:root {
+  /* Colors */
+  --color-night-violet: #0a0118;
+  --color-void-plum: #0c0616;
+  --color-soft-quartz: #ffffff;
+  --color-muted-steel: #d2d0dd;
+  --color-ash-lilac: #9b96b0;
+  --color-dim-fog: #85808c;
+  --color-ultraviolet-core: #713dff;
+  --color-lilac-beam: #b7a4fb;
+  --color-horizon-glow: #8562ff;
+  --color-glass-white-02: rgba(255, 255, 255, 0.02);
+  --color-glass-white-04: rgba(255, 255, 255, 0.04);
+  --color-glass-white-08: rgba(255, 255, 255, 0.08);
+  --color-glass-white-10: rgba(255, 255, 255, 0.1);
+  --color-glass-white-30: rgba(255, 255, 255, 0.3);
+  --color-overlay-film: rgba(10, 1, 24, 0.2);
+
+  --color-hairline: rgba(255, 255, 255, 0.08);
+
+  /* Page haze: the top of the page is lit, and the edges fall away to the canvas. */
+  --color-haze: #1c0c39;
+
+  /* The glow rising behind a panel, from its pale centre outwards. */
+  --color-bloom-core: #cfa4f3;
+  --color-bloom-hot: #b66ddc;
+  --color-bloom-magenta: #8239c2;
+  --color-bloom-violet: #492693;
+  --color-bloom-deep: #301d6c;
+  --color-bloom-edge: #201145;
+
+  /* Glass panels are blue-violet, lighter at the top where the glow comes through. */
+  --color-panel-top: rgba(37, 32, 73, 0.88);
+  --color-panel-bottom: rgba(19, 19, 43, 0.92);
+
+  /* Cards are lifted off the canvas by a lighter fill and a lilac border. */
+  --color-card-top: #2a2158;
+  --color-card-bottom: #1a1340;
+  --color-card-frosted: rgba(183, 164, 251, 0.12);
+  --color-card-overlay: rgba(42, 33, 88, 0.8);
+  --color-border-card: rgba(183, 164, 251, 0.35);
+  --color-card-glow: rgba(133, 98, 255, 0.35);
+
+  /* Dims the page behind a modal. */
+  --color-backdrop: rgba(10, 1, 24, 0.72);
+
+  /* Placeholder shapes shown while content loads. */
+  --color-skeleton: rgba(183, 164, 251, 0.16);
+  --color-skeleton-shine: rgba(183, 164, 251, 0.34);
+
+  /* Feedback. For messages and data. The only action that uses one is the danger
+     button, so deleting something always looks different from everything else. */
+  --color-success: #7ee2a8;
+  --color-warning: #ffc48a;
+  --color-danger: #ff8f9c;
+  --color-focus: var(--color-lilac-beam);
+
+  /* One color per mood, so patterns show up across a timeline. Each mood also has
+     its own icon, so they can be told apart without seeing color. */
+  --color-mood-hooked: #f38df7;
+  --color-mood-delighted: #ffd36b;
+  --color-mood-moved: #7cc4ff;
+  --color-mood-curious: #c3e66e;
+  --color-mood-frustrated: #ff9a6b;
+  --color-mood-bored: #b6b9c8;
+
+  /* Dropped gets its own rose, so it can't be mistaken for Frustrated's orange or a
+     warning. */
+  --color-status-dropped: #ff8ccf;
+
+  /* Fills and borders for badges, strong enough to stand out on any surface. */
+  --color-tint-accent: rgba(133, 98, 255, 0.38);
+  --color-tint-neutral: rgba(255, 255, 255, 0.14);
+  --color-tint-success: rgba(74, 222, 128, 0.2);
+  --color-tint-warning: rgba(251, 146, 60, 0.24);
+  --color-tint-danger: rgba(239, 68, 68, 0.26);
+  --color-border-accent: rgba(183, 164, 251, 0.7);
+  --color-border-neutral: rgba(255, 255, 255, 0.4);
+  --color-border-success: rgba(126, 226, 168, 0.6);
+  --color-border-warning: rgba(255, 196, 138, 0.6);
+  --color-border-danger: rgba(255, 143, 156, 0.6);
+
+  /* Gradients */
+  --gradient-ultraviolet-horizon: linear-gradient(
+    180deg,
+    rgba(183, 164, 251, 0) 0%,
+    rgba(183, 164, 251, 0.5) 50%,
+    rgba(133, 98, 255, 0.5) 75%,
+    rgba(133, 98, 255, 0) 100%
+  );
+  --gradient-violet-beam: linear-gradient(
+    180deg,
+    rgba(183, 164, 251, 0) 0%,
+    rgb(183, 164, 251) 50%,
+    rgb(133, 98, 255) 75%,
+    rgba(133, 98, 255, 0) 100%
+  );
+  --gradient-deep-fade-veil: linear-gradient(
+    180deg,
+    rgba(11, 2, 23, 0) 22.69%,
+    rgba(22, 9, 42, 0.5) 100%
+  );
+
+  /* Fonts. Archivo, slightly widened, was the closest free match to the reference heading. */
+  --font-body: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Archivo Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display-width: 112%;
+
+  /* Type scale */
+  --text-caption: 14px;
+  --leading-caption: 16px;
+  --tracking-caption: -0.28px;
+  --text-body: 16px;
+  --leading-body: 21px;
+  --tracking-body: -0.16px;
+  --text-subheading: 18px;
+  --leading-subheading: 28px;
+  --tracking-subheading: -0.36px;
+  --text-heading-sm: 24px;
+  --leading-heading-sm: 36px;
+  --tracking-heading-sm: -0.48px;
+  --text-heading: 28px;
+  --leading-heading: 48px;
+  --tracking-heading: 2.24px;
+  --text-heading-lg: 56px;
+  --leading-heading-lg: 74px;
+  --tracking-heading-lg: -1.12px;
+  --text-display: 72px;
+  --leading-display: 80px;
+  --tracking-display: -1.44px;
+
+  /* Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Spacing */
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-28: 28px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-96: 96px;
+  --spacing-108: 108px;
+  --spacing-112: 112px;
+  --spacing-120: 120px;
+  --spacing-124: 124px;
+
+  /* Layout */
+  --page-max-width: 1248px;
+  --page-gutter: var(--spacing-24);
+  --section-gap: 108px;
+  --card-padding: 28px;
+  --element-gap: 16px;
+
+  /* Radius */
+  --radius-cards: 16px;
+  --radius-badges: 999px;
+  --radius-inputs: 0px;
+  --radius-buttons: 999px;
+  --radius-overlay-cards: 10px;
+}

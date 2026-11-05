@@ -1,0 +1,33 @@
+.toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+}
+
+.button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-buttons);
+  background: transparent;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.button:hover {
+  color: var(--color-soft-quartz);
+}
+
+.selected {
+  background: var(--color-tint-accent);
+  color: var(--color-soft-quartz);
+}

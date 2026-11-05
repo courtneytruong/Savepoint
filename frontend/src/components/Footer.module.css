@@ -1,0 +1,80 @@
+/*
+ * A full-width band across the bottom of the page: a line from edge to edge, a
+ * slightly lit surface, and a faint pool of violet rising from the bottom. The
+ * content inside lines up with the header's.
+ */
+.footer {
+  margin-top: var(--spacing-64);
+  padding: var(--spacing-64) var(--page-gutter) var(--spacing-32);
+  border-top: 1px solid var(--color-border-card);
+  background:
+    radial-gradient(ellipse 70% 100% at 50% 100%, rgba(73, 38, 147, 0.4), transparent),
+    linear-gradient(180deg, rgba(42, 33, 88, 0.45), rgba(10, 1, 24, 0.2));
+  box-shadow: inset 0 1px 0 var(--color-glass-white-04);
+}
+
+.inner,
+.bottom {
+  max-width: calc(var(--page-max-width) - 2 * var(--page-gutter));
+  margin-inline: auto;
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-32);
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  max-width: 360px;
+}
+
+.brand {
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-size: var(--text-subheading);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: 20px;
+  letter-spacing: var(--tracking-caption);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-12) var(--spacing-32);
+}
+
+.links a {
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.links a:hover,
+.links a[aria-current='page'] {
+  color: var(--color-soft-quartz);
+}
+
+.bottom {
+  margin-top: var(--spacing-40);
+  padding-top: var(--spacing-16);
+  border-top: 1px solid var(--color-hairline);
+  color: var(--color-ash-lilac);
+  font-size: 12px;
+  line-height: var(--leading-caption);
+}

@@ -1,0 +1,87 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--spacing-4) 12px;
+  border: 1px solid color-mix(in srgb, var(--mood-color) 65%, transparent);
+  border-radius: var(--radius-badges);
+  background: color-mix(in srgb, var(--mood-color) 18%, transparent);
+  color: var(--mood-color);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+  white-space: nowrap;
+}
+
+.picker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: var(--spacing-8);
+  padding: 0;
+  color: var(--color-soft-quartz);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-subheading);
+  letter-spacing: var(--tracking-caption);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+/* The icon always shows the mood's color, so the choices are easy to scan. */
+.option svg {
+  color: var(--mood-color);
+}
+
+.option:hover {
+  border-color: var(--mood-color);
+  color: var(--color-soft-quartz);
+}
+
+.option:has(.radio:checked) {
+  border-color: var(--mood-color);
+  background: color-mix(in srgb, var(--mood-color) 22%, transparent);
+  color: var(--mood-color);
+}
+
+.option:has(.radio:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Hidden but still focusable and checkable, so the group works by keyboard. */
+.radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}

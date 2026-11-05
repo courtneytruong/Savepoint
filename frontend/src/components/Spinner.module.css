@@ -1,0 +1,78 @@
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-12);
+}
+
+/* A comet of light: the conic fade makes the ring, and the mask hollows it out. */
+.ring {
+  --thickness: 3px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 15%, var(--color-horizon-glow) 65%, var(--color-soft-quartz));
+  mask-image: radial-gradient(
+    closest-side,
+    transparent calc(100% - var(--thickness) - 0.5px),
+    black calc(100% - var(--thickness))
+  );
+  filter: drop-shadow(0 0 6px var(--color-horizon-glow));
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Kept moving, but slower: a still spinner would look like the app had frozen. */
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation-duration: 2400ms;
+  }
+}
+
+/* High-contrast modes remove gradients, so draw a plain ring with a gap instead. */
+@media (forced-colors: active) {
+  .ring {
+    border: var(--thickness) solid CanvasText;
+    border-top-color: transparent;
+    background: none;
+    mask-image: none;
+    filter: none;
+  }
+}
+
+.small {
+  --thickness: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.medium {
+  width: 32px;
+  height: 32px;
+}
+
+.large {
+  --thickness: 4px;
+  width: 56px;
+  height: 56px;
+}
+
+.label {
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+/* Read by screen readers, but takes up no space on screen. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
