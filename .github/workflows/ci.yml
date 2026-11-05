@@ -25,6 +25,7 @@ jobs:
       # below whenever a new vulnerability is published, with no code change.
       - run: dotnet restore Savepoint.slnx -p:NuGetAudit=false
       - run: dotnet build Savepoint.slnx --no-restore --configuration Release -warnaserror
+      - run: dotnet test --solution Savepoint.slnx --no-build --configuration Release
 
   frontend:
     runs-on: ubuntu-latest
