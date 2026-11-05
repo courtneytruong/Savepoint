@@ -33,5 +33,14 @@ services:
       db:
         condition: service_healthy
 
+  frontend:
+    build: ./frontend
+    ports:
+      # Bound to 127.0.0.1 so only this machine can reach the app. Port 3000
+      # leaves 5173 free for running the Vite dev server at the same time.
+      - "127.0.0.1:3000:8080"
+    depends_on:
+      - backend
+
 volumes:
   db-data:
