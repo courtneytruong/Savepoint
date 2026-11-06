@@ -32,6 +32,8 @@ import {
   TimelineIcon,
 } from '../components/icons.js'
 import {
+  AccountMenu,
+  Alert,
   Badge,
   Button,
   Card,
@@ -50,6 +52,7 @@ import {
   MoodPicker,
   MOODS,
   Pagination,
+  PasswordField,
   ReflectionCard,
   ReflectionForm,
   Section,
@@ -75,6 +78,7 @@ import {
   useToast,
 } from '../components/index.js'
 import styles from './Gallery.module.css'
+import { AuthPreview } from './AuthPreview.jsx'
 import { CalendarPage } from './CalendarPage.jsx'
 import { LibraryDemo } from './LibraryDemo.jsx'
 import { ReflectionsPage } from './ReflectionsPage.jsx'
@@ -170,7 +174,8 @@ function AddItemModal({ open, onClose, onSaved }) {
 
 // The gallery has no router, so the panel's page comes from the address, as in
 // /components#calendar. The browser's back button then works too.
-const PAGES = ['library', 'reflections', 'timeline', 'calendar']
+const PAGES = ['library', 'reflections', 'timeline', 'calendar', 'sign-in', 'create-account']
+const AUTH_PAGES = ['sign-in', 'create-account']
 const pageFromAddress = () => {
   const page = window.location.hash.slice(1)
   return PAGES.includes(page) ? page : 'library'
@@ -188,12 +193,20 @@ function useAddressPage() {
   return page
 }
 
-/** Every component in every state. Only exists in development, at /components. */
+/**
+ * Every component in every state. Only exists in development, at /components.
+ * #sign-in and #create-account show those pages on their own instead.
+ */
 export default function Gallery() {
+  const page = useAddressPage()
+  // The key starts each auth page fresh, rather than carrying over the other's state.
+  return AUTH_PAGES.includes(page) ? <AuthPreview key={page} page={page} /> : <GalleryPage page={page} />
+}
+
+function GalleryPage({ page }) {
   const toast = useToast()
   const [sessions] = useState(() => makeSampleSessions())
   const reflectionCount = useMemo(() => makeSampleReflections(sessions).length, [sessions])
-  const page = useAddressPage()
   const panelRef = useRef(null)
   const current = (name) => (page === name ? 'page' : undefined)
 
@@ -214,10 +227,15 @@ export default function Gallery() {
       <Header
         brand="Savepoint"
         actions={
-          <Button variant="text">
-            <SettingsIcon />
-            Settings
-          </Button>
+          <AccountMenu
+            name="Robin Reader"
+            email="reader@example.com"
+            settingsHref="#settings"
+            // Signing out goes to the sign-in page, as it will in the app.
+            onSignOut={() => {
+              window.location.hash = 'sign-in'
+            }}
+          />
         }
       >
         <a href="#library" aria-current={current('library')}>
@@ -365,6 +383,9 @@ export default function Gallery() {
           <Group title="As a link">
             <Button href="#library">Go to library</Button>
           </Group>
+          <Group title="Loading: press to try it">
+            <LoadingDemo />
+          </Group>
         </Section>
 
         <Section>
@@ -381,6 +402,23 @@ export default function Gallery() {
               Confirmation
             </Button>
           </Group>
+        </Section>
+
+        <Section>
+          <Heading size="medium">Alerts</Heading>
+          <Group title="For a whole form or page. A problem with one field uses that field's error." />
+          <div className={styles.stack}>
+            <Alert tone="error" title="No account uses that email">
+              Check it for typos, or <a href="#create-account">create an account</a>.
+            </Alert>
+            <Alert tone="warning" title="You're offline">
+              Your changes will be saved once you're back online.
+            </Alert>
+            <Alert tone="success" title="Account created">
+              Welcome to Savepoint.
+            </Alert>
+            <Alert tone="info" title="Signed out" />
+          </div>
         </Section>
 
         <Section>
@@ -706,6 +744,20 @@ export default function Gallery() {
         </Section>
 
         <Section>
+          <Heading size="medium">Auth pages</Heading>
+          <Group title="Whole pages, with no header or sidebar, and a pretend API">
+            <Button variant="outline" href="#sign-in">
+              Sign in
+              <ArrowIcon />
+            </Button>
+            <Button variant="outline" href="#create-account">
+              Create an account
+              <ArrowIcon />
+            </Button>
+          </Group>
+        </Section>
+
+        <Section>
           <Heading size="medium">Form fields</Heading>
           <Card as="form" className={styles.form}>
             <Input label="Title" placeholder="The Left Hand of Darkness" />
@@ -718,6 +770,13 @@ export default function Gallery() {
               error="Write a little more: notes need at least 20 characters."
             />
             <Input label="Disabled" defaultValue="Can't change this" disabled />
+            <PasswordField label="Password" defaultValue="tides-and-statues" />
+            <PasswordField
+              label="New password"
+              autoComplete="new-password"
+              defaultValue="short"
+              error="Use at least 12 characters."
+            />
           </Card>
         </Section>
       </main>
@@ -735,6 +794,9 @@ export default function Gallery() {
         </a>
         <a href="#calendar" aria-current={current('calendar')}>
           Calendar
+        </a>
+        <a href="#reflections" aria-current={current('reflections')}>
+          Reflections
         </a>
         <a href="#settings">Settings</a>
       </Footer>
@@ -833,6 +895,23 @@ export default function Gallery() {
         }
       />
     </>
+  )
+}
+
+// Shows the loading state for two seconds, as if signing in.
+function LoadingDemo() {
+  const [loading, setLoading] = useState(false)
+
+  return (
+    <Button
+      loading={loading}
+      onClick={() => {
+        setLoading(true)
+        setTimeout(() => setLoading(false), 2000)
+      }}
+    >
+      {loading ? 'Signing in…' : 'Sign in'}
+    </Button>
   )
 }
 

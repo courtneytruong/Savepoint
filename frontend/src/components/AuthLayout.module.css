@@ -1,0 +1,60 @@
+/* One column, centred on the page haze. On a tall screen the panel sits a little
+   above the middle, where the eye lands first. */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-32);
+  min-height: 100vh;
+  padding: clamp(var(--spacing-32), 8vh, var(--spacing-96)) var(--page-gutter) var(--spacing-64);
+  /* The panel's glow reaches past the sides, which shouldn't make it scroll sideways. */
+  overflow-x: clip;
+}
+
+.brand {
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-size: var(--text-subheading);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.panel {
+  width: 100%;
+  max-width: 440px;
+  margin-top: var(--spacing-32);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  margin-bottom: var(--spacing-32);
+  text-align: center;
+}
+
+/* The large heading's size, but smaller, so it fits the narrow panel on one line. */
+.title {
+  font-size: clamp(28px, 6vw, 36px);
+  line-height: 1.25;
+}
+
+.description {
+  margin: 0;
+}
+
+.switch {
+  margin: 0;
+  color: var(--color-ash-lilac);
+  text-align: center;
+}
+
+.switch a {
+  color: var(--color-lilac-beam);
+  font-weight: var(--font-weight-medium);
+}
+
+.switch a:hover {
+  color: var(--color-soft-quartz);
+}

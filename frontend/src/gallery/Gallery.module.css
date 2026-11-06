@@ -95,3 +95,31 @@
   gap: var(--spacing-24);
   max-width: 560px;
 }
+
+/* Only in the auth preview, which has no gallery around it to go back with. */
+.backLink {
+  position: fixed;
+  top: var(--spacing-16);
+  left: var(--spacing-16);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: 6px var(--spacing-12);
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+  background: var(--color-night-violet);
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--color-soft-quartz);
+}
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24);
+}

@@ -1,6 +1,7 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import styles from './Field.module.css'
 import { classNames } from './classNames.js'
+import { HideIcon, ShowIcon } from './icons.js'
 
 /**
  * Connects a control to its label, hint and error, so screen readers announce
@@ -50,4 +51,42 @@ export function Textarea({ rows = 5, ...props }) {
 /** Takes its options as children, like a normal select. */
 export function Select(props) {
   return <Field as="select" {...props} />
+}
+
+// The password box with its show/hide button. Field passes it the input's props.
+function PasswordControl({ className, ...inputProps }) {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <div className={styles.passwordWrap}>
+      <input
+        {...inputProps}
+        type={visible ? 'text' : 'password'}
+        // Spell check would send a visible password to the browser's spelling service.
+        spellCheck={false}
+        autoCapitalize="none"
+        className={classNames(className, styles.passwordInput)}
+      />
+      {/* A toggle, so screen readers hear whether the password is showing. */}
+      <button
+        type="button"
+        className={styles.reveal}
+        aria-label="Show password"
+        aria-pressed={visible}
+        aria-controls={inputProps.id}
+        onClick={() => setVisible(!visible)}
+      >
+        {visible ? <HideIcon aria-hidden="true" /> : <ShowIcon aria-hidden="true" />}
+      </button>
+    </div>
+  )
+}
+
+/**
+ * A password, hidden until its button shows it, so it can be checked without
+ * typing it twice. Pass autoComplete: current-password to sign in, or
+ * new-password when creating one, so password managers fill or save it.
+ */
+export function PasswordField({ autoComplete = 'current-password', ...props }) {
+  return <Field as={PasswordControl} autoComplete={autoComplete} {...props} />
 }

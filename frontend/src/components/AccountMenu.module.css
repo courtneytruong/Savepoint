@@ -1,0 +1,159 @@
+.wrap {
+  position: relative;
+}
+
+/* A quiet pill, like the header's other controls, that brightens when used. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  padding: 4px var(--spacing-12) 4px 4px;
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+  background: transparent;
+  color: var(--color-ash-lilac);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: inherit;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.button:hover,
+.button[aria-expanded='true'] {
+  border-color: var(--color-soft-quartz);
+  color: var(--color-soft-quartz);
+}
+
+/* The initial in a lit violet circle. */
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border-accent);
+  border-radius: 50%;
+  background: var(--color-tint-accent);
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+/* A long name shortens rather than pushing the header wider. */
+.name {
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  transition: transform 150ms ease;
+}
+
+.button[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+/* On phones only the circle shows. The name is still read out with the button. */
+@media (max-width: 600px) {
+  .button {
+    padding-right: 4px;
+  }
+
+  .name,
+  .chevron {
+    display: none;
+  }
+}
+
+/* The same glass as the typeahead's list, placed under the button's right edge. */
+.panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--color-border-accent);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-10),
+    0 16px 40px -12px rgba(0, 0, 0, 0.6),
+    0 0 32px -8px var(--color-horizon-glow);
+  color: var(--color-soft-quartz);
+  font-family: var(--font-body);
+}
+
+.panel:popover-open {
+  animation: appear 120ms ease-out;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-8) 10px var(--spacing-12);
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.whoName {
+  font-weight: var(--font-weight-medium);
+}
+
+.whoEmail {
+  overflow: hidden;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-12);
+  width: 100%;
+  padding: var(--spacing-8) 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-soft-quartz);
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.item svg {
+  color: var(--color-ash-lilac);
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--color-tint-accent);
+  box-shadow: inset 0 0 0 1px var(--color-border-accent);
+  outline: none;
+}

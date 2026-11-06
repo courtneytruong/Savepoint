@@ -1,17 +1,32 @@
+export { AccountMenu } from './AccountMenu.jsx'
+export { Alert } from './Alert.jsx'
+export { AuthLayout } from './AuthLayout.jsx'
+export {
+  CREATE_ACCOUNT_ERRORS,
+  looksLikeEmail,
+  MAX_DISPLAY_NAME_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  SIGN_IN_ERRORS,
+  validateNewAccount,
+  validateSignIn,
+} from './authRules.js'
 export { Badge } from './Badge.jsx'
 export { Button } from './Button.jsx'
 export { formatDuration, monthWeeks, parseDateKey, toDateKey, weekdayNames } from './calendarDates.js'
 export { Card, GlowFrame } from './Card.jsx'
 export { Combobox } from './Combobox.jsx'
+export { CreateAccountForm } from './CreateAccountForm.jsx'
 export { filterOptions, matchesSearch } from './textSearch.js'
 export { Divider } from './Divider.jsx'
 export { EmptyState } from './EmptyState.jsx'
-export { Input, Select, Textarea } from './Field.jsx'
+export { Input, PasswordField, Select, Textarea } from './Field.jsx'
 export { FilterGroup, FilterPill } from './FilterPill.jsx'
 export { Footer } from './Footer.jsx'
 export { Header } from './Header.jsx'
 export { Hero } from './Hero.jsx'
 export { ItemCard, ItemGrid, MediumLabel, Rating } from './ItemCard.jsx'
+export { LengthCounter } from './LengthCounter.jsx'
 export { Modal } from './Modal.jsx'
 export { MoodBadge, MoodPicker } from './Mood.jsx'
 export { MOODS, moodFor } from './moods.js'
@@ -27,6 +42,7 @@ export { SessionCalendar } from './SessionCalendar.jsx'
 export { SessionForm } from './SessionForm.jsx'
 export { MAX_SESSION_MINUTES, sessionMinutes, validateSession } from './sessionRules.js'
 export { Sidebar, SidebarGroup, SidebarLayout, SidebarLink } from './Sidebar.jsx'
+export { SignInForm } from './SignInForm.jsx'
 export { Skeleton, SkeletonCard, SkeletonGroup, SkeletonText } from './Skeleton.jsx'
 export { Spinner } from './Spinner.jsx'
 export { StatGroup, StatTile } from './StatTile.jsx'

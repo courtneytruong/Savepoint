@@ -3,14 +3,3 @@
   flex-direction: column;
   gap: var(--spacing-24);
 }
-
-.counter {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-4);
-  font-variant-numeric: tabular-nums;
-}
-
-.enough {
-  color: var(--color-success);
-}

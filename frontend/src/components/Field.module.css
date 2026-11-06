@@ -80,3 +80,47 @@ textarea.control {
 .error {
   color: var(--color-danger);
 }
+
+/* The show/hide button sits at the end of the underline, inside the field. */
+.passwordWrap {
+  position: relative;
+}
+
+.passwordInput {
+  padding-inline-end: 44px;
+}
+
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-ash-lilac);
+  font-size: 18px;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.reveal:hover {
+  background: var(--color-glass-white-10);
+  color: var(--color-soft-quartz);
+}
+
+.reveal:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.reveal[aria-pressed='true'] {
+  color: var(--color-lilac-beam);
+}

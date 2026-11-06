@@ -1,32 +1,12 @@
 import { useId, useRef, useState } from 'react'
 import { Textarea } from './Field.jsx'
-import { SuccessIcon } from './icons.js'
+import { LengthCounter } from './LengthCounter.jsx'
 import { MoodPicker } from './Mood.jsx'
 import styles from './ReflectionForm.module.css'
 import { TagInput } from './TagInput.jsx'
 import { classNames } from './classNames.js'
 import { showErrorsAndFocus } from './focusFirstProblem.js'
 import { MIN_NOTES_LENGTH, notesLength, validateReflection } from './reflectionRules.js'
-
-/** Counts toward the minimum as you type, then confirms once there's enough. */
-function NotesCounter({ notes }) {
-  const length = notesLength(notes)
-
-  if (length < MIN_NOTES_LENGTH) {
-    return (
-      <span className={styles.counter}>
-        {length} / {MIN_NOTES_LENGTH} characters
-      </span>
-    )
-  }
-
-  return (
-    <span className={classNames(styles.counter, styles.enough)}>
-      <SuccessIcon aria-hidden="true" />
-      {length} characters
-    </span>
-  )
-}
 
 /**
  * The mood, notes and tags of a reflection, without a form around them, so a larger
@@ -50,7 +30,7 @@ export function ReflectionFields({ value, onChange, errors = {}, tagSuggestions 
         placeholder="What stood out, what frustrated you, where you left off…"
         value={value.notes}
         onChange={(event) => onChange({ ...value, notes: event.target.value })}
-        hint={<NotesCounter notes={value.notes} />}
+        hint={<LengthCounter length={notesLength(value.notes)} min={MIN_NOTES_LENGTH} />}
         error={errors.notes}
       />
       <TagInput
