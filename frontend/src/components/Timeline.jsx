@@ -1,9 +1,10 @@
-import { formatDuration, parseDateKey, toDateKey } from './calendarDates.js'
+import { parseDateKey, toDateKey } from './calendarDates.js'
 import { classNames } from './classNames.js'
 import { EmptyState } from './EmptyState.jsx'
 import { RatingIcon, ReflectionIcon, TimelineIcon } from './icons.js'
-import { MoodBadge } from './Mood.jsx'
 import { moodFor } from './moods.js'
+import { ReflectionCard } from './ReflectionCard.jsx'
+import cardStyles from './ReflectionCard.module.css'
 import { Skeleton, SkeletonGroup, SkeletonText } from './Skeleton.jsx'
 import { StatusBadge } from './StatusBadge.jsx'
 import { STATUSES } from './statuses.js'
@@ -24,17 +25,6 @@ function statusText({ status, first, previous }, medium) {
     return previous === 'Finished' || previous === 'Dropped' ? 'Picked back up' : `Started ${verb}`
   }
   return status === 'Finished' ? `Finished ${verb}` : `Stopped ${verb}`
-}
-
-function Tags({ tags }) {
-  if (!tags?.length) return null
-  return (
-    <ul className={styles.tags} aria-label="Tags">
-      {tags.map((tag) => (
-        <li key={tag}>#{tag}</li>
-      ))}
-    </ul>
-  )
 }
 
 // What each kind of entry shows: the dot's icon and color, and its content.
@@ -77,25 +67,18 @@ function describe(entry, medium) {
       }
     case 'session': {
       const { mood, notes, tags } = entry.reflection
-      const verb = medium === 'Game' ? 'Played' : 'Read'
       return {
         Icon: moodFor(mood).Icon,
         color: moodFor(mood).color,
         content: (
-          <article className={styles.card}>
-            <div className={styles.cardTop}>
-              <p className={styles.cardTitle}>
-                {verb} for {formatDuration(entry.durationMinutes)}
-                {entry.pagesRead ? <span className={styles.meta}> · {entry.pagesRead} pages</span> : null}
-              </p>
-              <MoodBadge mood={mood} />
-            </div>
-            <p className={styles.notes}>{notes}</p>
-            <Tags tags={tags} />
-            {entry.loggedLate && (
-              <p className={styles.logged}>Logged on {dayFormat.format(new Date(entry.createdAt))}</p>
-            )}
-          </article>
+          <ReflectionCard
+            mood={mood}
+            notes={notes}
+            tags={tags}
+            session={entry}
+            medium={medium}
+            loggedOn={entry.loggedLate ? entry.createdAt : undefined}
+          />
         ),
       }
     }
@@ -103,16 +86,7 @@ function describe(entry, medium) {
       return {
         Icon: ReflectionIcon,
         color: moodFor(entry.mood).color,
-        content: (
-          <article className={classNames(styles.card, styles.reflection)}>
-            <div className={styles.cardTop}>
-              <p className={styles.cardTitle}>Reflection</p>
-              <MoodBadge mood={entry.mood} />
-            </div>
-            <p className={styles.thought}>{entry.notes}</p>
-            <Tags tags={entry.tags} />
-          </article>
-        ),
+        content: <ReflectionCard mood={entry.mood} notes={entry.notes} tags={entry.tags} medium={medium} />,
       }
   }
 }
@@ -126,7 +100,7 @@ function TimelineSkeleton() {
           <li key={index} className={styles.entry}>
             <Skeleton width="48px" className={styles.date} />
             <Skeleton variant="circle" width="32px" height="32px" className={styles.node} />
-            <div className={classNames(styles.card, styles.body)}>
+            <div className={classNames(cardStyles.card, styles.body)}>
               <Skeleton width="40%" height="20px" />
               <SkeletonText lines={lines} />
             </div>

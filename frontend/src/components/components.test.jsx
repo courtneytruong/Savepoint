@@ -629,6 +629,16 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /Library/ }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('link', { name: 'Timeline' }).getAttribute('aria-current')).toBeNull()
   })
+
+  it('keeps a link and its count apart for screen readers', () => {
+    render(
+      <SidebarLink href="#library" count={11}>
+        Library
+      </SidebarLink>,
+    )
+
+    expect(screen.getByRole('link', { name: /^Library\s*,\s*11$/ })).toBeTruthy()
+  })
 })
 
 describe('FilterPill', () => {
@@ -654,6 +664,19 @@ describe('FilterPill', () => {
     render(<FilterPill count={0}>Dropped</FilterPill>)
 
     expect(screen.getByText('0').tagName).toBe('SPAN')
+  })
+
+  // The exact spacing around the comma varies between browsers; the pause is what matters.
+  it('keeps the label and count apart for screen readers', () => {
+    render(<FilterPill count={5}>Moved</FilterPill>)
+
+    expect(screen.getByRole('button', { name: /^Moved\s*,\s*5$/ })).toBeTruthy()
+  })
+
+  it('adds nothing to the name without a count', () => {
+    render(<FilterPill>Moved</FilterPill>)
+
+    expect(screen.getByRole('button', { name: 'Moved' })).toBeTruthy()
   })
 })
 

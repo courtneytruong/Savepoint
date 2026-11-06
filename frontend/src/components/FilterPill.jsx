@@ -1,5 +1,6 @@
 import styles from './FilterPill.module.css'
 import { classNames } from './classNames.js'
+import { VisuallyHidden } from './VisuallyHidden.jsx'
 
 /** Groups filter pills, and tells screen readers what they filter. */
 export function FilterGroup({ label, className, ...props }) {
@@ -20,7 +21,13 @@ export function FilterPill({ selected = false, count, color, className, style, c
       {...props}
     >
       {children}
-      {count !== undefined && <span className={styles.count}>{count}</span>}
+      {count !== undefined && (
+        <>
+          {/* Without it, screen readers run the label and count together, as "Moved5". */}
+          <VisuallyHidden>, </VisuallyHidden>
+          <span className={styles.count}>{count}</span>
+        </>
+      )}
     </button>
   )
 }

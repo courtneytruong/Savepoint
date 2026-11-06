@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AddIcon,
   ArrowIcon,
@@ -50,7 +50,10 @@ import {
   MoodPicker,
   MOODS,
   Pagination,
+  ReflectionCard,
+  ReflectionForm,
   Section,
+  SessionForm,
   Select,
   Sidebar,
   SidebarGroup,
@@ -74,9 +77,10 @@ import {
 import styles from './Gallery.module.css'
 import { CalendarPage } from './CalendarPage.jsx'
 import { LibraryDemo } from './LibraryDemo.jsx'
+import { ReflectionsPage } from './ReflectionsPage.jsx'
 import { TimelinePage } from './TimelinePage.jsx'
 import { Palette } from './Palette.jsx'
-import { makeSampleSessions, SAMPLE_COLUMNS, SAMPLE_ITEMS, TIMELINE_EXAMPLE } from './sampleData.jsx'
+import { makeSampleReflections, makeSampleSessions, SAMPLE_COLUMNS, SAMPLE_ITEMS, SAMPLE_TAGS, TIMELINE_EXAMPLE } from './sampleData.jsx'
 
 const STATUSES = ['Backlog', 'InProgress', 'Finished', 'Dropped']
 
@@ -166,7 +170,7 @@ function AddItemModal({ open, onClose, onSaved }) {
 
 // The gallery has no router, so the panel's page comes from the address, as in
 // /components#calendar. The browser's back button then works too.
-const PAGES = ['library', 'timeline', 'calendar']
+const PAGES = ['library', 'reflections', 'timeline', 'calendar']
 const pageFromAddress = () => {
   const page = window.location.hash.slice(1)
   return PAGES.includes(page) ? page : 'library'
@@ -188,6 +192,7 @@ function useAddressPage() {
 export default function Gallery() {
   const toast = useToast()
   const [sessions] = useState(() => makeSampleSessions())
+  const reflectionCount = useMemo(() => makeSampleReflections(sessions).length, [sessions])
   const page = useAddressPage()
   const panelRef = useRef(null)
   const current = (name) => (page === name ? 'page' : undefined)
@@ -199,6 +204,7 @@ export default function Gallery() {
   }, [page])
   const [addOpen, setAddOpen] = useState(false)
   const [reflectionOpen, setReflectionOpen] = useState(false)
+  const [sessionOpen, setSessionOpen] = useState(false)
   const [removeOpen, setRemoveOpen] = useState(false)
 
   const openAddItem = () => setAddOpen(true)
@@ -208,16 +214,10 @@ export default function Gallery() {
       <Header
         brand="Savepoint"
         actions={
-          <>
-            <Button variant="text">
-              <SettingsIcon />
-              Settings
-            </Button>
-            <Button variant="outline" onClick={openAddItem}>
-              <AddIcon />
-              Add item
-            </Button>
-          </>
+          <Button variant="text">
+            <SettingsIcon />
+            Settings
+          </Button>
         }
       >
         <a href="#library" aria-current={current('library')}>
@@ -228,6 +228,9 @@ export default function Gallery() {
         </a>
         <a href="#calendar" aria-current={current('calendar')}>
           Calendar
+        </a>
+        <a href="#reflections" aria-current={current('reflections')}>
+          Reflections
         </a>
       </Header>
 
@@ -248,7 +251,12 @@ export default function Gallery() {
                       <SidebarLink href="#calendar" icon={<CalendarIcon />} active={page === 'calendar'}>
                         Calendar
                       </SidebarLink>
-                      <SidebarLink href="#reflections" icon={<ReflectionIcon />} count={23}>
+                      <SidebarLink
+                        href="#reflections"
+                        icon={<ReflectionIcon />}
+                        count={reflectionCount}
+                        active={page === 'reflections'}
+                      >
                         Reflections
                       </SidebarLink>
                     </SidebarGroup>
@@ -265,10 +273,12 @@ export default function Gallery() {
               >
                 {page === 'calendar' ? (
                   <CalendarPage sessions={sessions} />
+                ) : page === 'reflections' ? (
+                  <ReflectionsPage sessions={sessions} />
                 ) : page === 'timeline' ? (
                   <TimelinePage sessions={sessions} />
                 ) : (
-                  <LibraryDemo />
+                  <LibraryDemo onAddItem={openAddItem} />
                 )}
               </SidebarLayout>
             </GlowFrame>
@@ -362,7 +372,10 @@ export default function Gallery() {
           <Group title="Try them">
             <Button onClick={openAddItem}>Form</Button>
             <Button variant="outline" onClick={() => setReflectionOpen(true)}>
-              Can't be closed by accident
+              Write a reflection
+            </Button>
+            <Button variant="outline" onClick={() => setSessionOpen(true)}>
+              Log a session
             </Button>
             <Button variant="outline" onClick={() => setRemoveOpen(true)}>
               Confirmation
@@ -486,6 +499,40 @@ export default function Gallery() {
                 <Timeline entries={[]} />
               </Card>
             </div>
+          </div>
+        </Section>
+
+        <Section>
+          <Heading size="medium">Reflection cards</Heading>
+          <Group title="With the item, as on the Reflections page" />
+          <div className={styles.grid}>
+            <ReflectionCard
+              item={{ title: 'Piranesi', medium: 'Book', href: '#item' }}
+              date="2026-11-04"
+              session={{ durationMinutes: 75, pagesRead: 48 }}
+              mood="Curious"
+              notes="The house has tides. I have so many questions already, and the statues feel like they mean something."
+              tags={['worldbuilding', 'statues']}
+            />
+            <ReflectionCard
+              item={{ title: 'Outer Wilds', medium: 'Game', href: '#item' }}
+              date="2026-10-28"
+              mood="Moved"
+              notes="Nothing has made me feel this small and this lucky at once."
+              tags={['ending']}
+            />
+          </div>
+          <Group title="Without it, as on an item's timeline" />
+          <div className={styles.grid}>
+            <ReflectionCard
+              medium="Game"
+              session={{ durationMinutes: 140 }}
+              mood="Frustrated"
+              notes="Third run in a row lost to the same boss. I know the pattern, my hands just don't yet."
+              tags={['boss']}
+              loggedOn="2026-11-05T09:00:00"
+            />
+            <ReflectionCard medium="Game" mood="Delighted" notes="Worth every failed run. The music alone." />
           </div>
         </Section>
 
@@ -709,26 +756,57 @@ export default function Gallery() {
             <Button variant="text" onClick={() => setReflectionOpen(false)}>
               Discard
             </Button>
-            <Button
-              onClick={() => {
-                setReflectionOpen(false)
-                toast.show({ title: 'Reflection saved' })
-              }}
-            >
+            {/* Sits outside the form, in the modal's actions, so it names the form it submits. */}
+            <Button type="submit" form="reflection-form">
               Save reflection
             </Button>
           </>
         }
       >
-        <MoodPicker name="reflection-mood" required />
-        <Textarea label="Notes" hint="At least 20 characters." />
-        <div>
-          <Tooltip content="Tooltips show above modals too">
-            <button type="button" className={styles.infoButton} aria-label="About this modal">
-              <InfoIcon aria-hidden="true" />
-            </button>
-          </Tooltip>
-        </div>
+        <ReflectionForm
+          id="reflection-form"
+          tagSuggestions={SAMPLE_TAGS}
+          onSubmit={({ mood }) => {
+            setReflectionOpen(false)
+            toast.show({ title: `${mood} reflection saved` })
+          }}
+        >
+          <div>
+            <Tooltip content="Tooltips show above modals too">
+              <button type="button" className={styles.infoButton} aria-label="About this modal">
+                <InfoIcon aria-hidden="true" />
+              </button>
+            </Tooltip>
+          </div>
+        </ReflectionForm>
+      </Modal>
+
+      <Modal
+        open={sessionOpen}
+        onClose={() => setSessionOpen(false)}
+        title="Log a session"
+        description="Every session gets a reflection, saved together with it."
+        dismissible={false}
+        actions={
+          <>
+            <Button variant="text" onClick={() => setSessionOpen(false)}>
+              Discard
+            </Button>
+            <Button type="submit" form="session-form">
+              Save session
+            </Button>
+          </>
+        }
+      >
+        <SessionForm
+          id="session-form"
+          items={SAMPLE_ITEMS}
+          tagSuggestions={SAMPLE_TAGS}
+          onSubmit={({ itemId }) => {
+            setSessionOpen(false)
+            toast.show({ title: `Session logged for ${SAMPLE_ITEMS.find((item) => item.id === itemId).title}` })
+          }}
+        />
       </Modal>
 
       <Modal

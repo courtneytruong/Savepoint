@@ -1,28 +1,11 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import fieldStyles from './Field.module.css'
 import styles from './Combobox.module.css'
 import { classNames } from './classNames.js'
 import { filterOptions } from './textSearch.js'
 import { ExpandIcon, FinishedIcon } from './icons.js'
-
-const GAP = 4
-const EDGE = 8
-const MAX_HEIGHT = 320
-const MIN_WIDTH = 280
-
-// Marks the part of the label that matches what was typed.
-function Highlight({ text, query }) {
-  const wanted = query.trim().toLocaleLowerCase()
-  const start = wanted ? text.toLocaleLowerCase().indexOf(wanted) : -1
-  if (start === -1) return text
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark className={styles.match}>{text.slice(start, start + wanted.length)}</mark>
-      {text.slice(start + wanted.length)}
-    </>
-  )
-}
+import { Highlight } from './Highlight.jsx'
+import { useAnchoredPopup } from './useAnchoredPopup.js'
 
 /**
  * A text field that suggests options as you type, for choosing from a list too
@@ -31,9 +14,7 @@ function Highlight({ text, query }) {
  *
  * options: { value, label, description?, icon? }, in the order to show them.
  * value and onChange: the chosen option's value. Always controlled.
- *
- * The list sits in the browser's top layer, like a tooltip, so a panel's edges
- * can't cut it off.
+ * error: shown under the field, as with the other fields.
  */
 export function Combobox({
   label,
@@ -42,6 +23,7 @@ export function Combobox({
   onChange,
   placeholder,
   hint,
+  error,
   emptyMessage = 'No matches',
   id,
   className,
@@ -50,6 +32,7 @@ export function Combobox({
   const inputId = id ?? generatedId
   const listId = `${inputId}-list`
   const hintId = `${inputId}-hint`
+  const errorId = `${inputId}-error`
   const inputRef = useRef(null)
   const popupRef = useRef(null)
 
@@ -108,44 +91,7 @@ export function Combobox({
     }
   }
 
-  const position = useCallback(() => {
-    const field = inputRef.current.getBoundingClientRect()
-    const popup = popupRef.current
-    const below = window.innerHeight - field.bottom - GAP - EDGE
-    const above = field.top - GAP - EDGE
-    const side = below >= 200 || below >= above ? 'bottom' : 'top'
-    const width = Math.min(Math.max(field.width, MIN_WIDTH), window.innerWidth - EDGE * 2)
-    const left = Math.min(Math.max(field.right - width, EDGE), window.innerWidth - width - EDGE)
-
-    popup.style.left = `${left}px`
-    popup.style.width = `${width}px`
-    popup.style.maxHeight = `${Math.min(MAX_HEIGHT, side === 'bottom' ? below : above)}px`
-    if (side === 'bottom') {
-      popup.style.top = `${field.bottom + GAP}px`
-      popup.style.bottom = 'auto'
-    } else {
-      popup.style.top = 'auto'
-      popup.style.bottom = `${window.innerHeight - field.top + GAP}px`
-    }
-  }, [])
-
-  useLayoutEffect(() => {
-    const popup = popupRef.current
-    if (!open) {
-      // The test browser has no popover support, so check before using it.
-      if (popup.hidePopover && popup.matches(':popover-open')) popup.hidePopover()
-      return undefined
-    }
-
-    popup.showPopover?.()
-    position()
-    window.addEventListener('scroll', position, true)
-    window.addEventListener('resize', position)
-    return () => {
-      window.removeEventListener('scroll', position, true)
-      window.removeEventListener('resize', position)
-    }
-  }, [open, position])
+  useAnchoredPopup(open, inputRef, popupRef)
 
   // Keeps the highlighted option in view as the arrow keys move through a long list.
   useEffect(() => {
@@ -153,7 +99,7 @@ export function Combobox({
   })
 
   return (
-    <div className={classNames(fieldStyles.field, className)}>
+    <div className={classNames(fieldStyles.field, error && fieldStyles.invalid, className)}>
       <label className={fieldStyles.label} htmlFor={inputId}>
         {label}
       </label>
@@ -169,7 +115,8 @@ export function Combobox({
           aria-expanded={open}
           aria-controls={listId}
           aria-activedescendant={open && results[active] ? optionId(active) : undefined}
-          aria-describedby={hint ? hintId : undefined}
+          aria-describedby={classNames(hint && hintId, error && errorId) || undefined}
+          aria-invalid={error ? true : undefined}
           className={classNames(fieldStyles.control, styles.input)}
           placeholder={placeholder}
           value={query ?? selected?.label ?? ''}
@@ -205,6 +152,11 @@ export function Combobox({
       {hint && (
         <p id={hintId} className={fieldStyles.hint}>
           {hint}
+        </p>
+      )}
+      {error && (
+        <p id={errorId} className={fieldStyles.error}>
+          {error}
         </p>
       )}
 

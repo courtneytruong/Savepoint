@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import styles from './Mood.module.css'
 import { classNames } from './classNames.js'
 import { MOODS, moodFor } from './moods.js'
@@ -17,10 +18,26 @@ export function MoodBadge({ mood, className, ...props }) {
 /**
  * Choosing a mood, as a set of colored radio buttons. Works like any radio group:
  * pass value and onChange to control it, or defaultValue to leave it to the form.
+ * An error shows under the choices and is read out with the group.
  */
-export function MoodPicker({ name = 'mood', label = 'Mood', value, defaultValue, onChange, required, className }) {
+export function MoodPicker({
+  name = 'mood',
+  label = 'Mood',
+  value,
+  defaultValue,
+  onChange,
+  required,
+  error,
+  className,
+}) {
+  const errorId = `${useId()}-error`
+
   return (
-    <fieldset className={classNames(styles.picker, className)}>
+    <fieldset
+      className={classNames(styles.picker, className)}
+      aria-describedby={error ? errorId : undefined}
+      data-invalid={error ? true : undefined}
+    >
       <legend className={styles.legend}>{label}</legend>
       <div className={styles.options}>
         {MOODS.map(({ value: mood, color, Icon }) => (
@@ -40,6 +57,11 @@ export function MoodPicker({ name = 'mood', label = 'Mood', value, defaultValue,
           </label>
         ))}
       </div>
+      {error && (
+        <p id={errorId} className={styles.error}>
+          {error}
+        </p>
+      )}
     </fieldset>
   )
 }

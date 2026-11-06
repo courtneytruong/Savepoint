@@ -20,7 +20,7 @@ import {
   ViewToggle,
 } from '../components/index.js'
 import { classNames } from '../components/classNames.js'
-import { NoResultsIcon } from '../components/icons.js'
+import { AddIcon, NoResultsIcon } from '../components/icons.js'
 import styles from './LibraryDemo.module.css'
 import { SAMPLE_COLUMNS, SAMPLE_ITEMS, SORT_OPTIONS } from './sampleData.jsx'
 
@@ -46,7 +46,7 @@ const sortName = (sort) => sort && `${sort.key}:${sort.direction}`
  * A working mock of the library: filters, sorting, pages, and the list and grid
  * views. Both views share one sort, so switching keeps the same order.
  */
-export function LibraryDemo() {
+export function LibraryDemo({ onAddItem }) {
   const [view, setView] = useStoredView()
   const [search, setSearch] = useState('')
   const [medium, setMedium] = useState(null)
@@ -107,6 +107,11 @@ export function LibraryDemo() {
           onChange={update(setSearch)}
         />
         <ViewToggle value={view} onChange={setView} />
+        {/* The library's main action, so it gets the lit primary style. */}
+        <Button onClick={onAddItem}>
+          <AddIcon />
+          Add item
+        </Button>
       </div>
       <div className={styles.filters}>
         <FilterGroup label="Filter by type">

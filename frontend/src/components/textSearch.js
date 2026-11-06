@@ -1,5 +1,5 @@
 // Lowercase, with accents removed, so "eloise" finds "Éloïse".
-const simplify = (text = '') =>
+export const simplify = (text = '') =>
   text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')

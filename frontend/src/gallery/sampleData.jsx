@@ -158,6 +158,20 @@ export const SAMPLE_COLUMNS = [
   },
 ]
 
+// Every tag used in the sample reflections, as the API would list them for suggestions.
+export const SAMPLE_TAGS = [
+  'boss',
+  'ending',
+  'friendship',
+  'music',
+  'quantum moon',
+  'reread',
+  'space',
+  'statues',
+  'theory',
+  'worldbuilding',
+]
+
 // For the grid view, which has no column headers to click.
 export const SORT_OPTIONS = [
   ['Title, A to Z', { key: 'title', direction: 'ascending' }],
@@ -380,4 +394,29 @@ export function makeSampleHistory(itemTitle, sessions, today = new Date()) {
       createdAt: stamp(daysAgo, 22),
     })),
   }
+}
+
+/**
+ * Every reflection across the library, newest first, as the Reflections page
+ * shows them. Built from each item's timeline, so they sort the same way: a
+ * session's reflection by the session's day, a standalone one by when it was saved.
+ */
+export function makeSampleReflections(sessions, today = new Date()) {
+  return SAMPLE_ITEMS.flatMap((item) =>
+    buildTimeline(makeSampleHistory(item.title, sessions, today))
+      .filter((entry) => entry.type === 'session' || entry.type === 'reflection')
+      .map((entry) => ({
+        key: `${item.id}-${entry.key}`,
+        item: { id: item.id, title: item.title, medium: item.medium },
+        day: entry.day,
+        time: entry.time,
+        ...(entry.type === 'session'
+          ? {
+              ...entry.reflection,
+              session: { durationMinutes: entry.durationMinutes, pagesRead: entry.pagesRead },
+              loggedOn: entry.loggedLate ? entry.createdAt : undefined,
+            }
+          : { mood: entry.mood, notes: entry.notes, tags: entry.tags }),
+      })),
+  ).sort((a, b) => b.time - a.time)
 }

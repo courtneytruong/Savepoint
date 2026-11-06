@@ -1,0 +1,97 @@
+/* Looks like the other fields: no box, just the underline, with the tags and the
+   typing space sharing a row and wrapping as more are added. */
+.box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+  min-height: 51px;
+  padding: var(--spacing-8) 0;
+  border-bottom: 1px solid var(--color-dim-fog);
+  cursor: text;
+  transition: border-color 150ms ease;
+}
+
+.box:hover {
+  border-bottom-color: var(--color-ash-lilac);
+}
+
+/* The field has no outline of its own, so the underline shows focus for both. */
+.box:focus-within {
+  border-bottom-color: var(--color-focus);
+  box-shadow: 0 1px 0 var(--color-focus);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Matches the accent badge, with room on the right for the remove button. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: 2px 4px 2px 12px;
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-badges);
+  background: var(--color-tint-accent);
+  color: var(--color-soft-quartz);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-ash-lilac);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.remove:hover {
+  background: var(--color-glass-white-10);
+  color: var(--color-soft-quartz);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.input {
+  flex: 1 1 8ch;
+  min-width: 8ch;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-soft-quartz);
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-ash-lilac);
+  opacity: 1;
+}

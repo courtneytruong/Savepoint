@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import styles from './Sidebar.module.css'
 import { classNames } from './classNames.js'
+import { VisuallyHidden } from './VisuallyHidden.jsx'
 
 /** Puts a sidebar beside the main content. On small screens it moves above it. */
 export function SidebarLayout({ sidebar, className, children, ...props }) {
@@ -60,7 +61,13 @@ export function SidebarLink({ icon, count, active = false, className, children, 
           </span>
         )}
         <span className={styles.name}>{children}</span>
-        {count !== undefined && <span className={styles.count}>{count}</span>}
+        {count !== undefined && (
+          <>
+            {/* Without it, screen readers run the label and count together, as "Library11". */}
+            <VisuallyHidden>, </VisuallyHidden>
+            <span className={styles.count}>{count}</span>
+          </>
+        )}
       </a>
     </li>
   )
