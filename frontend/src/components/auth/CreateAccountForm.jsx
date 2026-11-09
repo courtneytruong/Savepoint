@@ -28,7 +28,7 @@ const FAILED = {
  */
 export function CreateAccountForm({ onSubmit, signInHref, className }) {
   const [values, setValues] = useState({ displayName: '', email: '', password: '' })
-  const { errors, serverError, setServerError, loading, handleSubmit, formRef, alertRef } = useAuthSubmit({
+  const { errors: checkErrors, serverError, setServerError, loading, handleSubmit, formRef, alertRef } = useAuthSubmit({
     values,
     validate: validateNewAccount,
     send: () =>
@@ -37,6 +37,8 @@ export function CreateAccountForm({ onSubmit, signInHref, className }) {
     formErrors: ['failed'],
   })
 
+  // A copy, because what a hook returns mustn't be changed.
+  const errors = { ...checkErrors }
   if (serverError === 'emailTaken' && !errors.email) {
     errors.email = signInHref ? (
       <>

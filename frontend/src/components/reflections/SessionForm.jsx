@@ -29,12 +29,14 @@ export function SessionForm({
   defaultItemId = null,
   tagSuggestions,
   onSubmit,
-  today = new Date(),
+  today: fixedToday,
   className,
   children,
 }) {
   const durationErrorId = `${useId()}-duration-error`
   const formRef = useRef(null)
+  // Read once, so "today" can't change between renders.
+  const [today] = useState(() => fixedToday ?? new Date())
   const todayKey = toDateKey(today)
 
   const [session, setSession] = useState({

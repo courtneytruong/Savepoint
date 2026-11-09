@@ -7,9 +7,7 @@ import { Highlight } from '../ui/Highlight.jsx'
 import { AddIcon, CloseIcon } from '../icons.js'
 import { filterOptions, simplify } from '../../utils/textSearch.js'
 import { useAnchoredPopup } from '../../hooks/useAnchoredPopup.js'
-
-/** Spaces trimmed from the ends and runs of spaces inside made single. */
-export const cleanTag = (text) => text.trim().replace(/\s+/g, ' ')
+import { cleanTag } from '../../rules/tagRules.js'
 
 /**
  * Tags typed or picked one at a time, with existing tags suggested as you type so
