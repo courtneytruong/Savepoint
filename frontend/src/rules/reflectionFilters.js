@@ -1,4 +1,4 @@
-import { simplify } from './textSearch.js'
+import { simplify } from '../utils/textSearch.js'
 
 /**
  * The reflections that match every filter given. null means any. Tags match

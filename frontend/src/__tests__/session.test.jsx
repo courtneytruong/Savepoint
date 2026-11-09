@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SessionForm, sessionMinutes, validateSession } from './index.js'
+import { SessionForm, sessionMinutes, validateSession } from '../components/index.js'
 
 afterEach(cleanup)
 

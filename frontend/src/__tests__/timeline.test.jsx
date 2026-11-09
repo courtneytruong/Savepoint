@@ -1,6 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { buildTimeline, groupByMonth, Timeline } from './index.js'
+import { buildTimeline, groupByMonth, Timeline } from '../components/index.js'
 
 afterEach(cleanup)
 

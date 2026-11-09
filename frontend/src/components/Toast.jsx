@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './Toast.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { CloseIcon, ErrorIcon, InfoIcon, SuccessIcon } from './icons.js'
-import { ToastContext } from './toastContext.js'
+import { ToastContext } from '../hooks/toastContext.js'
 
 const DEFAULT_DURATION = 5000
 const MAX_VISIBLE = 4

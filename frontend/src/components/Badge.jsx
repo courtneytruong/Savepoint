@@ -1,5 +1,5 @@
 import styles from './Badge.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * A small pill label, such as a status, mood or tag. It can hold an icon.

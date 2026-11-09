@@ -1,5 +1,5 @@
 import styles from './Typography.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * A heading. Size is how it looks, and `as` is its level in the page outline,

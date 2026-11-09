@@ -1,4 +1,4 @@
-import { BoredIcon, CuriousIcon, DelightedIcon, FrustratedIcon, HookedIcon, MovedIcon } from './icons.js'
+import { BoredIcon, CuriousIcon, DelightedIcon, FrustratedIcon, HookedIcon, MovedIcon } from '../components/icons.js'
 
 // The moods in docs/data-model.md, each with its own color and icon.
 export const MOODS = [

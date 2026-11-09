@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CreateAccountForm, validateNewAccount } from './index.js'
+import { CreateAccountForm, validateNewAccount } from '../components/index.js'
 
 afterEach(cleanup)
 

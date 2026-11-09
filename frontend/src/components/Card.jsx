@@ -1,5 +1,5 @@
 import styles from './Card.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { Horizon } from './Horizon.jsx'
 
 /**

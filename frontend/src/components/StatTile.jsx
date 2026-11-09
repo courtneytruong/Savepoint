@@ -1,5 +1,5 @@
 import styles from './StatTile.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /** A row of stat tiles. It's a description list, so each label stays tied to its value. */
 export function StatGroup({ className, ...props }) {

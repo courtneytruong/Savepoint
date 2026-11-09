@@ -1,5 +1,5 @@
 import styles from './Divider.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * A line between pieces of content.

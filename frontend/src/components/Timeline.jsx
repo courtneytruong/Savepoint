@@ -1,16 +1,16 @@
-import { parseDateKey, toDateKey } from './calendarDates.js'
-import { classNames } from './classNames.js'
+import { parseDateKey, toDateKey } from '../utils/calendarDates.js'
+import { classNames } from '../utils/classNames.js'
 import { EmptyState } from './EmptyState.jsx'
 import { RatingIcon, ReflectionIcon, TimelineIcon } from './icons.js'
-import { moodFor } from './moods.js'
+import { moodFor } from '../rules/moods.js'
 import { ReflectionCard } from './ReflectionCard.jsx'
 import cardStyles from './ReflectionCard.module.css'
 import { Skeleton, SkeletonGroup, SkeletonText } from './Skeleton.jsx'
 import { StatusBadge } from './StatusBadge.jsx'
-import { STATUSES } from './statuses.js'
+import { STATUSES } from '../rules/statuses.js'
 import { useId } from 'react'
 import styles from './Timeline.module.css'
-import { groupByMonth } from './timelineEntries.js'
+import { groupByMonth } from '../rules/timelineEntries.js'
 
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' })
 const dayFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })

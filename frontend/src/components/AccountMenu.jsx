@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import styles from './AccountMenu.module.css'
 import { ExpandIcon, SettingsIcon, SignOutIcon } from './icons.js'
-import { useAnchoredPopup } from './useAnchoredPopup.js'
+import { useAnchoredPopup } from '../hooks/useAnchoredPopup.js'
 import { VisuallyHidden } from './VisuallyHidden.jsx'
 
 // The first letter of the name, for the circle. Array.from keeps a letter made of

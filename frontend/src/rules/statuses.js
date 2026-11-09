@@ -1,4 +1,4 @@
-import { BacklogIcon, DroppedIcon, FinishedIcon, InProgressIcon } from './icons.js'
+import { BacklogIcon, DroppedIcon, FinishedIcon, InProgressIcon } from '../components/icons.js'
 
 // Keyed by the status values in docs/data-model.md.
 export const STATUSES = {

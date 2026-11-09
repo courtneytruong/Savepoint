@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import { NextIcon, PreviousIcon } from './icons.js'
 import styles from './Pagination.module.css'
-import { classNames } from './classNames.js'
-import { pageRange } from './pagination.js'
+import { classNames } from '../utils/classNames.js'
+import { pageRange } from '../utils/pagination.js'
 
 /**
  * Moves between pages.

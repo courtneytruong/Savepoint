@@ -1,6 +1,6 @@
 import { SuccessIcon } from './icons.js'
 import styles from './LengthCounter.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * Counts toward a minimum length as you type, as in "7 / 12 characters", then

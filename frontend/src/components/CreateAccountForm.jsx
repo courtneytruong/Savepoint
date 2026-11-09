@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Alert } from './Alert.jsx'
-import { CREATE_ACCOUNT_ERRORS, MIN_PASSWORD_LENGTH, validateNewAccount } from './authRules.js'
+import { CREATE_ACCOUNT_ERRORS, MIN_PASSWORD_LENGTH, validateNewAccount } from '../rules/authRules.js'
 import styles from './AuthForm.module.css'
 import { Button } from './Button.jsx'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { Input, PasswordField } from './Field.jsx'
 import { LengthCounter } from './LengthCounter.jsx'
-import { useAuthSubmit } from './useAuthSubmit.js'
+import { useAuthSubmit } from '../hooks/useAuthSubmit.js'
 
 const FAILED = {
   title: "Couldn't create your account",

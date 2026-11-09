@@ -19,7 +19,7 @@ import {
   useStoredView,
   ViewToggle,
 } from '../components/index.js'
-import { classNames } from '../components/classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { AddIcon, NoResultsIcon } from '../components/icons.js'
 import styles from './LibraryDemo.module.css'
 import { SAMPLE_COLUMNS, SAMPLE_ITEMS, SORT_OPTIONS } from './sampleData.jsx'

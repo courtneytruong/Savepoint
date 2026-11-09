@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { SortAscendingIcon, SortDescendingIcon, SortIcon } from './icons.js'
 import { Skeleton } from './Skeleton.jsx'
 import styles from './Table.module.css'
-import { classNames } from './classNames.js'
-import { nextSort, sortRows } from './tableSort.js'
+import { classNames } from '../utils/classNames.js'
+import { nextSort, sortRows } from '../utils/tableSort.js'
 
 const SORT_ICONS = { ascending: SortAscendingIcon, descending: SortDescendingIcon }
 

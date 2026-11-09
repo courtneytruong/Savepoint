@@ -1,6 +1,6 @@
 import { useId, useRef } from 'react'
 import styles from './SearchField.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { CloseIcon, SearchIcon } from './icons.js'
 
 /**

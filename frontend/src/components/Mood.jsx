@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import styles from './Mood.module.css'
-import { classNames } from './classNames.js'
-import { MOODS, moodFor } from './moods.js'
+import { classNames } from '../utils/classNames.js'
+import { MOODS, moodFor } from '../rules/moods.js'
 
 /** A mood, in its own color and with its own icon. */
 export function MoodBadge({ mood, className, ...props }) {

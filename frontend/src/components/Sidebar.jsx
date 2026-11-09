@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import styles from './Sidebar.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { VisuallyHidden } from './VisuallyHidden.jsx'
 
 /** Puts a sidebar beside the main content. On small screens it moves above it. */

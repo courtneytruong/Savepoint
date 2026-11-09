@@ -9,13 +9,13 @@ import {
   startOfMonth,
   toDateKey,
   weekdayNames,
-} from './calendarDates.js'
-import { classNames } from './classNames.js'
+} from '../utils/calendarDates.js'
+import { classNames } from '../utils/classNames.js'
 import { EmptyState } from './EmptyState.jsx'
 import { CalendarIcon, NextIcon, PreviousIcon } from './icons.js'
 import { MediumLabel } from './ItemCard.jsx'
 import { MoodBadge } from './Mood.jsx'
-import { MOODS, moodFor } from './moods.js'
+import { MOODS, moodFor } from '../rules/moods.js'
 import styles from './SessionCalendar.module.css'
 
 const MAX_DOTS = 4

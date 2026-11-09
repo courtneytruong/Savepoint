@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { showErrorsAndFocus } from './focusFirstProblem.js'
+import { showErrorsAndFocus } from '../utils/focusFirstProblem.js'
 
 /**
  * How the auth forms submit: check the fields, send, show that it's working,

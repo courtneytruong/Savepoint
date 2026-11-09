@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
-import { AuthPreview } from './AuthPreview.jsx'
+import { AuthPreview } from '../gallery/AuthPreview.jsx'
 
 afterEach(() => {
   cleanup()

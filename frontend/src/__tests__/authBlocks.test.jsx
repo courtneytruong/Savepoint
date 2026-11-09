@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Alert, AuthLayout, Button, PasswordField } from './index.js'
+import { Alert, AuthLayout, Button, PasswordField } from '../components/index.js'
 
 afterEach(cleanup)
 

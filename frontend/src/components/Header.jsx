@@ -1,5 +1,5 @@
 import styles from './Header.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /** The top bar. Children are the navigation links; actions sit on the right. */
 export function Header({ brand, actions, className, children, ...props }) {

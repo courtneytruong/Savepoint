@@ -1,6 +1,6 @@
 import { Card } from './Card.jsx'
 import styles from './Skeleton.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * Announces that its skeletons are loading. Screen readers can't see the shapes

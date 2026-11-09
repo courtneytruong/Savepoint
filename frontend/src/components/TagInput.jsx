@@ -2,11 +2,11 @@ import { useEffect, useId, useRef, useState } from 'react'
 import comboboxStyles from './Combobox.module.css'
 import fieldStyles from './Field.module.css'
 import styles from './TagInput.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { Highlight } from './Highlight.jsx'
 import { AddIcon, CloseIcon } from './icons.js'
-import { filterOptions, simplify } from './textSearch.js'
-import { useAnchoredPopup } from './useAnchoredPopup.js'
+import { filterOptions, simplify } from '../utils/textSearch.js'
+import { useAnchoredPopup } from '../hooks/useAnchoredPopup.js'
 
 /** Spaces trimmed from the ends and runs of spaces inside made single. */
 export const cleanTag = (text) => text.trim().replace(/\s+/g, ' ')

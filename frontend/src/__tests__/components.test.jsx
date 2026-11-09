@@ -53,7 +53,7 @@ import {
   useToast,
   ViewToggle,
   weekdayNames,
-} from './index.js'
+} from '../components/index.js'
 
 afterEach(cleanup)
 

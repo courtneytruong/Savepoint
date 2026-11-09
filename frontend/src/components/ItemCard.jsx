@@ -1,7 +1,7 @@
 import styles from './ItemCard.module.css'
 import { MoodBadge } from './Mood.jsx'
 import { StatusBadge } from './StatusBadge.jsx'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { BookIcon, GameIcon, RatingIcon } from './icons.js'
 
 // Keyed by the medium values in docs/data-model.md.

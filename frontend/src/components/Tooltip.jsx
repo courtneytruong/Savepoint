@@ -1,6 +1,6 @@
 import { cloneElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import styles from './Tooltip.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 const SHOW_DELAY = 300
 const HIDE_DELAY = 150

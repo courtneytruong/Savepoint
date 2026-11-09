@@ -1,5 +1,5 @@
-import { formatDuration, parseDateKey } from './calendarDates.js'
-import { classNames } from './classNames.js'
+import { formatDuration, parseDateKey } from '../utils/calendarDates.js'
+import { classNames } from '../utils/classNames.js'
 import { MediumLabel } from './ItemCard.jsx'
 import { MoodBadge } from './Mood.jsx'
 import styles from './ReflectionCard.module.css'

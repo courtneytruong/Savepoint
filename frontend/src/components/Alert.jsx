@@ -1,5 +1,5 @@
 import styles from './Alert.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { ErrorIcon, InfoIcon, SuccessIcon, WarningIcon } from './icons.js'
 
 const ICONS = { error: ErrorIcon, warning: WarningIcon, success: SuccessIcon, info: InfoIcon }

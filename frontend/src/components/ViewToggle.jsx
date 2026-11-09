@@ -1,5 +1,5 @@
 import styles from './ViewToggle.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { GridIcon, ListIcon } from './icons.js'
 import { Tooltip } from './Tooltip.jsx'
 

@@ -1,15 +1,15 @@
 import { useId, useRef, useState } from 'react'
-import { toDateKey } from './calendarDates.js'
-import { classNames } from './classNames.js'
+import { toDateKey } from '../utils/calendarDates.js'
+import { classNames } from '../utils/classNames.js'
 import { Combobox } from './Combobox.jsx'
 import { Input } from './Field.jsx'
 import fieldStyles from './Field.module.css'
-import { showErrorsAndFocus } from './focusFirstProblem.js'
+import { showErrorsAndFocus } from '../utils/focusFirstProblem.js'
 import { BookIcon, GameIcon } from './icons.js'
 import { ReflectionFields } from './ReflectionForm.jsx'
-import { validateReflection } from './reflectionRules.js'
+import { validateReflection } from '../rules/reflectionRules.js'
 import styles from './SessionForm.module.css'
-import { sessionMinutes, validateSession } from './sessionRules.js'
+import { sessionMinutes, validateSession } from '../rules/sessionRules.js'
 
 /**
  * Logging a session: what, when, for how long, and the reflection that every

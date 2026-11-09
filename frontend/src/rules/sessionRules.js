@@ -2,7 +2,7 @@
 // can't be in the future, and can't be longer than the day it's logged on.
 // The API checks the same rules, so these only exist to tell the user sooner.
 
-import { toDateKey } from './calendarDates.js'
+import { toDateKey } from '../utils/calendarDates.js'
 
 export const MAX_SESSION_MINUTES = 24 * 60
 

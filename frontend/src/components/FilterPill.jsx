@@ -1,5 +1,5 @@
 import styles from './FilterPill.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { VisuallyHidden } from './VisuallyHidden.jsx'
 
 /** Groups filter pills, and tells screen readers what they filter. */

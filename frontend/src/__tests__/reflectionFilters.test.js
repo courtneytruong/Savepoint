@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countMoods, filterReflections } from './index.js'
+import { countMoods, filterReflections } from '../components/index.js'
 
 const book = { medium: 'Book' }
 const game = { medium: 'Game' }

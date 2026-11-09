@@ -1,5 +1,5 @@
 import styles from './Button.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * A pill-shaped action. Passing href renders a link instead of a button.

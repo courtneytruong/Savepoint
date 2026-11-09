@@ -4,9 +4,9 @@ import { LengthCounter } from './LengthCounter.jsx'
 import { MoodPicker } from './Mood.jsx'
 import styles from './ReflectionForm.module.css'
 import { TagInput } from './TagInput.jsx'
-import { classNames } from './classNames.js'
-import { showErrorsAndFocus } from './focusFirstProblem.js'
-import { MIN_NOTES_LENGTH, notesLength, validateReflection } from './reflectionRules.js'
+import { classNames } from '../utils/classNames.js'
+import { showErrorsAndFocus } from '../utils/focusFirstProblem.js'
+import { MIN_NOTES_LENGTH, notesLength, validateReflection } from '../rules/reflectionRules.js'
 
 /**
  * The mood, notes and tags of a reflection, without a form around them, so a larger

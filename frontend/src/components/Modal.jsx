@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import styles from './Modal.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { CloseIcon } from './icons.js'
 
 /**

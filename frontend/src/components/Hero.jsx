@@ -1,5 +1,5 @@
 import styles from './Hero.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * The top of a main page: centred intro text, with a panel underneath. The panel

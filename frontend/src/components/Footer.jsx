@@ -1,5 +1,5 @@
 import styles from './Footer.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * The bottom of every page. Children are links, and note is a short line under

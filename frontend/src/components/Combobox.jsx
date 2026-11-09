@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import fieldStyles from './Field.module.css'
 import styles from './Combobox.module.css'
-import { classNames } from './classNames.js'
-import { filterOptions } from './textSearch.js'
+import { classNames } from '../utils/classNames.js'
+import { filterOptions } from '../utils/textSearch.js'
 import { ExpandIcon, FinishedIcon } from './icons.js'
 import { Highlight } from './Highlight.jsx'
-import { useAnchoredPopup } from './useAnchoredPopup.js'
+import { useAnchoredPopup } from '../hooks/useAnchoredPopup.js'
 
 /**
  * A text field that suggests options as you type, for choosing from a list too

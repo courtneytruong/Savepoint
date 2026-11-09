@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AccountMenu } from './index.js'
+import { AccountMenu } from '../components/index.js'
 
 afterEach(cleanup)
 

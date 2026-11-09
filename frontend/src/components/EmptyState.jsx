@@ -1,5 +1,5 @@
 import styles from './EmptyState.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { Heading, Text } from './Typography.jsx'
 
 /**

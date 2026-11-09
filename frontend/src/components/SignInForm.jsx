@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Alert } from './Alert.jsx'
-import { SIGN_IN_ERRORS, validateSignIn } from './authRules.js'
+import { SIGN_IN_ERRORS, validateSignIn } from '../rules/authRules.js'
 import styles from './AuthForm.module.css'
 import { Button } from './Button.jsx'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { Input, PasswordField } from './Field.jsx'
-import { useAuthSubmit } from './useAuthSubmit.js'
+import { useAuthSubmit } from '../hooks/useAuthSubmit.js'
 
 // Problems with the whole sign-in, rather than one field, shown above the form.
 const FORM_ERRORS = {

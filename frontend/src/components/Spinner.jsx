@@ -1,5 +1,5 @@
 import styles from './Spinner.module.css'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 
 /**
  * Shows that something is working, when the shape of the result isn't known. For

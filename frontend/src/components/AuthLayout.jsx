@@ -1,6 +1,6 @@
 import styles from './AuthLayout.module.css'
 import { GlowFrame } from './Card.jsx'
-import { classNames } from './classNames.js'
+import { classNames } from '../utils/classNames.js'
 import { Heading, Text } from './Typography.jsx'
 
 /**

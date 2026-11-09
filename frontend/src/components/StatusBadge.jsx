@@ -1,5 +1,5 @@
 import { Badge } from './Badge.jsx'
-import { STATUSES } from './statuses.js'
+import { STATUSES } from '../rules/statuses.js'
 
 /** An item's status, with its color, icon and readable name. */
 export function StatusBadge({ status, ...props }) {
