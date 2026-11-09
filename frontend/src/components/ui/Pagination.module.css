@@ -1,0 +1,113 @@
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-12) var(--spacing-24);
+}
+
+.info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-12) var(--spacing-24);
+}
+
+.size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+/* A compact pill to match the page buttons, with the browser's own arrow. */
+.select {
+  height: 32px;
+  padding: 0 var(--spacing-8) 0 var(--spacing-12);
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+  background: transparent;
+  color: var(--color-soft-quartz);
+  font: inherit;
+  cursor: pointer;
+}
+
+.select:hover {
+  border-color: var(--color-lilac-beam);
+}
+
+.select option {
+  background: var(--color-night-violet);
+  color: var(--color-soft-quartz);
+}
+
+.summary {
+  margin: 0;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+.pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.page,
+.step {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 var(--spacing-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-buttons);
+  background: transparent;
+  color: var(--color-muted-steel);
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.step {
+  border-color: var(--color-glass-white-30);
+  font-size: var(--text-body);
+}
+
+.page:hover,
+.step:hover:not(:disabled) {
+  border-color: var(--color-lilac-beam);
+  color: var(--color-soft-quartz);
+}
+
+.step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.current,
+.current:hover {
+  border-color: var(--color-border-accent);
+  background: var(--color-tint-accent);
+  color: var(--color-soft-quartz);
+}
+
+.gap {
+  min-width: 24px;
+  color: var(--color-ash-lilac);
+  text-align: center;
+}

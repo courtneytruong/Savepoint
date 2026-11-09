@@ -76,18 +76,28 @@ erDiagram
 | Items | `Medium` | `Book` or `Game` |
 | StatusChanges | `Status` | `Backlog`, `InProgress`, `Finished` or `Dropped` |
 | RatingChanges | `Rating` | Whole number from 1 to 10 |
-| Sessions | `DurationMinutes` | Greater than 0 |
+| Sessions | `Date` | Not after today |
+| Sessions | `DurationMinutes` | Greater than 0, and at most 1440 (24 hours) |
 | Sessions | `PagesRead` | Optional, books only (enforced by the API) |
 | Reflections | `SessionId` | Optional and unique, so a session has at most one reflection |
 | Reflections | `Mood` | `Hooked`, `Delighted`, `Moved`, `Curious`, `Frustrated` or `Bored` |
 | Reflections | `Notes` | At least 20 characters after trimming whitespace |
 | Tags | `Name` | Unique per user |
+| Users | `DisplayName` | 1 to 50 characters after trimming whitespace |
 
 ## Decisions
 
-### One user for now, ready for more
+### Everyone's data is their own
 
-The app is built for a single user, with one seeded row in `Users`. Items and Tags carry a `UserId`, so authentication and more users can be added later. Other tables reach their user through their item, because repeating `UserId` would allow the values to disagree.
+Anyone who can reach the app can create an account, so each user's library is theirs alone. Items and Tags carry a `UserId`. Other tables reach their user through their item, because repeating `UserId` would allow the values to disagree.
+
+### Accounts
+
+People sign in with an email and a password, through ASP.NET Core Identity, which stores the email and the password's hash. How `Users` connects to Identity's tables is decided with the backend work.
+
+- An email can have only one account. The API says when an email is already in use, and when no account uses one, because a vague message only frustrates people, and creating an account already reveals which emails are taken. Repeated sign-in attempts are limited instead.
+- A password must be 12 to 128 characters, with no other rules. Rules about uppercase letters, digits and symbols make passwords harder to remember without making them much stronger, so current guidance (NIST SP 800-63B) asks for length instead. Spaces count, and a password is never trimmed.
+- There's no password reset by email yet, because the app runs locally without an email service.
 
 ### Every session has a reflection
 
@@ -100,6 +110,12 @@ A reflection requires a mood and notes. Without a minimum length, a required ref
 A reflection with no `SessionId` is a final thought or overall review. Because these still belong to an item, every reflection has an `ItemId`.
 
 A session's reflection must belong to the same item as the session. A composite foreign key from `Reflections (SessionId, ItemId)` to `Sessions (Id, ItemId)` enforces this, and PostgreSQL skips the check when `SessionId` is null. It requires a unique constraint on `Sessions (Id, ItemId)`.
+
+### Sessions are real days that have happened
+
+A session can't be dated after today, and can't be longer than the 24 hours of the day it's logged on.
+
+`Date` is the user's own calendar day, but the API runs in UTC, so its today can differ from the user's by up to a day either way. Until the app knows the user's time zone, the API allows dates up to one day after its own today. Rejecting a real session is worse than letting a slightly early one through.
 
 ### No reflection prompts
 

@@ -1,0 +1,125 @@
+.lead {
+  max-width: 640px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-20);
+}
+
+/* A table reaches the card's edges, so the card's padding comes off. */
+.flushCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.infoButton {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-ash-lilac);
+  font-size: 18px;
+  cursor: help;
+}
+
+.infoButton:hover {
+  color: var(--color-soft-quartz);
+}
+
+.verticalDemo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-16);
+}
+
+.icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--spacing-16);
+}
+
+.icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-8);
+  padding: var(--spacing-16) var(--spacing-8);
+  color: var(--color-soft-quartz);
+  font-size: var(--text-heading-sm);
+  text-align: center;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--element-gap);
+}
+
+.row:empty {
+  display: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: var(--spacing-24);
+}
+
+.overlay {
+  width: fit-content;
+  margin-top: var(--element-gap);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24);
+  max-width: 560px;
+}
+
+/* Only in the auth preview, which has no gallery around it to go back with. */
+.backLink {
+  position: fixed;
+  top: var(--spacing-16);
+  left: var(--spacing-16);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: 6px var(--spacing-12);
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+  background: var(--color-night-violet);
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--color-soft-quartz);
+}
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24);
+}

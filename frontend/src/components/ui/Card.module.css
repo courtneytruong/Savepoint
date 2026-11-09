@@ -1,0 +1,58 @@
+.card {
+  border: 1px solid var(--color-border-card);
+}
+
+/* Lit from its top edge, with a violet glow rather than a shadow. */
+.surface {
+  padding: var(--card-padding);
+  border-radius: var(--radius-cards);
+  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-10),
+    0 0 40px -12px var(--color-card-glow);
+}
+
+.frosted {
+  padding: var(--card-padding);
+  border-radius: var(--radius-cards);
+  background: var(--color-card-frosted);
+  backdrop-filter: blur(4px);
+}
+
+.overlay {
+  padding: var(--spacing-12) var(--spacing-16);
+  border-radius: var(--radius-overlay-cards);
+  background: var(--color-card-overlay);
+  backdrop-filter: blur(8px);
+}
+
+.glowFrame {
+  position: relative;
+  /* Keeps the glow behind this frame, without going behind the page itself. */
+  isolation: isolate;
+}
+
+/* A soft halo beside the panel, fading out on every side so it has no visible edge. */
+.glowFrame::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -240px -120px -64px;
+  background: radial-gradient(ellipse 50% 50% at 50% 40%, rgba(73, 38, 147, 0.5), transparent);
+  pointer-events: none;
+}
+
+/* Glass: the glow shows through at the top centre, and the panel settles below it. */
+.glowFrameContent {
+  overflow: hidden;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-cards);
+  background:
+    radial-gradient(ellipse 45% 96px at 50% 0, rgba(207, 164, 243, 0.55), transparent),
+    linear-gradient(180deg, var(--color-panel-top), var(--color-panel-bottom));
+  backdrop-filter: blur(8px);
+}
+
+.padded {
+  padding: var(--card-padding);
+}

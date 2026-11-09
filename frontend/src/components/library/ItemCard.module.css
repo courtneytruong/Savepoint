@@ -1,0 +1,144 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  gap: var(--spacing-16);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  padding: var(--spacing-20);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-cards);
+  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
+  box-shadow: inset 0 1px 0 var(--color-glass-white-10);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.card:hover {
+  border-color: var(--color-border-accent);
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-10),
+    0 0 32px -8px var(--color-horizon-glow);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-12);
+}
+
+.well {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border-accent);
+  border-radius: 50%;
+  background: var(--color-tint-accent);
+  color: var(--color-soft-quartz);
+  font-size: 20px;
+}
+
+.medium {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+/* Beside its well, the type doesn't need a second icon. */
+.top .medium svg {
+  display: none;
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  color: var(--color-soft-quartz);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+.top .rating {
+  margin-inline-start: auto;
+}
+
+.outOf {
+  color: var(--color-ash-lilac);
+  font-weight: var(--font-weight-regular);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-subheading);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.33;
+  letter-spacing: var(--tracking-subheading);
+}
+
+.link {
+  color: var(--color-soft-quartz);
+  text-decoration: none;
+}
+
+/* Stretches the link's click area over the whole card. */
+.link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-cards);
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+.link:focus-visible::after {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.creator {
+  margin: var(--spacing-4) 0 0;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+/* Up to three lines of the latest reflection, the heart of the item. */
+.excerpt {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  line-height: 20px;
+  letter-spacing: var(--tracking-caption);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+  margin-top: auto;
+}

@@ -1,0 +1,76 @@
+/* Tinted glass in the tone's color, like the badges, with the icon carrying the
+   color so the text stays easy to read. */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-12);
+  padding: var(--spacing-12) var(--spacing-16);
+  border: 1px solid var(--alert-border);
+  border-radius: var(--radius-overlay-cards);
+  background: var(--alert-tint);
+  color: var(--color-soft-quartz);
+  font-size: var(--text-caption);
+  line-height: 20px;
+  letter-spacing: var(--tracking-caption);
+}
+
+.alert:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.error {
+  --alert-border: var(--color-border-danger);
+  --alert-tint: var(--color-tint-danger);
+  --alert-color: var(--color-danger);
+}
+
+.warning {
+  --alert-border: var(--color-border-warning);
+  --alert-tint: var(--color-tint-warning);
+  --alert-color: var(--color-warning);
+}
+
+.success {
+  --alert-border: var(--color-border-success);
+  --alert-tint: var(--color-tint-success);
+  --alert-color: var(--color-success);
+}
+
+.info {
+  --alert-border: var(--color-border-accent);
+  --alert-tint: var(--color-tint-accent);
+  --alert-color: var(--color-lilac-beam);
+}
+
+.icon {
+  flex-shrink: 0;
+  /* Lines the icon up with the first line of text. */
+  margin-top: 2px;
+  color: var(--alert-color);
+  font-size: 16px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.body {
+  color: var(--color-muted-steel);
+}
+
+.body p {
+  margin: 0;
+}
+
+.body a {
+  color: var(--color-lilac-beam);
+}

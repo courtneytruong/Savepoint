@@ -1,0 +1,163 @@
+.timeline {
+  --date-width: 56px;
+  --node-size: 32px;
+  --column-gap: var(--spacing-16);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-32);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+/* Each month starts with a small lit label, lined up with the line below it. */
+.month {
+  align-self: flex-start;
+  margin: 0 0 0 calc(var(--date-width) + var(--column-gap) - var(--spacing-8));
+  padding: var(--spacing-4) var(--spacing-12);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-badges);
+  background: var(--color-card-frosted);
+  color: var(--color-soft-quartz);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: 0.48px;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--date-width) var(--node-size) minmax(0, 1fr);
+  column-gap: var(--column-gap);
+  padding-bottom: var(--spacing-20);
+}
+
+/* The line runs down through every dot, and stops at the month's last one. */
+.entry::before {
+  content: '';
+  position: absolute;
+  top: var(--node-size);
+  bottom: 0;
+  left: calc(var(--date-width) + var(--column-gap) + var(--node-size) / 2 - 1px);
+  width: 2px;
+  background: var(--color-border-card);
+}
+
+.entry:last-child {
+  padding-bottom: 0;
+}
+
+.entry:last-child::before {
+  display: none;
+}
+
+.date {
+  padding-top: 7px;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.node {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--node-size);
+  height: var(--node-size);
+  border: 1px solid color-mix(in srgb, var(--node-color, var(--color-lilac-beam)) 70%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--node-color, var(--color-lilac-beam)) 22%, var(--color-void-plum));
+  box-shadow: 0 0 16px -4px var(--node-color, var(--color-horizon-glow));
+  color: var(--node-color, var(--color-lilac-beam));
+  font-size: 16px;
+}
+
+.body {
+  min-width: 0;
+}
+
+/* Status and rating changes are a single line, lighter than a session. */
+.change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8) var(--spacing-12);
+  min-height: var(--node-size);
+  margin: 0;
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+.value {
+  color: var(--color-soft-quartz);
+  font-weight: var(--font-weight-medium);
+}
+
+.old {
+  color: var(--color-ash-lilac);
+}
+
+/* A second entry on the same day doesn't repeat the date on screen. Screen readers
+   still hear it, so every entry can be understood on its own. */
+@media (min-width: 601px) {
+  .sameDay {
+    opacity: 0;
+  }
+}
+
+/* On phones the date moves above each entry, so the cards keep their width. */
+@media (max-width: 600px) {
+  .timeline {
+    --column-gap: var(--spacing-12);
+    --node-size: 28px;
+  }
+
+  .month {
+    margin-left: 0;
+  }
+
+  .entry {
+    grid-template-columns: var(--node-size) minmax(0, 1fr);
+    grid-template-areas:
+      'node date'
+      'node body';
+  }
+
+  .entry::before {
+    left: calc(var(--node-size) / 2 - 1px);
+  }
+
+  .date {
+    grid-area: date;
+    padding: 0 0 var(--spacing-8);
+    text-align: left;
+  }
+
+  .node {
+    grid-area: node;
+    font-size: 14px;
+  }
+
+  .body {
+    grid-area: body;
+  }
+}

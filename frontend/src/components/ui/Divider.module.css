@@ -1,0 +1,36 @@
+.divider {
+  flex-shrink: 0;
+  margin: 0;
+  border: 0;
+  --direction: 90deg;
+}
+
+.horizontal {
+  width: 100%;
+  height: 1px;
+}
+
+.vertical {
+  --direction: 180deg;
+  align-self: stretch;
+  width: 1px;
+  height: auto;
+}
+
+.hairline {
+  background: var(--color-hairline);
+}
+
+.fade {
+  background: linear-gradient(var(--direction), transparent, var(--color-border-card) 50%, transparent);
+}
+
+.beam {
+  background: linear-gradient(
+    var(--direction),
+    transparent,
+    var(--color-lilac-beam) 40%,
+    var(--color-horizon-glow) 60%,
+    transparent
+  );
+}

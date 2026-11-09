@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Heading, Section } from './components/index.js'
 
 const MESSAGES = {
   checking: 'Checking...',
@@ -35,12 +36,14 @@ function App() {
   }, [])
 
   return (
-    <main>
-      <h1>Savepoint</h1>
+    <Section as="main">
+      <Heading as="h1" size="large">
+        Savepoint
+      </Heading>
       <p className={`status status-${status}`} role="status">
         {MESSAGES[status]}
       </p>
-    </main>
+    </Section>
   )
 }
 

@@ -1,0 +1,93 @@
+/* A pill, like the filter pills it sits near, so it reads as a control rather than a form field. */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.icon {
+  position: absolute;
+  left: 16px;
+  color: var(--color-ash-lilac);
+  font-size: 16px;
+  pointer-events: none;
+  transition: color 150ms ease;
+}
+
+.input {
+  width: 100%;
+  height: 40px;
+  padding: 0 40px 0 42px;
+  border: 1px solid var(--color-glass-white-30);
+  border-radius: var(--radius-buttons);
+  background: var(--color-glass-white-04);
+  color: var(--color-soft-quartz);
+  font: inherit;
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-caption);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/* The browser's own clear button would sit beside ours. */
+.input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.input::placeholder {
+  color: var(--color-ash-lilac);
+  opacity: 1;
+}
+
+.input:hover {
+  border-color: var(--color-lilac-beam);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--color-lilac-beam);
+  background: var(--color-glass-white-08);
+  box-shadow:
+    0 0 0 1px var(--color-lilac-beam),
+    0 0 24px -6px var(--color-horizon-glow);
+}
+
+.search:focus-within .icon {
+  color: var(--color-lilac-beam);
+}
+
+.clear {
+  position: absolute;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted-steel);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.clear:hover {
+  background: var(--color-glass-white-10);
+  color: var(--color-soft-quartz);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

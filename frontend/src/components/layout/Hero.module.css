@@ -1,0 +1,28 @@
+/* The panel's light reaches past the page edges, which shouldn't make it scroll sideways. */
+.hero {
+  overflow-x: clip;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--spacing-96), 13vw, 172px);
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  padding: clamp(var(--spacing-64), 8vw, 120px) var(--page-gutter) 0;
+}
+
+/* Positioned so the text stays above the light rising from the panel below. */
+.intro {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-24);
+  text-align: center;
+}
+
+.panel {
+  width: 100%;
+}

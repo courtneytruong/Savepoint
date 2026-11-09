@@ -1,0 +1,54 @@
+/* Wider than the panel, and its base slightly overlaps the panel's top edge. */
+.horizon {
+  position: absolute;
+  z-index: -1;
+  left: -17%;
+  bottom: calc(100% - 24px);
+  width: 134%;
+  height: clamp(280px, 44vw, 560px);
+  pointer-events: none;
+}
+
+.art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* The lines fade out as they rise away from the glow. */
+  mask-image: linear-gradient(180deg, transparent, black 45%, black 80%, transparent);
+}
+
+.lines {
+  fill: none;
+  stroke: var(--color-glass-white-10);
+  stroke-width: 1;
+}
+
+.speck {
+  fill: var(--color-soft-quartz);
+}
+
+/*
+ * A whole ellipse centred on the panel's top edge, so it fades out on every side
+ * instead of being cut off in a line. The panel covers its lower half. The color
+ * stops are measured from the reference, going up from the panel's edge.
+ */
+.bloom {
+  --bloom-reach: clamp(150px, 19vw, 270px);
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: calc(24px - var(--bloom-reach));
+  height: calc(var(--bloom-reach) * 2);
+  background: radial-gradient(
+    ellipse 50% 50% at 50% 50%,
+    var(--color-bloom-core) 0%,
+    var(--color-bloom-core) 12%,
+    var(--color-bloom-hot) 22%,
+    var(--color-bloom-magenta) 31%,
+    var(--color-bloom-violet) 40%,
+    var(--color-bloom-deep) 50%,
+    var(--color-bloom-edge) 64%,
+    transparent 100%
+  );
+}

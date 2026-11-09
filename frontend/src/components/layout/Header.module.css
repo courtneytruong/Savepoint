@@ -1,0 +1,85 @@
+/*
+ * A full-width band across the top of the page, matching the footer: a line from
+ * edge to edge and a slightly lit glass surface. The content inside lines up with
+ * the rest of the page.
+ */
+.header {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding-inline: var(--page-gutter);
+  border-bottom: 1px solid var(--color-border-card);
+  background: linear-gradient(180deg, rgba(42, 33, 88, 0.5), rgba(19, 19, 43, 0.35));
+  box-shadow:
+    inset 0 -1px 0 var(--color-glass-white-04),
+    0 8px 32px -16px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+/* Equal outer columns keep the links centred on the page, whatever is beside them. */
+.inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-areas: 'brand nav actions';
+  align-items: center;
+  gap: var(--spacing-8) var(--spacing-24);
+  min-height: 78px;
+  max-width: calc(var(--page-max-width) - 2 * var(--page-gutter));
+  margin-inline: auto;
+  padding-block: var(--spacing-12);
+}
+
+.brand {
+  grid-area: brand;
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-size: var(--text-subheading);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+}
+
+.brand a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nav {
+  grid-area: nav;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-32);
+}
+
+.nav a {
+  color: var(--color-ash-lilac);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.nav a:hover,
+.nav a[aria-current='page'] {
+  color: var(--color-soft-quartz);
+}
+
+.actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-12);
+}
+
+/* Too narrow for three columns, so the links get their own row. */
+@media (max-width: 640px) {
+  .inner {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'brand actions'
+      'nav nav';
+  }
+
+  .nav {
+    gap: var(--spacing-20);
+  }
+}

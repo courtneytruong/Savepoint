@@ -1,0 +1,113 @@
+.region {
+  position: fixed;
+  z-index: 100;
+  right: var(--spacing-24);
+  bottom: var(--spacing-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+  width: min(380px, 100vw - 32px);
+  /* Clicks in the empty space between toasts reach the page. */
+  pointer-events: none;
+}
+
+.toast {
+  --accent: var(--color-lilac-beam);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-12);
+  padding: var(--spacing-16);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-overlay-cards);
+  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-10),
+    0 0 40px -10px var(--color-horizon-glow);
+  pointer-events: auto;
+  animation: slideIn 200ms ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+.success {
+  --accent: var(--color-success);
+  border-color: var(--color-border-success);
+}
+
+.error {
+  --accent: var(--color-danger);
+  border-color: var(--color-border-danger);
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 20px;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-soft-quartz);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: 20px;
+  letter-spacing: var(--tracking-caption);
+}
+
+.description {
+  margin: var(--spacing-4) 0 0;
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  line-height: 20px;
+  letter-spacing: var(--tracking-caption);
+}
+
+.action {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-lilac-beam);
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.action:hover {
+  color: var(--color-soft-quartz);
+  text-decoration: underline;
+}
+
+.dismiss {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-body);
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--color-soft-quartz);
+}

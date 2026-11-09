@@ -1,0 +1,94 @@
+.wrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  letter-spacing: var(--tracking-caption);
+  text-align: left;
+}
+
+.table th {
+  padding: var(--spacing-16) var(--spacing-24);
+  color: var(--color-ash-lilac);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+/* Fills the header cell's text area, so the whole header is the click target. */
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.sortButton svg {
+  opacity: 0.6;
+}
+
+.sortButton:hover {
+  background: var(--color-glass-white-04);
+  color: var(--color-soft-quartz);
+}
+
+.sorted {
+  color: var(--color-soft-quartz);
+}
+
+.sorted svg {
+  color: var(--color-lilac-beam);
+  opacity: 1;
+}
+
+.table td {
+  padding: var(--spacing-12) var(--spacing-24);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.table tbody tr:hover {
+  background: var(--color-glass-white-04);
+}
+
+.table .alignEnd {
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .table .hideOnMobile {
+    display: none;
+  }
+
+  .table th,
+  .table td {
+    padding-inline: var(--spacing-16);
+  }
+}
+
+/* Read by screen readers, but takes up no space on screen. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

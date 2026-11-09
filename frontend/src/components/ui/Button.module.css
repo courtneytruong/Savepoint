@@ -1,0 +1,113 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-buttons);
+  background: transparent;
+  color: var(--color-soft-quartz);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease,
+    filter 150ms ease;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Lit violet glass with its own glow, so there's only one obvious main action. */
+.primary {
+  padding: 10px var(--spacing-24);
+  border-color: rgba(183, 164, 251, 0.45);
+  background: linear-gradient(180deg, rgba(133, 98, 255, 0.6), rgba(113, 61, 255, 0.4));
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-30),
+    0 0 24px -6px var(--color-horizon-glow);
+}
+
+.primary:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--color-lilac-beam);
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-30),
+    0 0 32px -2px var(--color-horizon-glow);
+  filter: brightness(1.12);
+}
+
+/* Red glass, so an action that deletes something can't be mistaken for any other. */
+.danger {
+  padding: 10px var(--spacing-24);
+  border-color: var(--color-border-danger);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.62), rgba(190, 30, 60, 0.5));
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-30),
+    0 0 24px -6px rgba(239, 68, 68, 0.7);
+}
+
+.danger:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--color-danger);
+  box-shadow:
+    inset 0 1px 0 var(--color-glass-white-30),
+    0 0 32px -2px rgba(239, 68, 68, 0.8);
+  filter: brightness(1.12);
+}
+
+/* A quiet frame with muted text, which brightens when it's about to be used. */
+.outline {
+  padding: 6px var(--spacing-16);
+  border-color: var(--color-glass-white-30);
+  color: var(--color-ash-lilac);
+}
+
+.outline:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--color-soft-quartz);
+  color: var(--color-soft-quartz);
+}
+
+/* Just the words, with no frame or fill until hovered. */
+.text {
+  padding: 6px var(--spacing-12);
+}
+
+.text:hover:not(:disabled, [aria-disabled='true']) {
+  color: var(--color-lilac-beam);
+}
+
+/* Still focusable while working, but shown as busy and not pressable. */
+.loading {
+  cursor: progress;
+}
+
+.spinner {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Without motion, the ring stays still and still shows that it's busy. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.6;
+  }
+}

@@ -46,6 +46,8 @@ npm run dev
 
 Open <http://localhost:5173>.
 
+To see every component in the library, open <http://localhost:5173/components>. This page only exists while running outside Docker with `npm run dev`, and isn't part of the production build.
+
 ## Run the API outside Docker (optional)
 
 This needs the .NET 10 SDK, and the database still runs in Docker.
