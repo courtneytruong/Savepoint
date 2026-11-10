@@ -22,6 +22,10 @@ builder.Services.AddDbContext<SavepointDbContext>((services, options) =>
 
 builder.Services.AddAccounts();
 
+// Error answers, including ones ASP.NET Core makes itself, such as for a request
+// body that isn't JSON, come back as Problem Details.
+builder.Services.AddProblemDetails();
+
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgres", timeout: TimeSpan.FromSeconds(5));
 
@@ -43,5 +47,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
+app.MapAuthEndpoints();
 
 app.Run();
