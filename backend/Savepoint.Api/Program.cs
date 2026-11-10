@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Savepoint.Api.Accounts;
 using Savepoint.Api.Data;
 using Savepoint.Api.Health;
 
@@ -19,6 +20,8 @@ builder.Services.AddNpgsqlDataSource(connectionString);
 builder.Services.AddDbContext<SavepointDbContext>((services, options) =>
     options.UseNpgsql(services.GetRequiredService<NpgsqlDataSource>()));
 
+builder.Services.AddAccounts();
+
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgres", timeout: TimeSpan.FromSeconds(5));
 
@@ -34,6 +37,10 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     var db = scope.ServiceProvider.GetRequiredService<SavepointDbContext>();
     await db.Database.MigrateAsync();
 }
+
+// Reads the sign-in cookie to work out who's asking, then checks they're allowed.
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 
