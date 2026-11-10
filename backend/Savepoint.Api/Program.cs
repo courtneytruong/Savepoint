@@ -24,6 +24,17 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+// Compose turns this on, so a fresh database gets its tables when the API starts.
+// It's off by default, so the API can still start and report an unreachable
+// database through /health. Without Compose, apply migrations with
+// dotnet ef database update.
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<SavepointDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 app.MapHealthChecks("/health");
 
 app.Run();
