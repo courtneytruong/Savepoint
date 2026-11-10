@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using Savepoint.Api.Data;
 using Savepoint.Api.Health;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +13,11 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 builder.Services.AddNpgsqlDataSource(connectionString);
+
+// EF Core uses the same data source as the health check, so the app has one
+// connection pool, and /health checks the very connections the app relies on.
+builder.Services.AddDbContext<SavepointDbContext>((services, options) =>
+    options.UseNpgsql(services.GetRequiredService<NpgsqlDataSource>()));
 
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgres", timeout: TimeSpan.FromSeconds(5));
