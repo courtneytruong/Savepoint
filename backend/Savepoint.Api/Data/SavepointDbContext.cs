@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
@@ -9,8 +10,14 @@ namespace Savepoint.Api.Data;
 /// tables, because Savepoint has no roles: everyone's data is simply their own.
 /// </summary>
 public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
-    : IdentityUserContext<User, Guid>(options)
+    : IdentityUserContext<User, Guid>(options), IDataProtectionKeyContext
 {
+    /// <summary>
+    /// The keys that encrypt the sign-in cookie. Kept here rather than in the
+    /// container, so rebuilding the API doesn't sign everyone out.
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         // Identity's own setup comes first, so the lines below can adjust it.

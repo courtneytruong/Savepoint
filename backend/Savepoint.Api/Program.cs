@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Savepoint.Api.Accounts;
 using Savepoint.Api.Data;
 using Savepoint.Api.Health;
 
@@ -19,6 +20,12 @@ builder.Services.AddNpgsqlDataSource(connectionString);
 builder.Services.AddDbContext<SavepointDbContext>((services, options) =>
     options.UseNpgsql(services.GetRequiredService<NpgsqlDataSource>()));
 
+builder.Services.AddAccounts();
+
+// Error answers, including ones ASP.NET Core makes itself, such as for a request
+// body that isn't JSON, come back as Problem Details.
+builder.Services.AddProblemDetails();
+
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgres", timeout: TimeSpan.FromSeconds(5));
 
@@ -35,6 +42,15 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     await db.Database.MigrateAsync();
 }
 
+// Gives error answers with no body, such as a 401 for not being signed in, a
+// Problem Details body, so every error the frontend sees has the same shape.
+app.UseStatusCodePages();
+
+// Reads the sign-in cookie to work out who's asking, then checks they're allowed.
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapHealthChecks("/health");
+app.MapAuthEndpoints();
 
 app.Run();
