@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
@@ -18,6 +19,10 @@ public static partial class AuthEndpoints
         var auth = app.MapGroup("/api/auth");
         auth.MapPost("/register", Register);
         auth.MapPost("/sign-in", SignIn);
+        auth.MapPost("/sign-out", SignOut);
+        // The only endpoint here that needs a signed-in user. Without one, the cookie
+        // setup in AccountsSetup answers 401.
+        auth.MapGet("/me", Me).RequireAuthorization();
         return app;
     }
 
@@ -139,6 +144,30 @@ public static partial class AuthEndpoints
                 extensions: new Dictionary<string, object?> { ["error"] = "tooManyTries", ["retryAfterSeconds"] = seconds });
         }
         return SignInFailed("That password is wrong.", "wrongPassword");
+    }
+
+    /// <summary>
+    /// Signs out by telling the browser to delete the cookie. 204 whether or not
+    /// anyone was signed in, so signing out twice is never an error.
+    /// </summary>
+    private static async Task<NoContent> SignOut(SignInManager<User> signIn)
+    {
+        await signIn.SignOutAsync();
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>
+    /// Who's signed in: 200 with the account, or 401. The frontend asks when the
+    /// app loads, to choose between the account menu and the sign-in page.
+    /// </summary>
+    private static async Task<Results<Ok<AccountResponse>, UnauthorizedHttpResult>> Me(
+        ClaimsPrincipal principal, UserManager<User> users)
+    {
+        // The cookie only holds the user's id, so the name and email are read fresh,
+        // and an account deleted since signing in counts as signed out.
+        var user = await users.GetUserAsync(principal);
+        if (user is null) return TypedResults.Unauthorized();
+        return TypedResults.Ok(new AccountResponse(user.Id, user.DisplayName, user.Email!));
     }
 
     private static ProblemHttpResult SignInFailed(string title, string error) => TypedResults.Problem(

@@ -42,6 +42,10 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     await db.Database.MigrateAsync();
 }
 
+// Gives error answers with no body, such as a 401 for not being signed in, a
+// Problem Details body, so every error the frontend sees has the same shape.
+app.UseStatusCodePages();
+
 // Reads the sign-in cookie to work out who's asking, then checks they're allowed.
 app.UseAuthentication();
 app.UseAuthorization();
