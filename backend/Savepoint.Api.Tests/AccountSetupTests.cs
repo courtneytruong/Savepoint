@@ -13,7 +13,7 @@ public sealed class AccountSetupTests : IAsyncDisposable
 
     public AccountSetupTests(PostgresFixture postgres)
     {
-        factory = new ApiFactory(postgres.ConnectionString, migrateOnStartup: true);
+        factory = new ApiFactory(postgres.ConnectionString);
         scope = factory.Services.CreateAsyncScope();
         users = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
     }

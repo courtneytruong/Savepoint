@@ -11,7 +11,9 @@ public class DatabaseTests(PostgresFixture postgres)
     [Fact]
     public async Task Applies_every_migration_on_startup()
     {
-        await using var factory = new ApiFactory(postgres.ConnectionString, migrateOnStartup: true);
+        // An empty database of its own, because the shared one is already migrated.
+        var emptyDatabase = await postgres.CreateEmptyDatabaseAsync();
+        await using var factory = new ApiFactory(emptyDatabase, migrateOnStartup: true);
         // The API starts, and so migrates, the first time a client is requested.
         using var client = factory.CreateClient();
         var cancellationToken = TestContext.Current.CancellationToken;

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Savepoint.Api.Data;
 
@@ -35,6 +36,14 @@ public static class AccountsSetup
             })
             .AddEntityFrameworkStores<SavepointDbContext>()
             .AddSignInManager();
+
+        // The sign-in cookie is encrypted with keys ASP.NET Core makes and rotates
+        // itself. Stored in the database, they outlive the container, so rebuilding
+        // the API doesn't sign everyone out. The application name keeps the keys
+        // tied to Savepoint, rather than to the folder the app happens to run from.
+        services.AddDataProtection()
+            .PersistKeysToDbContext<SavepointDbContext>()
+            .SetApplicationName("Savepoint");
 
         // All of Identity's cookie schemes, because signing out clears every one of
         // them, but only the application cookie, which says who is signed in, is used.
