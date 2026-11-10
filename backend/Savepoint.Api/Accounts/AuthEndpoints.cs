@@ -17,11 +17,14 @@ public static partial class AuthEndpoints
     {
         var auth = app.MapGroup("/api/auth");
         auth.MapPost("/register", Register);
+        auth.MapPost("/sign-in", SignIn);
         return app;
     }
 
     // Nullable, so a missing field gets a "required" answer rather than a failed request.
     public record RegisterRequest(string? DisplayName, string? Email, string? Password);
+
+    public record SignInRequest(string? Email, string? Password);
 
     public record AccountResponse(Guid Id, string DisplayName, string Email);
 
@@ -91,6 +94,57 @@ public static partial class AuthEndpoints
         await signIn.SignInAsync(user, isPersistent: true);
         return TypedResults.Created("/api/auth/me", new AccountResponse(user.Id, user.DisplayName, user.Email!));
     }
+
+    /// <summary>
+    /// Signs in with an email and password. 200 with the account, 401 unknownEmail
+    /// or wrongPassword, 429 tooManyTries while locked out, with the seconds left in
+    /// both a Retry-After header and retryAfterSeconds, or 400 with a code per field.
+    /// </summary>
+    private static async Task<Results<Ok<AccountResponse>, ValidationProblem, ProblemHttpResult>> SignIn(
+        SignInRequest request, UserManager<User> users, SignInManager<User> signIn, HttpResponse response)
+    {
+        var email = request.Email?.Trim() ?? "";
+        var password = request.Password ?? "";
+
+        // Only what's needed to try: a password's length is checked when it's chosen.
+        var errors = new Dictionary<string, string[]>();
+        if (email.Length == 0) errors["email"] = ["required"];
+        else if (!LooksLikeEmail().IsMatch(email)) errors["email"] = ["invalid"];
+        if (password.Length == 0) errors["password"] = ["required"];
+        if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
+
+        // Matches the email in any case, through Identity's normalized column.
+        var user = await users.FindByEmailAsync(email);
+        if (user is null)
+        {
+            return SignInFailed("No account uses that email.", "unknownEmail");
+        }
+
+        // lockoutOnFailure counts the wrong password toward the lockout. The try that
+        // reaches the limit already comes back as locked out, not as a wrong password.
+        var result = await signIn.PasswordSignInAsync(user, password, isPersistent: true, lockoutOnFailure: true);
+        if (result.Succeeded)
+        {
+            return TypedResults.Ok(new AccountResponse(user.Id, user.DisplayName, user.Email!));
+        }
+        if (result.IsLockedOut)
+        {
+            var lockoutEnd = await users.GetLockoutEndDateAsync(user) ?? DateTimeOffset.UtcNow;
+            // Rounded up, so waiting exactly this long is always enough.
+            var seconds = Math.Max(1, (int)Math.Ceiling((lockoutEnd - DateTimeOffset.UtcNow).TotalSeconds));
+            response.Headers.RetryAfter = seconds.ToString();
+            return TypedResults.Problem(
+                title: "Too many tries. Signing in is paused for this account.",
+                statusCode: StatusCodes.Status429TooManyRequests,
+                extensions: new Dictionary<string, object?> { ["error"] = "tooManyTries", ["retryAfterSeconds"] = seconds });
+        }
+        return SignInFailed("That password is wrong.", "wrongPassword");
+    }
+
+    private static ProblemHttpResult SignInFailed(string title, string error) => TypedResults.Problem(
+        title: title,
+        statusCode: StatusCodes.Status401Unauthorized,
+        extensions: new Dictionary<string, object?> { ["error"] = error });
 
     private static ProblemHttpResult EmailTaken() => TypedResults.Problem(
         title: "That email already has an account.",
