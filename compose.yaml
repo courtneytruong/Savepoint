@@ -26,6 +26,9 @@ services:
       # Inside Compose's network, the database is reached by its service name.
       # The double underscore maps to the ConnectionStrings:Savepoint setting.
       ConnectionStrings__Savepoint: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      # Applies any new migrations when the API starts, so a fresh database, as
+      # in CI, gets its tables. depends_on below waits until the database is ready.
+      Database__MigrateOnStartup: "true"
     ports:
       # Bound to 127.0.0.1 so only this machine can reach the API.
       - "127.0.0.1:8080:8080"
