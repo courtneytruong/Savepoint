@@ -1,0 +1,111 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
+using Savepoint.Api.Accounts;
+using Savepoint.Api.Data;
+
+namespace Savepoint.Api.Library;
+
+/// <summary>
+/// The signed-in person's library, under /api/items. Every endpoint needs someone
+/// signed in, and only ever sees that person's items. Errors are Problem Details,
+/// with the same field codes as /api/auth: required, tooLong and invalid.
+/// </summary>
+public static class ItemEndpoints
+{
+    public static IEndpointRouteBuilder MapItemEndpoints(this IEndpointRouteBuilder app)
+    {
+        var items = app.MapGroup("/api/items").RequireAuthorization();
+        items.MapPost("/", Create);
+        return app;
+    }
+
+    // Strings rather than enums, and nullable, so a missing or unknown value gets a
+    // field code rather than a request the JSON reader refuses outright.
+    public record CreateItemRequest(string? Medium, string? Title, string? Creator, string? Status);
+
+    /// <summary>
+    /// An item as the frontend sees it, with its current status: the newest of its
+    /// status changes, and when that happened.
+    /// </summary>
+    public record ItemResponse(
+        Guid Id,
+        string Medium,
+        string Title,
+        string? Creator,
+        string Status,
+        DateTimeOffset StatusChangedAt,
+        DateTimeOffset CreatedAt);
+
+    /// <summary>
+    /// Adds an item with its first status, Backlog unless the request says otherwise,
+    /// since people often add what they're already in the middle of. 201 with the
+    /// item, or 400 with a code per field.
+    /// </summary>
+    private static async Task<Results<Created<ItemResponse>, ValidationProblem>> Create(
+        CreateItemRequest request, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var title = request.Title?.Trim() ?? "";
+        // An empty creator means none is known, saved as null.
+        var creator = string.IsNullOrWhiteSpace(request.Creator) ? null : request.Creator.Trim();
+
+        var errors = new Dictionary<string, string[]>();
+
+        Medium medium = default;
+        if (request.Medium is null) errors["medium"] = ["required"];
+        else if (!TryParseName(request.Medium, out medium)) errors["medium"] = ["invalid"];
+
+        if (title.Length == 0) errors["title"] = ["required"];
+        else if (title.Length > LibraryRules.MaxTitleLength) errors["title"] = ["tooLong"];
+
+        if (creator?.Length > LibraryRules.MaxCreatorLength) errors["creator"] = ["tooLong"];
+
+        var status = ItemStatus.Backlog;
+        if (request.Status is not null && !TryParseName(request.Status, out status)) errors["status"] = ["invalid"];
+
+        if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
+
+        var item = new Item
+        {
+            UserId = CurrentUserId(principal, users),
+            Medium = medium,
+            Title = title,
+            Creator = creator,
+            StatusChanges = { new StatusChange { Status = status } },
+        };
+        // One save, so the item and its first status are one transaction: both are
+        // saved, or neither is.
+        db.Items.Add(item);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return TypedResults.Created($"/api/items/{item.Id}", ToResponse(item));
+    }
+
+    private static ItemResponse ToResponse(Item item)
+    {
+        // Newest by time, then by id, since ids are made in time order.
+        var current = item.StatusChanges.OrderBy(s => s.ChangedAt).ThenBy(s => s.Id).Last();
+        return new ItemResponse(
+            item.Id,
+            item.Medium.ToString(),
+            item.Title,
+            item.Creator,
+            current.Status.ToString(),
+            current.ChangedAt,
+            item.CreatedAt);
+    }
+
+    // Only the exact names, such as "InProgress". Enum.TryParse alone would also take
+    // "inprogress" with ignoreCase, or a number like "1".
+    private static bool TryParseName<TEnum>(string value, out TEnum parsed) where TEnum : struct, Enum
+    {
+        parsed = default;
+        return Enum.GetNames<TEnum>().Contains(value) && Enum.TryParse(value, out parsed);
+    }
+
+    // The group requires someone signed in, so the cookie always holds their id.
+    private static Guid CurrentUserId(ClaimsPrincipal principal, UserManager<User> users) =>
+        Guid.Parse(users.GetUserId(principal)
+            ?? throw new InvalidOperationException("A signed-in request had no user id."));
+}
