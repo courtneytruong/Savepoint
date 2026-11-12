@@ -12,6 +12,18 @@ export async function getItems({ signal } = {}) {
 }
 
 /**
+ * One item, in the shape getItems gives, or null when there's no such item in
+ * this library: the API answers 404 for other people's items too. Throws on any
+ * other answer, as when the server fails or can't be reached.
+ */
+export async function getItem(id, { signal } = {}) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}`, { signal })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`Loading an item got ${response.status}`)
+  return response.json()
+}
+
+/**
  * Adds an item to the library. Resolves with { item }, in the shape getItems
  * gives, or { error: 'failed' } for any other answer: the form checks the same
  * rules first, so a 400 means they've drifted apart. If the server can't be

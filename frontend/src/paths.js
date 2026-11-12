@@ -14,3 +14,8 @@ export function libraryPath({ medium = null, status = null } = {}) {
   const query = params.toString()
   return query ? `${LIBRARY_PATH}?${query}` : LIBRARY_PATH
 }
+
+/** An item's own page. */
+export function itemPath(id) {
+  return `/items/${encodeURIComponent(id)}`
+}
