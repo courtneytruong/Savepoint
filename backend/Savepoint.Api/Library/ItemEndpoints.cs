@@ -23,6 +23,7 @@ public static class ItemEndpoints
         items.MapPost("/", Create);
         items.MapPut("/{id:guid}", Update);
         items.MapPost("/{id:guid}/status", ChangeStatus);
+        items.MapDelete("/{id:guid}", Delete);
         return app;
     }
 
@@ -192,6 +193,23 @@ public static class ItemEndpoints
         await db.SaveChangesAsync(cancellationToken);
 
         return TypedResults.Ok(ToResponse(row.Item, change));
+    }
+
+    /// <summary>
+    /// Deletes an item, and through the database's cascade, its whole history. 204,
+    /// or 404 as for Get, which includes deleting the same item a second time.
+    /// </summary>
+    private static async Task<Results<NoContent, NotFound>> Delete(
+        Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId(principal, users);
+        // One DELETE, which also says whether the item was there.
+        var deleted = await db.Items
+            .Where(i => i.Id == id && i.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return deleted == 0 ? TypedResults.NotFound() : TypedResults.NoContent();
     }
 
     // The checked, trimmed fields shared by creating and editing.
