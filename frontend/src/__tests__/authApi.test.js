@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createAccount, getAccount, signIn } from '../api/auth.js'
+import { createAccount, getAccount, signIn, signOut } from '../api/auth.js'
 
 const ACCOUNT = { id: '6f1c2c1e-0000-4000-8000-000000000000', displayName: 'Courtney', email: 'reader@example.com' }
 const NEW_ACCOUNT = { displayName: 'Courtney', email: 'reader@example.com', password: 'tides and statues' }
@@ -115,5 +115,19 @@ describe('getAccount', () => {
     const controller = new AbortController()
     await getAccount({ signal: controller.signal })
     expect(fetchStub.mock.calls[0][1].signal).toBe(controller.signal)
+  })
+})
+
+describe('signOut', () => {
+  it('posts to the sign-out endpoint', async () => {
+    const fetchStub = stubFetch(async () => new Response(null, { status: 204 }))
+    await signOut()
+    expect(fetchStub.mock.calls[0][0]).toBe('/api/auth/sign-out')
+    expect(fetchStub.mock.calls[0][1].method).toBe('POST')
+  })
+
+  it('throws when the API doesn’t sign out', async () => {
+    stubFetch(async () => problem(500))
+    await expect(signOut()).rejects.toThrow('500')
   })
 })

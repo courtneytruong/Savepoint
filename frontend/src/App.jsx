@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createAccount, getAccount, signIn } from './api/auth.js'
+import { createAccount, getAccount, signIn, signOut } from './api/auth.js'
 import {
   AccountMenu,
   AuthLayout,
@@ -9,6 +9,7 @@ import {
   Section,
   SignInForm,
   Spinner,
+  useToast,
 } from './components/index.js'
 import styles from './App.module.css'
 import { HealthStatus } from './HealthStatus.jsx'
@@ -60,7 +61,7 @@ function App() {
     )
   }
 
-  if (account) return <Home account={account} />
+  if (account) return <Home account={account} onSignedOut={() => setAccount(null)} />
 
   if (window.location.pathname === CREATE_ACCOUNT_PATH) {
     return (
@@ -94,10 +95,32 @@ function App() {
 }
 
 // A stand-in for the library, until that feature is built.
-function Home({ account }) {
+function Home({ account, onSignedOut }) {
+  const toast = useToast()
+
+  // Sign-in shows only once the API has deleted the cookie. Otherwise the next
+  // reload would sign them straight back in, so they stay here and can retry.
+  async function handleSignOut() {
+    try {
+      await signOut()
+    } catch {
+      toast.show({
+        tone: 'error',
+        title: "Couldn't sign out",
+        description: "Something went wrong on Savepoint's server. Try again.",
+        action: { label: 'Try again', onClick: handleSignOut },
+      })
+      return
+    }
+    onSignedOut()
+  }
+
   return (
     <>
-      <Header brand="Savepoint" actions={<AccountMenu name={account.displayName} email={account.email} />} />
+      <Header
+        brand="Savepoint"
+        actions={<AccountMenu name={account.displayName} email={account.email} onSignOut={handleSignOut} />}
+      />
       <Section as="main">
         <Heading as="h1" size="large">
           Welcome, {account.displayName}

@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App, { CREATE_ACCOUNT_PATH, SIGN_IN_PATH } from '../App.jsx'
+import { ToastProvider } from '../components/index.js'
 
 const ACCOUNT = { id: '6f1c2c1e-0000-4000-8000-000000000000', displayName: 'Courtney', email: 'reader@example.com' }
 
@@ -26,7 +27,7 @@ const heading = () => screen.getByRole('heading', { level: 1 }).textContent
 
 // Renders, then waits for the answer about who's signed in.
 async function renderApp() {
-  render(<App />)
+  render(<App />, { wrapper: ToastProvider })
   await vi.waitFor(() => expect(screen.queryByText('Opening Savepoint')).toBeNull())
 }
 
@@ -39,7 +40,7 @@ describe('App', () => {
   describe('on load', () => {
     it('shows a spinner while asking who’s signed in', () => {
       stubApi({ me: neverAnswers })
-      render(<App />)
+      render(<App />, { wrapper: ToastProvider })
       expect(screen.getByRole('status').textContent).toBe('Opening Savepoint')
       expect(screen.queryByRole('heading')).toBeNull()
     })
@@ -86,14 +87,14 @@ describe('App', () => {
           throw new DOMException('Aborted', 'AbortError')
         },
       })
-      render(<App />)
+      render(<App />, { wrapper: ToastProvider })
       await act(async () => {})
       expect(screen.getByRole('status').textContent).toBe('Opening Savepoint')
     })
 
     it('cancels the request when the page goes away', () => {
       const fetchStub = stubApi({ me: neverAnswers })
-      const { unmount } = render(<App />)
+      const { unmount } = render(<App />, { wrapper: ToastProvider })
       const { signal } = fetchStub.mock.calls[0][1]
       unmount()
       expect(signal.aborted).toBe(true)
@@ -143,6 +144,39 @@ describe('App', () => {
     await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
     expect(fetchStub.mock.calls.map(([path]) => path)).toContain('/api/auth/sign-in')
     expect(window.location.pathname).toBe('/')
+  })
+
+  describe('signing out', () => {
+    // Signed in, with the account menu open, ready to choose Sign out.
+    async function openAccountMenu(signOutAnswer) {
+      const fetchStub = vi.fn(async (path) => {
+        if (path === '/health') return new Response('Healthy')
+        if (path === '/api/auth/me') return json(ACCOUNT, 200)
+        return signOutAnswer()
+      })
+      vi.stubGlobal('fetch', fetchStub)
+      await renderApp()
+      fireEvent.click(screen.getByRole('button', { name: /Courtney/ }))
+      return fetchStub
+    }
+
+    it('asks the API to sign out, then shows sign-in', async () => {
+      const fetchStub = await openAccountMenu(async () => new Response(null, { status: 204 }))
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+
+      await vi.waitFor(() => expect(heading()).toBe('Welcome back'))
+      const call = fetchStub.mock.calls.find(([path]) => path === '/api/auth/sign-out')
+      expect(call[1].method).toBe('POST')
+    })
+
+    it('stays signed in, and says so, when the API can’t sign out', async () => {
+      await openAccountMenu(async () => new Response(null, { status: 500 }))
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+
+      await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toMatch("Couldn't sign out"))
+      expect(heading()).toBe('Welcome, Courtney')
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    })
   })
 
   it('stays on the form, showing the answer, when the API says no', async () => {
