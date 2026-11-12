@@ -63,6 +63,7 @@ describe('App', () => {
       stubApi()
       await renderApp()
       expect(heading()).toBe('Welcome back')
+      expect(window.location.pathname).toBe(SIGN_IN_PATH)
     })
 
     it.each([
@@ -101,11 +102,36 @@ describe('App', () => {
     })
   })
 
-  it('shows sign-in at the home address while signed out', async () => {
+  it('sends a signed-out visitor from home to sign in', async () => {
     stubApi()
     await renderApp()
     expect(heading()).toBe('Welcome back')
+    expect(window.location.pathname).toBe(SIGN_IN_PATH)
     expect(screen.getByRole('link', { name: 'Create an account' }).getAttribute('href')).toBe(CREATE_ACCOUNT_PATH)
+  })
+
+  it('switches between signing in and creating an account without reloading', async () => {
+    const fetchStub = stubApi()
+    await renderApp()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Create an account' }))
+    expect(heading()).toBe('Start your journal')
+    expect(window.location.pathname).toBe(CREATE_ACCOUNT_PATH)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Sign in' }))
+    expect(heading()).toBe('Welcome back')
+    // A reload would have asked who's signed in again.
+    expect(fetchStub.mock.calls.filter(([path]) => path === '/api/auth/me')).toHaveLength(1)
+  })
+
+  it.each([
+    ['signed out', signedOut, SIGN_IN_PATH],
+    ['signed in', async () => json(ACCOUNT, 200), '/'],
+  ])('sends an unknown address home, which while %s is %s', async (_, me, path) => {
+    stubApi({ me })
+    openAt('/no-such-page')
+    await renderApp()
+    expect(window.location.pathname).toBe(path)
   })
 
   it('shows creating an account at its own path', async () => {
@@ -146,13 +172,48 @@ describe('App', () => {
     expect(window.location.pathname).toBe('/')
   })
 
+  describe('returning to the page asked for', () => {
+    function signInWithForm() {
+      type('Email', 'reader@example.com')
+      type('Password', 'tides and statues')
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    }
+
+    it('goes back to it once signed in', async () => {
+      stubApi({ auth: async () => json(ACCOUNT, 200) })
+      openAt('/?view=grid#top')
+      await renderApp()
+      expect(window.location.pathname).toBe(SIGN_IN_PATH)
+
+      signInWithForm()
+
+      await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+      expect(window.location.pathname + window.location.search + window.location.hash).toBe('/?view=grid#top')
+    })
+
+    it('still goes back to it after a detour to creating an account', async () => {
+      stubApi({ auth: async () => json(ACCOUNT, 201) })
+      openAt('/?view=grid')
+      await renderApp()
+
+      fireEvent.click(screen.getByRole('link', { name: 'Create an account' }))
+      type('Your name', 'Courtney')
+      type('Email', 'reader@example.com')
+      type('Password', 'tides and statues')
+      fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+
+      await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+      expect(window.location.search).toBe('?view=grid')
+    })
+  })
+
   describe('signing out', () => {
     // Signed in, with the account menu open, ready to choose Sign out.
     async function openAccountMenu(signOutAnswer) {
       const fetchStub = vi.fn(async (path) => {
         if (path === '/health') return new Response('Healthy')
         if (path === '/api/auth/me') return json(ACCOUNT, 200)
-        return signOutAnswer()
+        return signOutAnswer(path)
       })
       vi.stubGlobal('fetch', fetchStub)
       await renderApp()
@@ -167,6 +228,23 @@ describe('App', () => {
       await vi.waitFor(() => expect(heading()).toBe('Welcome back'))
       const call = fetchStub.mock.calls.find(([path]) => path === '/api/auth/sign-out')
       expect(call[1].method).toBe('POST')
+      expect(window.location.pathname).toBe(SIGN_IN_PATH)
+    })
+
+    it('doesn’t remember the page, since the next person to sign in may not be the same', async () => {
+      openAt('/?view=grid')
+      await openAccountMenu(async (path) =>
+        path === '/api/auth/sign-in' ? json(ACCOUNT, 200) : new Response(null, { status: 204 }),
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+      await vi.waitFor(() => expect(heading()).toBe('Welcome back'))
+
+      type('Email', 'reader@example.com')
+      type('Password', 'tides and statues')
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+      await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+      expect(window.location.search).toBe('')
     })
 
     it('stays signed in, and says so, when the API can’t sign out', async () => {
