@@ -95,6 +95,27 @@ describe('LibraryPage', () => {
     expect(hades.getByText('In progress')).toBeTruthy()
   })
 
+  it("links each title in the list to the item's page, which opens on a click", async () => {
+    stubItems(async () => json(ITEMS))
+    renderPage()
+    await vi.waitFor(() => expect(screen.getByText('Hades')).toBeTruthy())
+
+    const link = screen.getByRole('link', { name: 'Hades' })
+    expect(link.getAttribute('href')).toBe(`/items/${ITEMS[0].id}`)
+    fireEvent.click(link)
+    expect(seen.location.pathname).toBe(`/items/${ITEMS[0].id}`)
+  })
+
+  it("links each card in the grid to the item's page", async () => {
+    window.localStorage.setItem('savepoint.library.view', 'grid')
+    stubItems(async () => json(ITEMS))
+    renderPage()
+    await vi.waitFor(() => expect(screen.getByRole('heading', { name: 'Tetris' })).toBeTruthy())
+
+    const card = screen.getByRole('heading', { name: 'Tetris' })
+    expect(within(card).getByRole('link').getAttribute('href')).toBe(`/items/${ITEMS[2].id}`)
+  })
+
   it('shows how many items there are in the sidebar once loaded', async () => {
     stubItems(async () => json(ITEMS))
     renderPage()

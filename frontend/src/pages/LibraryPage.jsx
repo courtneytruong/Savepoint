@@ -26,7 +26,7 @@ import {
   ViewToggle,
 } from '../components/index.js'
 import { AddIcon, ErrorIcon, LibraryIcon, NoResultsIcon } from '../components/icons.js'
-import { libraryPath } from '../paths.js'
+import { itemPath, libraryPath } from '../paths.js'
 import { AppLayout } from './AppLayout.jsx'
 import { LIBRARY_COLUMNS, MEDIUM_FILTERS, SORT_OPTIONS, STATUS_FILTERS } from './libraryColumns.jsx'
 import styles from './LibraryPage.module.css'
@@ -198,7 +198,7 @@ export function LibraryPage({ account, onSignedOut }) {
     content = (
       <ItemGrid className={styles.grid}>
         {paged.pageRows.map((item) => (
-          <ItemCard key={item.id} {...item} />
+          <ItemCard key={item.id} {...item} href={itemPath(item.id)} />
         ))}
       </ItemGrid>
     )

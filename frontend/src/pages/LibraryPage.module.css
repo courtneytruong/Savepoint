@@ -61,8 +61,14 @@
 
 .title {
   display: block;
+  width: fit-content;
   color: var(--color-soft-quartz);
   font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.title:hover {
+  text-decoration: underline;
 }
 
 .creator {

@@ -1,4 +1,5 @@
-import { MediumLabel, StatusBadge } from '../components/index.js'
+import { Link, MediumLabel, StatusBadge } from '../components/index.js'
+import { itemPath } from '../paths.js'
 import styles from './LibraryPage.module.css'
 
 // Statuses sort in the order an item moves through them, not alphabetically.
@@ -8,8 +9,8 @@ const STATUS_ORDER = ['Backlog', 'InProgress', 'Finished', 'Dropped']
 const addedDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 
 /**
- * The library's list view. Mood and rating join once reflections and ratings
- * exist, and the title becomes a link once items have their own page.
+ * The library's list view. Each title links to the item's own page. Mood and
+ * rating join once reflections and ratings exist.
  */
 export const LIBRARY_COLUMNS = [
   {
@@ -18,7 +19,9 @@ export const LIBRARY_COLUMNS = [
     sortable: true,
     render: (item) => (
       <>
-        <span className={styles.title}>{item.title}</span>
+        <Link href={itemPath(item.id)} className={styles.title}>
+          {item.title}
+        </Link>
         {item.creator && <span className={styles.creator}>{item.creator}</span>}
       </>
     ),
