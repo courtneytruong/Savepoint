@@ -2,6 +2,8 @@
 export const SIGN_IN_PATH = '/sign-in'
 export const CREATE_ACCOUNT_PATH = '/create-account'
 export const LIBRARY_PATH = '/'
+// The route for an item's own page; itemPath fills in the id.
+export const ITEM_PATH = '/items/:id'
 
 /**
  * The library, filtered by medium (Book or Game) and status, each left out of

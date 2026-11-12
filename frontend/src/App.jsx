@@ -3,8 +3,9 @@ import { BrowserRouter, Navigate, Outlet, Link as RouterLink, Route, Routes, use
 import { createAccount, getAccount, signIn } from './api/auth.js'
 import { AuthLayout, CreateAccountForm, LinkProvider, SignInForm, Spinner } from './components/index.js'
 import styles from './App.module.css'
+import { ItemPage } from './pages/ItemPage.jsx'
 import { LibraryPage } from './pages/LibraryPage.jsx'
-import { CREATE_ACCOUNT_PATH, LIBRARY_PATH, SIGN_IN_PATH } from './paths.js'
+import { CREATE_ACCOUNT_PATH, ITEM_PATH, LIBRARY_PATH, SIGN_IN_PATH } from './paths.js'
 
 // Every link in the components goes through React Router, so moving around the
 // app doesn't reload the page. nginx and Vite answer any path with the app.
@@ -58,8 +59,9 @@ function Session() {
       </Route>
       <Route element={<SignedInOnly account={account} />}>
         <Route path={LIBRARY_PATH} element={<LibraryPage account={account} onSignedOut={() => setAccount(null)} />} />
+        <Route path={ITEM_PATH} element={<ItemPage account={account} onSignedOut={() => setAccount(null)} />} />
       </Route>
-      {/* No other pages yet, so any other address goes home. */}
+      {/* Any other address goes home. */}
       <Route path="*" element={<Navigate to={LIBRARY_PATH} replace />} />
     </Routes>
   )
