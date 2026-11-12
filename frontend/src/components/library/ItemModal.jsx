@@ -2,7 +2,7 @@ import { useId, useRef, useState } from 'react'
 import { Alert } from '../feedback/Alert.jsx'
 import { Modal } from '../feedback/Modal.jsx'
 import { Input, Select } from '../forms/Field.jsx'
-import { AddIcon } from '../icons.js'
+import { AddIcon, DeleteIcon } from '../icons.js'
 import { Button } from '../ui/Button.jsx'
 import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
 import { ITEM_ERRORS, validateItem } from '../../rules/itemRules.js'
@@ -73,6 +73,62 @@ export function EditItemModal({ open, item, onClose, onSubmit }) {
       text={EDITING}
       start={{ title: item.title, creator: item.creator ?? '', medium: item.medium, status: null }}
     />
+  )
+}
+
+/**
+ * Asks before deleting an item, since that can't be undone.
+ *
+ * title: the item's title, to name it in the question. onConfirm deletes it and
+ * returns a Promise of { deleted: true }, after which whoever opened this moves
+ * on, or { error: 'failed' }, shown in the modal. If it throws, that counts as
+ * failed. Each opening starts without the last one's error.
+ */
+export function DeleteItemModal({ open, title, onClose, onConfirm }) {
+  const opening = useOpening(open)
+  return <DeleteDialog key={opening} open={open} title={title} onClose={onClose} onConfirm={onConfirm} />
+}
+
+function DeleteDialog({ open, title, onClose, onConfirm }) {
+  // asking, deleting or failed.
+  const [state, setState] = useState('asking')
+
+  async function confirm() {
+    if (state === 'deleting') return
+    setState('deleting')
+    let result
+    try {
+      result = await onConfirm()
+    } catch {
+      result = { error: 'failed' }
+    }
+    if (!result?.deleted) setState('failed')
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Delete ${title}?`}
+      description="This also deletes its history, and can't be undone."
+      actions={
+        <>
+          <Button variant="text" onClick={onClose}>
+            Keep it
+          </Button>
+          <Button variant="danger" loading={state === 'deleting'} onClick={confirm}>
+            <DeleteIcon />
+            {state === 'deleting' ? 'Deleting…' : 'Delete'}
+          </Button>
+        </>
+      }
+    >
+      {state === 'failed' && (
+        <Alert tone="error" title="Couldn't delete it">
+          {FAILED_BODY}
+        </Alert>
+      )}
+    </Modal>
   )
 }
 

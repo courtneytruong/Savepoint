@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { changeItemStatus, editItem, getItem, getItems } from '../api/items.js'
+import { changeItemStatus, deleteItem, editItem, getItem, getItems } from '../api/items.js'
 import { itemPath } from '../paths.js'
 
 function stubFetch(answer) {
@@ -106,5 +106,25 @@ describe('editItem', () => {
   it('says it failed on any other answer', async () => {
     stubFetch(async () => new Response(null, { status: 400 }))
     expect(await editItem('abc', { medium: 'Book', title: 'Piranesi', creator: null })).toEqual({ error: 'failed' })
+  })
+})
+
+describe('deleteItem', () => {
+  it('deletes the item', async () => {
+    const fetchStub = stubFetch(async () => new Response(null, { status: 204 }))
+
+    expect(await deleteItem('abc')).toEqual({ deleted: true })
+    expect(fetchStub.mock.calls[0][0]).toBe('/api/items/abc')
+    expect(fetchStub.mock.calls[0][1].method).toBe('DELETE')
+  })
+
+  it('counts an item that was already gone as deleted', async () => {
+    stubFetch(async () => new Response(null, { status: 404 }))
+    expect(await deleteItem('abc')).toEqual({ deleted: true })
+  })
+
+  it('says it failed on any other answer', async () => {
+    stubFetch(async () => new Response(null, { status: 500 }))
+    expect(await deleteItem('abc')).toEqual({ error: 'failed' })
   })
 })

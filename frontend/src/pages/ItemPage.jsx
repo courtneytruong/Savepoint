@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
-import { changeItemStatus, editItem, getItem } from '../api/items.js'
+import { useNavigate, useParams } from 'react-router'
+import { changeItemStatus, deleteItem, editItem, getItem } from '../api/items.js'
 import {
   Button,
+  DeleteItemModal,
   EditItemModal,
   EmptyState,
   FilterGroup,
@@ -17,7 +18,7 @@ import {
   Text,
   useToast,
 } from '../components/index.js'
-import { EditIcon, ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
+import { DeleteIcon, EditIcon, ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { AppLayout } from './AppLayout.jsx'
 import styles from './ItemPage.module.css'
@@ -42,7 +43,9 @@ export function ItemPage({ account, onSignedOut }) {
   // The status being saved, if any, so a second press waits for the first.
   const [changing, setChanging] = useState(null)
   const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const toast = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -77,6 +80,17 @@ export function ItemPage({ account, onSignedOut }) {
       setEditing(false)
       stillShowing(item.id, { id: item.id, state: 'missing', item: null })
       return {}
+    }
+    return result
+  }
+
+  // Back to the library, which no longer has it. Replace, so Back doesn't return
+  // to a page that would only say it's gone.
+  async function confirmDelete() {
+    const result = await deleteItem(item.id)
+    if (result.deleted) {
+      navigate(LIBRARY_PATH, { replace: true })
+      toast.show({ title: `${item.title} deleted` })
     }
     return result
   }
@@ -155,10 +169,16 @@ export function ItemPage({ account, onSignedOut }) {
             <Heading as="h2">{item.title}</Heading>
             {item.creator && <Text className={styles.creator}>{item.creator}</Text>}
           </div>
-          <Button variant="outline" onClick={() => setEditing(true)}>
-            <EditIcon />
-            Edit
-          </Button>
+          <div className={styles.actions}>
+            <Button onClick={() => setEditing(true)}>
+              <EditIcon />
+              Edit
+            </Button>
+            <Button variant="danger" onClick={() => setDeleting(true)}>
+              <DeleteIcon />
+              Delete
+            </Button>
+          </div>
         </header>
         <MediumLabel medium={item.medium} />
         {/* The current status is the pressed one, so there's no badge as well. */}
@@ -191,6 +211,12 @@ export function ItemPage({ account, onSignedOut }) {
           </div>
         </dl>
         <EditItemModal open={editing} item={item} onClose={() => setEditing(false)} onSubmit={saveDetails} />
+        <DeleteItemModal
+          open={deleting}
+          title={item.title}
+          onClose={() => setDeleting(false)}
+          onConfirm={confirmDelete}
+        />
       </article>
     )
   }

@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createItem } from '../api/items.js'
-import { AddItemModal, EditItemModal, validateItem } from '../components/index.js'
+import { AddItemModal, DeleteItemModal, EditItemModal, validateItem } from '../components/index.js'
 
 afterEach(cleanup)
 
@@ -203,5 +203,49 @@ describe('EditItemModal', () => {
     rerender(<EditItemModal open item={ITEM} onClose={vi.fn()} onSubmit={vi.fn()} />)
 
     expect(field('Title').value).toBe('Hades')
+  })
+})
+
+describe('DeleteItemModal', () => {
+  const remove = () => screen.getByRole('button', { name: /^Delet(e|ing…)$/ })
+
+  function open(onConfirm = vi.fn(async () => ({ deleted: true }))) {
+    const utils = render(<DeleteItemModal open title="Hades" onClose={vi.fn()} onConfirm={onConfirm} />)
+    return { onConfirm, ...utils }
+  }
+
+  it('names the item, and says it cannot be undone', () => {
+    open()
+    const dialog = screen.getByRole('dialog', { name: 'Delete Hades?' })
+    expect(dialog.textContent).toMatch("can't be undone")
+  })
+
+  it('shows that it is deleting, and ignores a second press', async () => {
+    const { onConfirm } = open(vi.fn(() => new Promise(() => {})))
+    fireEvent.click(remove())
+    expect(remove().textContent).toBe('Deleting…')
+
+    fireEvent.click(remove())
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+  })
+
+  it('says when deleting fails, including a server that cannot be reached', async () => {
+    open(
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch')
+      }),
+    )
+    await act(async () => fireEvent.click(remove()))
+    expect(screen.getByRole('alert').textContent).toMatch("Couldn't delete it")
+  })
+
+  it('starts without the last error each time it opens', async () => {
+    const { rerender } = open(vi.fn(async () => ({ error: 'failed' })))
+    await act(async () => fireEvent.click(remove()))
+
+    rerender(<DeleteItemModal open={false} title="Hades" onClose={vi.fn()} onConfirm={vi.fn()} />)
+    rerender(<DeleteItemModal open title="Hades" onClose={vi.fn()} onConfirm={vi.fn()} />)
+
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

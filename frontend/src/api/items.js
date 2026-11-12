@@ -71,3 +71,14 @@ export async function editItem(id, { medium, title, creator }) {
   if (!response.ok) return { error: 'failed' }
   return { item: await response.json() }
 }
+
+/**
+ * Deletes an item and its whole history. Resolves with { deleted: true }, also
+ * when it was already gone (a 404), since either way it's no longer there, or
+ * { error: 'failed' } for any other answer. Throws if the server can't be reached.
+ */
+export async function deleteItem(id) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (response.status === 204 || response.status === 404) return { deleted: true }
+  return { error: 'failed' }
+}

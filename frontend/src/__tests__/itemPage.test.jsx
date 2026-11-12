@@ -34,6 +34,7 @@ function renderPage(path = '/items/abc') {
         <ToastProvider>
           <Routes>
             <Route path={ITEM_PATH} element={<ItemPage account={ACCOUNT} onSignedOut={vi.fn()} />} />
+            <Route path="/" element={<p>The library</p>} />
           </Routes>
         </ToastProvider>
       </LinkProvider>
@@ -226,6 +227,46 @@ describe('ItemPage', () => {
       save()
       expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
       expect(screen.queryByRole('dialog')).toBeNull()
+    })
+  })
+
+  describe('deleting it', () => {
+    async function loaded(...answers) {
+      const fetchStub = stubFetch(async () => json(ITEM), ...answers)
+      renderPage()
+      await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+      return fetchStub
+    }
+
+    const dialog = () => screen.getByRole('dialog', { name: 'Delete Outer Wilds?' })
+    const confirm = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Delete' }))
+
+    it('asks first, and keeping it sends nothing', async () => {
+      const fetchStub = await loaded()
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Keep it' }))
+
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(fetchStub).toHaveBeenCalledTimes(1)
+    })
+
+    it('deletes it and goes back to the library', async () => {
+      const fetchStub = await loaded(async () => new Response(null, { status: 204 }))
+      confirm()
+
+      expect(await screen.findByText('The library')).toBeTruthy()
+      expect(screen.getByText('Outer Wilds deleted')).toBeTruthy()
+      const [url, options] = fetchStub.mock.calls[1]
+      expect(url).toBe('/api/items/abc')
+      expect(options.method).toBe('DELETE')
+    })
+
+    it('stays and says so when deleting fails', async () => {
+      await loaded(async () => new Response(null, { status: 500 }))
+      confirm()
+
+      await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
+      expect(screen.getByRole('heading', { level: 2, name: 'Outer Wilds' })).toBeTruthy()
     })
   })
 })
