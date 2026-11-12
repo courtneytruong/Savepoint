@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { useEffect } from 'react'
 import { Link as RouterLink, MemoryRouter, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -279,4 +279,62 @@ describe('LibraryPage', () => {
       })
     })
   })
+
+  describe('adding an item', () => {
+    const NEW = item({ medium: 'Game', title: 'Outer Wilds', creator: 'Mobius Digital', createdAt: '2026-11-11T12:00:00+00:00' })
+
+    // The library loads with items, and adding answers with saved.
+    function stubLibrary(items, saved = async () => json(NEW, 201)) {
+      const fetchStub = vi.fn(async (path, options = {}) => (options.method === 'POST' ? saved() : json(items)))
+      vi.stubGlobal('fetch', fetchStub)
+      return fetchStub
+    }
+
+    it('adds it at the top of the list, closes the form, and says so', async () => {
+      const fetchStub = stubLibrary(ITEMS)
+      renderPage()
+      await vi.waitFor(() => expect(sidebarLink(3)).toBeTruthy())
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add item' }))
+      expect(document.querySelector('dialog').open).toBe(true)
+      fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Outer Wilds' } })
+      await act(async () => fireEvent.click(within(document.querySelector('dialog')).getByRole('button', { name: 'Add item' })))
+
+      expect(document.querySelector('dialog').open).toBe(false)
+      expect(screen.getAllByRole('row')[1].textContent).toMatch('Outer Wilds')
+      expect(sidebarLink(4)).toBeTruthy()
+      expect(screen.getByText('Outer Wilds added to your library')).toBeTruthy()
+      // Added as it is, without loading the whole library again.
+      expect(fetchStub.mock.calls.filter(([, options = {}]) => options.method !== 'POST')).toHaveLength(1)
+    })
+
+    it('offers adding the first item when the library is empty', async () => {
+      stubLibrary([])
+      renderPage()
+      await vi.waitFor(() => expect(screen.getByText('Your library is empty')).toBeTruthy())
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add your first item' }))
+      fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Outer Wilds' } })
+      await act(async () => fireEvent.click(within(document.querySelector('dialog')).getByRole('button', { name: 'Add item' })))
+
+      expect(screen.queryByText('Your library is empty')).toBeNull()
+      expect(screen.getByText('Outer Wilds')).toBeTruthy()
+    })
+
+    it('keeps the form open, with what was typed, when saving fails', async () => {
+      stubLibrary(ITEMS, async () => json({ status: 500 }, 500))
+      renderPage()
+      await vi.waitFor(() => expect(sidebarLink(3)).toBeTruthy())
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add item' }))
+      fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Outer Wilds' } })
+      await act(async () => fireEvent.click(within(document.querySelector('dialog')).getByRole('button', { name: 'Add item' })))
+
+      expect(document.querySelector('dialog').open).toBe(true)
+      expect(screen.getByText("Couldn't add it")).toBeTruthy()
+      expect(screen.getByLabelText('Title').value).toBe('Outer Wilds')
+      expect(sidebarLink(3)).toBeTruthy()
+    })
+  })
 })
+

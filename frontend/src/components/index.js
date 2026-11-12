@@ -1,4 +1,5 @@
 export { AccountMenu } from './auth/AccountMenu.jsx'
+export { AddItemModal } from './library/AddItemModal.jsx'
 export { Alert } from './feedback/Alert.jsx'
 export { AuthLayout } from './layout/AuthLayout.jsx'
 export {
@@ -27,6 +28,7 @@ export { Footer } from './layout/Footer.jsx'
 export { Header } from './layout/Header.jsx'
 export { Hero } from './layout/Hero.jsx'
 export { ItemCard, ItemGrid, MediumLabel, Rating } from './library/ItemCard.jsx'
+export { MAX_CREATOR_LENGTH, MAX_TITLE_LENGTH, validateItem } from '../rules/itemRules.js'
 export { LengthCounter } from './forms/LengthCounter.jsx'
 export { Link, LinkProvider } from './ui/Link.jsx'
 export { Modal } from './feedback/Modal.jsx'

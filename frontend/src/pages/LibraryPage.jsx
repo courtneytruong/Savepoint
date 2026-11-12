@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { getItems } from '../api/items.js'
+import { createItem, getItems } from '../api/items.js'
 import {
+  AddItemModal,
   Button,
   EmptyState,
   FilterGroup,
@@ -21,9 +22,10 @@ import {
   Table,
   useStoredChoice,
   useStoredView,
+  useToast,
   ViewToggle,
 } from '../components/index.js'
-import { ErrorIcon, LibraryIcon, NoResultsIcon } from '../components/icons.js'
+import { AddIcon, ErrorIcon, LibraryIcon, NoResultsIcon } from '../components/icons.js'
 import { libraryPath } from '../paths.js'
 import { AppLayout } from './AppLayout.jsx'
 import { LIBRARY_COLUMNS, MEDIUM_FILTERS, SORT_OPTIONS, STATUS_FILTERS } from './libraryColumns.jsx'
@@ -54,6 +56,8 @@ export function LibraryPage({ account, onSignedOut }) {
   const [library, setLibrary] = useState({ state: 'loading', items: [] })
   // Counting tries makes Try again load afresh, through the same effect.
   const [tries, setTries] = useState(0)
+  const [adding, setAdding] = useState(false)
+  const toast = useToast()
 
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -85,6 +89,27 @@ export function LibraryPage({ account, onSignedOut }) {
     setLibrary({ state: 'loading', items: [] })
     setTries((count) => count + 1)
   }
+
+  // The new item joins the list as it is, rather than the whole library loading
+  // again. If the library never loaded, it loads now, with the new item in it.
+  async function addItem(details) {
+    const result = await createItem(details)
+    if (result.item) {
+      setAdding(false)
+      if (library.state === 'ready') setLibrary({ state: 'ready', items: [result.item, ...library.items] })
+      else tryAgain()
+      toast.show({ title: `${result.item.title} added to your library` })
+    }
+    return result
+  }
+
+  const addButton = (label) => (
+    // The library's main action, so it gets the lit primary style.
+    <Button onClick={() => setAdding(true)}>
+      <AddIcon />
+      {label}
+    </Button>
+  )
 
   const filterBy = (changes) => navigate(libraryPath({ medium, status, ...changes }))
 
@@ -123,7 +148,12 @@ export function LibraryPage({ account, onSignedOut }) {
     )
   } else if (state === 'ready' && items.length === 0) {
     content = (
-      <EmptyState icon={<LibraryIcon />} title="Your library is empty" headingAs="h3">
+      <EmptyState
+        icon={<LibraryIcon />}
+        title="Your library is empty"
+        headingAs="h3"
+        action={addButton('Add your first item')}
+      >
         Add a book or game to get started.
       </EmptyState>
     )
@@ -194,6 +224,7 @@ export function LibraryPage({ account, onSignedOut }) {
           onChange={setSearch}
         />
         <ViewToggle value={view} onChange={setView} />
+        {addButton('Add item')}
       </div>
       <div className={styles.filters}>
         <FilterGroup label="Filter by type">
@@ -251,6 +282,7 @@ export function LibraryPage({ account, onSignedOut }) {
           }}
         />
       )}
+      <AddItemModal open={adding} onClose={() => setAdding(false)} onSubmit={addItem} />
     </AppLayout>
   )
 }
