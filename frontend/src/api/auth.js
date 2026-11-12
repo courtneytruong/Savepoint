@@ -15,7 +15,10 @@ async function post(path, body) {
   })
   const answer = await readJson(response)
   if (response.ok) return { account: answer }
-  return { error: typeof answer?.error === 'string' ? answer.error : 'failed' }
+  const error = typeof answer?.error === 'string' ? answer.error : 'failed'
+  // How long a lockout has left, for the sign-in form's countdown.
+  const seconds = answer?.retryAfterSeconds
+  return Number.isFinite(seconds) && seconds > 0 ? { error, retryAfterSeconds: seconds } : { error }
 }
 
 // null when the body isn't JSON, such as an HTML error page.
@@ -37,6 +40,7 @@ export const createAccount = ({ displayName, email, password }) =>
 
 /**
  * Signs in: the API sets the auth cookie. Resolves with { account }, or with
- * { error }: unknownEmail, wrongPassword, tooManyTries or failed.
+ * { error }: unknownEmail, wrongPassword, tooManyTries (with retryAfterSeconds)
+ * or failed.
  */
 export const signIn = ({ email, password }) => post('/api/auth/sign-in', { email, password })

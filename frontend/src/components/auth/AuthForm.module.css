@@ -9,6 +9,11 @@
   margin-top: var(--spacing-8);
 }
 
+/* Even-width digits, so a ticking countdown doesn't shuffle the text beside it. */
+.countdown {
+  font-variant-numeric: tabular-nums;
+}
+
 /* A link inside a field's error, such as "Create an account". */
 .form p a {
   color: inherit;

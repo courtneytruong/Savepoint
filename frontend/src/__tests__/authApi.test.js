@@ -77,9 +77,18 @@ describe('signIn', () => {
   it.each([
     [401, 'unknownEmail'],
     [401, 'wrongPassword'],
-    [429, 'tooManyTries'],
   ])('passes on a %i with %s', async (status, error) => {
     stubFetch(async () => problem(status, { error }))
     expect(await signIn(DETAILS)).toEqual({ error })
+  })
+
+  it('passes on how long a lockout has left', async () => {
+    stubFetch(async () => problem(429, { error: 'tooManyTries', retryAfterSeconds: 287 }))
+    expect(await signIn(DETAILS)).toEqual({ error: 'tooManyTries', retryAfterSeconds: 287 })
+  })
+
+  it('leaves out a time left that isn’t a positive number', async () => {
+    stubFetch(async () => problem(429, { error: 'tooManyTries', retryAfterSeconds: 'soon' }))
+    expect(await signIn(DETAILS)).toEqual({ error: 'tooManyTries' })
   })
 })
