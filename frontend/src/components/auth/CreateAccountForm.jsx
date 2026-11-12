@@ -10,7 +10,7 @@ import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
 
 const FAILED = {
   title: "Couldn't create your account",
-  body: "Savepoint's server didn't answer. Check that it's running, then try again.",
+  body: "Something went wrong on Savepoint's server. Try again.",
 }
 
 /**

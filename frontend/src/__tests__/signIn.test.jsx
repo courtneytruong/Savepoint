@@ -144,9 +144,10 @@ describe('SignInForm', () => {
     expect(email().getAttribute('aria-invalid')).toBeNull()
   })
 
-  it("says the server didn't answer when sending fails", async () => {
+  it('says something went wrong when sending fails', async () => {
     await signInWith(new Error('Network down'))
     expect(screen.getByRole('alert').textContent).toMatch("Couldn't sign in")
+    expect(screen.getByRole('alert').textContent).toMatch("Something went wrong on Savepoint's server. Try again.")
     expect(submit().textContent).toBe('Sign in')
   })
 

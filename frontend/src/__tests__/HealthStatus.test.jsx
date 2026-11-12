@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App from '../App.jsx'
+import { HealthStatus } from '../HealthStatus.jsx'
 
 const API_UNREACHABLE = "Can't reach the API"
 
@@ -17,7 +17,7 @@ function statusText() {
 // A request that never gets an answer, for looking at the page while it waits.
 const neverAnswers = () => new Promise(() => {})
 
-describe('App', () => {
+describe('HealthStatus', () => {
   afterEach(cleanup)
 
   it.each([
@@ -29,7 +29,7 @@ describe('App', () => {
   ])('for a %i response with body "%s", shows "%s"', async (status, body, message) => {
     stubFetch(async () => new Response(body, { status }))
 
-    render(<App />)
+    render(<HealthStatus />)
 
     await vi.waitFor(() => expect(statusText()).toBe(message))
   })
@@ -39,7 +39,7 @@ describe('App', () => {
       throw new TypeError('Failed to fetch')
     })
 
-    render(<App />)
+    render(<HealthStatus />)
 
     await vi.waitFor(() => expect(statusText()).toBe(API_UNREACHABLE))
   })
@@ -47,7 +47,7 @@ describe('App', () => {
   it('shows a checking message until the API answers', () => {
     stubFetch(neverAnswers)
 
-    render(<App />)
+    render(<HealthStatus />)
 
     expect(statusText()).toBe('Checking...')
   })
@@ -55,7 +55,7 @@ describe('App', () => {
   it('cancels the request when the page goes away', () => {
     const fetchStub = stubFetch(neverAnswers)
 
-    const { unmount } = render(<App />)
+    const { unmount } = render(<HealthStatus />)
     const { signal } = fetchStub.mock.calls[0][1]
     expect(signal.aborted).toBe(false)
 
@@ -71,7 +71,7 @@ describe('App', () => {
       throw new DOMException('Aborted', 'AbortError')
     })
 
-    render(<App />)
+    render(<HealthStatus />)
     await act(async () => {})
 
     expect(statusText()).toBe('Checking...')

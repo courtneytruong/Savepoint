@@ -142,10 +142,11 @@ describe('CreateAccountForm', () => {
     expect(screen.queryByText('That email already has an account.')).toBeNull()
   })
 
-  it("says the server didn't answer, above the form, and moves there", async () => {
+  it('says something went wrong, above the form, and moves there', async () => {
     await createWith(new Error('Network down'))
     const alert = screen.getByRole('alert')
     expect(alert.textContent).toMatch("Couldn't create your account")
+    expect(alert.textContent).toMatch("Something went wrong on Savepoint's server. Try again.")
     expect(document.activeElement).toBe(alert)
   })
 

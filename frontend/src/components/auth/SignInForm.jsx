@@ -15,7 +15,7 @@ const FORM_ERRORS = {
   },
   failed: {
     title: "Couldn't sign in",
-    body: "Savepoint's server didn't answer. Check that it's running, then try again.",
+    body: "Something went wrong on Savepoint's server. Try again.",
   },
 }
 

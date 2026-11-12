@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createAccount } from '../api/auth.js'
+import { createAccount, signIn } from '../api/auth.js'
 
 const ACCOUNT = { id: '6f1c2c1e-0000-4000-8000-000000000000', displayName: 'Courtney', email: 'reader@example.com' }
 const NEW_ACCOUNT = { displayName: 'Courtney', email: 'reader@example.com', password: 'tides and statues' }
@@ -58,5 +58,28 @@ describe('createAccount', () => {
       throw new TypeError('Failed to fetch')
     })
     await expect(createAccount(NEW_ACCOUNT)).rejects.toThrow('Failed to fetch')
+  })
+})
+
+describe('signIn', () => {
+  const DETAILS = { email: 'reader@example.com', password: 'tides and statues' }
+
+  it('posts the email and password as JSON to the sign-in endpoint, and answers with the account', async () => {
+    const fetchStub = stubFetch(async () => new Response(JSON.stringify(ACCOUNT), { status: 200 }))
+    expect(await signIn(DETAILS)).toEqual({ account: ACCOUNT })
+
+    const [path, options] = fetchStub.mock.calls[0]
+    expect(path).toBe('/api/auth/sign-in')
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual(DETAILS)
+  })
+
+  it.each([
+    [401, 'unknownEmail'],
+    [401, 'wrongPassword'],
+    [429, 'tooManyTries'],
+  ])('passes on a %i with %s', async (status, error) => {
+    stubFetch(async () => problem(status, { error }))
+    expect(await signIn(DETAILS)).toEqual({ error })
   })
 })

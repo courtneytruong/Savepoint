@@ -34,3 +34,9 @@ async function readJson(response) {
  */
 export const createAccount = ({ displayName, email, password }) =>
   post('/api/auth/register', { displayName, email, password })
+
+/**
+ * Signs in: the API sets the auth cookie. Resolves with { account }, or with
+ * { error }: unknownEmail, wrongPassword, tooManyTries or failed.
+ */
+export const signIn = ({ email, password }) => post('/api/auth/sign-in', { email, password })
