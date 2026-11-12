@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
 using Savepoint.Api.Data;
 
@@ -16,8 +17,35 @@ public static class ItemEndpoints
     public static IEndpointRouteBuilder MapItemEndpoints(this IEndpointRouteBuilder app)
     {
         var items = app.MapGroup("/api/items").RequireAuthorization();
+        items.MapGet("/", List);
         items.MapPost("/", Create);
         return app;
+    }
+
+    /// <summary>
+    /// Every item in the library, newest first, each with its current status. All
+    /// of them at once, because the browser searches, filters and sorts: a personal
+    /// library is small enough that paging on the server isn't needed.
+    /// </summary>
+    private static async Task<Ok<List<ItemResponse>>> List(
+        ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId(principal, users);
+        var rows = await db.Items
+            .Where(i => i.UserId == userId)
+            // Ids are made in time order, so they break a tie between items made at once.
+            .OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id)
+            // The database picks each item's newest status change, rather than every
+            // change being loaded to find it.
+            .Select(i => new
+            {
+                Item = i,
+                Current = i.StatusChanges.OrderByDescending(s => s.ChangedAt).ThenByDescending(s => s.Id).First(),
+            })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(rows.Select(row => ToResponse(row.Item, row.Current)).ToList());
     }
 
     // Strings rather than enums, and nullable, so a missing or unknown value gets a
@@ -79,14 +107,12 @@ public static class ItemEndpoints
         db.Items.Add(item);
         await db.SaveChangesAsync(cancellationToken);
 
-        return TypedResults.Created($"/api/items/{item.Id}", ToResponse(item));
+        // A new item has only its first status, which is its current one.
+        return TypedResults.Created($"/api/items/{item.Id}", ToResponse(item, item.StatusChanges.Single()));
     }
 
-    private static ItemResponse ToResponse(Item item)
-    {
-        // Newest by time, then by id, since ids are made in time order.
-        var current = item.StatusChanges.OrderBy(s => s.ChangedAt).ThenBy(s => s.Id).Last();
-        return new ItemResponse(
+    private static ItemResponse ToResponse(Item item, StatusChange current) =>
+        new(
             item.Id,
             item.Medium.ToString(),
             item.Title,
@@ -94,7 +120,6 @@ public static class ItemEndpoints
             current.Status.ToString(),
             current.ChangedAt,
             item.CreatedAt);
-    }
 
     // Only the exact names, such as "InProgress". Enum.TryParse alone would also take
     // "inprogress" with ignoreCase, or a number like "1".

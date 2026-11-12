@@ -16,17 +16,7 @@ public sealed class CreateItemTests(PostgresFixture postgres) : IAsyncDisposable
 
     public ValueTask DisposeAsync() => factory.DisposeAsync();
 
-    // A client signed in as a new account of its own, since the tests share one database.
-    private async Task<HttpClient> SignedInClient()
-    {
-        var client = factory.CreateClient();
-        var response = await client.PostAsJsonAsync(
-            "/api/auth/register",
-            new { displayName = "Reader", email = $"{Guid.NewGuid()}@example.com", password = "a long password" },
-            cancellationToken);
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return client;
-    }
+    private async Task<HttpClient> SignedInClient() => (await factory.SignedInClientAsync(cancellationToken)).Client;
 
     private Task<HttpResponseMessage> Create(HttpClient client, object body) =>
         client.PostAsJsonAsync("/api/items", body, cancellationToken);
@@ -76,9 +66,8 @@ public sealed class CreateItemTests(PostgresFixture postgres) : IAsyncDisposable
     [Fact]
     public async Task Saves_the_item_and_its_first_status_for_the_signed_in_account()
     {
-        using var client = await SignedInClient();
-        var me = await (await client.GetAsync("/api/auth/me", cancellationToken)).Content
-            .ReadFromJsonAsync<JsonElement>(cancellationToken);
+        var (client, userId) = await factory.SignedInClientAsync(cancellationToken);
+        using var _ = client;
 
         var response = await Create(client, new { medium = "Game", title = "Hades", status = "InProgress" });
         var id = (await ReadJson(response)).GetProperty("id").GetGuid();
@@ -86,7 +75,7 @@ public sealed class CreateItemTests(PostgresFixture postgres) : IAsyncDisposable
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SavepointDbContext>();
         var saved = await db.Items.Include(i => i.StatusChanges).SingleAsync(i => i.Id == id, cancellationToken);
-        Assert.Equal(me.GetProperty("id").GetGuid(), saved.UserId);
+        Assert.Equal(userId, saved.UserId);
         Assert.Equal(ItemStatus.InProgress, Assert.Single(saved.StatusChanges).Status);
     }
 
