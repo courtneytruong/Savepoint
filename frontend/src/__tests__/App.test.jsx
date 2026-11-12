@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App, { CREATE_ACCOUNT_PATH, SIGN_IN_PATH } from '../App.jsx'
+import App from '../App.jsx'
+import { CREATE_ACCOUNT_PATH, SIGN_IN_PATH } from '../paths.js'
 import { ToastProvider } from '../components/index.js'
 
 const ACCOUNT = { id: '6f1c2c1e-0000-4000-8000-000000000000', displayName: 'Courtney', email: 'reader@example.com' }
@@ -9,12 +10,12 @@ const json = (body, status) => new Response(JSON.stringify(body), { status })
 const signedOut = async () => json({ status: 401 }, 401)
 const neverAnswers = () => new Promise(() => {})
 
-// Answers each path the way the API would: me says who's signed in, and auth
-// answers registering or signing in.
+// Answers each path the way the API would: me says who's signed in, the library
+// is empty, and auth answers registering or signing in.
 function stubApi({ me = signedOut, auth = neverAnswers } = {}) {
   const fetchStub = vi.fn(async (path, options) => {
-    if (path === '/health') return new Response('Healthy')
     if (path === '/api/auth/me') return me(options)
+    if (path === '/api/items') return json([], 200)
     return auth()
   })
   vi.stubGlobal('fetch', fetchStub)
@@ -24,6 +25,8 @@ function stubApi({ me = signedOut, auth = neverAnswers } = {}) {
 const openAt = (path) => window.history.replaceState(null, '', path)
 const type = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent
+// The library is the page someone signed in lands on.
+const showsLibrary = () => expect(screen.getByRole('heading', { level: 2, name: 'Library' })).toBeTruthy()
 
 // Renders, then waits for the answer about who's signed in.
 async function renderApp() {
@@ -48,14 +51,14 @@ describe('App', () => {
     it('opens the app when the cookie says who this is', async () => {
       stubApi({ me: async () => json(ACCOUNT, 200) })
       await renderApp()
-      expect(heading()).toBe('Welcome, Courtney')
+      showsLibrary()
     })
 
     it('opens the app at home when signed in at an auth screen’s address', async () => {
       stubApi({ me: async () => json(ACCOUNT, 200) })
       openAt(SIGN_IN_PATH)
       await renderApp()
-      expect(heading()).toBe('Welcome, Courtney')
+      showsLibrary()
       expect(window.location.pathname).toBe('/')
     })
 
@@ -152,7 +155,7 @@ describe('App', () => {
     type('Password', 'tides and statues')
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
 
-    await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+    await vi.waitFor(showsLibrary)
     expect(fetchStub.mock.calls.map(([path]) => path)).toContain('/api/auth/register')
     expect(window.location.pathname).toBe('/')
     expect(screen.getByRole('button', { name: /Courtney/ })).toBeTruthy()
@@ -167,7 +170,7 @@ describe('App', () => {
     type('Password', 'tides and statues')
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+    await vi.waitFor(showsLibrary)
     expect(fetchStub.mock.calls.map(([path]) => path)).toContain('/api/auth/sign-in')
     expect(window.location.pathname).toBe('/')
   })
@@ -187,7 +190,7 @@ describe('App', () => {
 
       signInWithForm()
 
-      await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+      await vi.waitFor(showsLibrary)
       expect(window.location.pathname + window.location.search + window.location.hash).toBe('/?view=grid#top')
     })
 
@@ -202,7 +205,7 @@ describe('App', () => {
       type('Password', 'tides and statues')
       fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
 
-      await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+      await vi.waitFor(showsLibrary)
       expect(window.location.search).toBe('?view=grid')
     })
   })
@@ -211,8 +214,8 @@ describe('App', () => {
     // Signed in, with the account menu open, ready to choose Sign out.
     async function openAccountMenu(signOutAnswer) {
       const fetchStub = vi.fn(async (path) => {
-        if (path === '/health') return new Response('Healthy')
         if (path === '/api/auth/me') return json(ACCOUNT, 200)
+        if (path === '/api/items') return json([], 200)
         return signOutAnswer(path)
       })
       vi.stubGlobal('fetch', fetchStub)
@@ -243,7 +246,7 @@ describe('App', () => {
       type('Password', 'tides and statues')
       fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
-      await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+      await vi.waitFor(showsLibrary)
       expect(window.location.search).toBe('')
     })
 
@@ -252,7 +255,7 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
 
       await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toMatch("Couldn't sign out"))
-      expect(heading()).toBe('Welcome, Courtney')
+      showsLibrary()
       expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
     })
   })

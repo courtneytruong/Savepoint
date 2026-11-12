@@ -1,23 +1,10 @@
-import { startTransition, useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Outlet, Link as RouterLink, Route, Routes, useLocation, useNavigate } from 'react-router'
-import { createAccount, getAccount, signIn, signOut } from './api/auth.js'
-import {
-  AccountMenu,
-  AuthLayout,
-  CreateAccountForm,
-  Header,
-  Heading,
-  LinkProvider,
-  Section,
-  SignInForm,
-  Spinner,
-  useToast,
-} from './components/index.js'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Navigate, Outlet, Link as RouterLink, Route, Routes, useLocation } from 'react-router'
+import { createAccount, getAccount, signIn } from './api/auth.js'
+import { AuthLayout, CreateAccountForm, LinkProvider, SignInForm, Spinner } from './components/index.js'
 import styles from './App.module.css'
-import { HealthStatus } from './HealthStatus.jsx'
-
-export const SIGN_IN_PATH = '/sign-in'
-export const CREATE_ACCOUNT_PATH = '/create-account'
+import { LibraryPage } from './pages/LibraryPage.jsx'
+import { CREATE_ACCOUNT_PATH, LIBRARY_PATH, SIGN_IN_PATH } from './paths.js'
 
 // Every link in the components goes through React Router, so moving around the
 // app doesn't reload the page. nginx and Vite answer any path with the app.
@@ -70,10 +57,10 @@ function Session() {
         <Route path={CREATE_ACCOUNT_PATH} element={<CreateAccountPage onSignedIn={setAccount} />} />
       </Route>
       <Route element={<SignedInOnly account={account} />}>
-        <Route path="/" element={<Home account={account} onSignedOut={() => setAccount(null)} />} />
+        <Route path={LIBRARY_PATH} element={<LibraryPage account={account} onSignedOut={() => setAccount(null)} />} />
       </Route>
       {/* No other pages yet, so any other address goes home. */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={LIBRARY_PATH} replace />} />
     </Routes>
   )
 }
@@ -140,52 +127,6 @@ function CreateAccountPage({ onSignedIn }) {
     >
       <CreateAccountForm signInHref={SIGN_IN_PATH} onSubmit={thenSignIn(createAccount, onSignedIn)} />
     </AuthLayout>
-  )
-}
-
-// A stand-in for the library, until that feature is built.
-function Home({ account, onSignedOut }) {
-  const toast = useToast()
-  const navigate = useNavigate()
-
-  // Sign-in shows only once the API has deleted the cookie. Otherwise the next
-  // reload would sign them straight back in, so they stay here and can retry.
-  async function handleSignOut() {
-    try {
-      await signOut()
-    } catch {
-      toast.show({
-        tone: 'error',
-        title: "Couldn't sign out",
-        description: "Something went wrong on Savepoint's server. Try again.",
-        action: { label: 'Try again', onClick: handleSignOut },
-      })
-      return
-    }
-    // Straight to sign-in, without remembering this page: whoever signs in next
-    // may not be the same person. One transition for both, because React Router
-    // makes every navigation a transition, which waits behind ordinary updates.
-    // Alone, signing out would show first, still at this page, and the redirect
-    // for signed-out people would remember it.
-    startTransition(() => {
-      navigate(SIGN_IN_PATH, { replace: true })
-      onSignedOut()
-    })
-  }
-
-  return (
-    <>
-      <Header
-        brand="Savepoint"
-        actions={<AccountMenu name={account.displayName} email={account.email} onSignOut={handleSignOut} />}
-      />
-      <Section as="main">
-        <Heading as="h1" size="large">
-          Welcome, {account.displayName}
-        </Heading>
-        <HealthStatus />
-      </Section>
-    </>
   )
 }
 

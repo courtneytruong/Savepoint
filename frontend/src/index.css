@@ -42,12 +42,3 @@ html:has(dialog[open]) {
     transition: none !important;
   }
 }
-
-.status-connected {
-  color: var(--color-success);
-}
-
-.status-databaseUnreachable,
-.status-apiUnreachable {
-  color: var(--color-danger);
-}
