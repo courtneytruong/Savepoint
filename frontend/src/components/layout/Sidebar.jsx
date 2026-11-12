@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import styles from './Sidebar.module.css'
 import { classNames } from '../../utils/classNames.js'
 import { VisuallyHidden } from '../ui/VisuallyHidden.jsx'
+import { Link } from '../ui/Link.jsx'
 
 /** Puts a sidebar beside the main content. On small screens it moves above it. */
 export function SidebarLayout({ sidebar, className, children, ...props }) {
@@ -50,7 +51,7 @@ export function SidebarGroup({ title, children }) {
 export function SidebarLink({ icon, count, active = false, className, children, ...props }) {
   return (
     <li>
-      <a
+      <Link
         aria-current={active ? 'page' : undefined}
         className={classNames(styles.link, active && styles.active, className)}
         {...props}
@@ -68,7 +69,7 @@ export function SidebarLink({ icon, count, active = false, className, children, 
             <span className={styles.count}>{count}</span>
           </>
         )}
-      </a>
+      </Link>
     </li>
   )
 }

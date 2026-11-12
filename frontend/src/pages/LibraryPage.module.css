@@ -1,0 +1,78 @@
+/* The same layout as the /components gallery's library. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-16);
+  padding: var(--spacing-16) var(--spacing-24);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+/* The search takes the room between the heading and the view switch. On phones it
+   drops to its own row, full width, so there's space to type. */
+.search {
+  flex: 1;
+  max-width: 420px;
+  margin-inline-start: auto;
+}
+
+@media (max-width: 600px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    flex-basis: 100%;
+    order: 1;
+    max-width: none;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  /* Keeps the pills their own height when the taller sort field sits beside them. */
+  align-items: flex-end;
+  gap: var(--spacing-12) var(--spacing-24);
+  padding: var(--spacing-16) var(--spacing-24);
+}
+
+.sort {
+  width: 200px;
+  margin-inline-start: auto;
+}
+
+.grid {
+  padding: 0 var(--spacing-24) var(--spacing-24);
+}
+
+/* Loading cards, in the same columns as ItemGrid, so nothing jumps when they're replaced. */
+.loadingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  gap: var(--spacing-16);
+  padding: 0 var(--spacing-24) var(--spacing-24);
+}
+
+.pagination {
+  padding: var(--spacing-16) var(--spacing-24);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.title {
+  display: block;
+  width: fit-content;
+  color: var(--color-soft-quartz);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.title:hover {
+  text-decoration: underline;
+}
+
+.creator {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-ash-lilac);
+}

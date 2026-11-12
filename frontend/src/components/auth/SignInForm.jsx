@@ -9,6 +9,7 @@ import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
 import { useSecondsLeft } from '../../hooks/useSecondsLeft.js'
 import { formatClock, formatDuration } from '../../utils/duration.js'
 import { VisuallyHidden } from '../ui/VisuallyHidden.jsx'
+import { Link } from '../ui/Link.jsx'
 
 // Problems with the whole sign-in, rather than one field, shown above the form.
 const FORM_ERRORS = {
@@ -81,7 +82,7 @@ export function SignInForm({ onSubmit, createAccountHref, className }) {
   if (serverError === 'unknownEmail' && !errors.email) {
     errors.email = createAccountHref ? (
       <>
-        No account uses that email. <a href={createAccountHref}>Create an account</a>?
+        No account uses that email. <Link href={createAccountHref}>Create an account</Link>?
       </>
     ) : (
       'No account uses that email.'

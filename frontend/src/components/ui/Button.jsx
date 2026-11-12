@@ -1,5 +1,6 @@
 import styles from './Button.module.css'
 import { classNames } from '../../utils/classNames.js'
+import { Link } from './Link.jsx'
 
 /**
  * A pill-shaped action. Passing href renders a link instead of a button.
@@ -17,9 +18,9 @@ export function Button({ variant = 'primary', href, type = 'button', loading = f
 
   if (href) {
     return (
-      <a href={href} className={classes} onClick={onClick} {...props}>
+      <Link href={href} className={classes} onClick={onClick} {...props}>
         {children}
-      </a>
+      </Link>
     )
   }
 

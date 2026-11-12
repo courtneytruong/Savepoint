@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App, { CREATE_ACCOUNT_PATH, SIGN_IN_PATH } from '../App.jsx'
+import App from '../App.jsx'
+import { CREATE_ACCOUNT_PATH, SIGN_IN_PATH } from '../paths.js'
 import { ToastProvider } from '../components/index.js'
 
 const ACCOUNT = { id: '6f1c2c1e-0000-4000-8000-000000000000', displayName: 'Courtney', email: 'reader@example.com' }
@@ -9,12 +10,12 @@ const json = (body, status) => new Response(JSON.stringify(body), { status })
 const signedOut = async () => json({ status: 401 }, 401)
 const neverAnswers = () => new Promise(() => {})
 
-// Answers each path the way the API would: me says who's signed in, and auth
-// answers registering or signing in.
+// Answers each path the way the API would: me says who's signed in, the library
+// is empty, and auth answers registering or signing in.
 function stubApi({ me = signedOut, auth = neverAnswers } = {}) {
   const fetchStub = vi.fn(async (path, options) => {
-    if (path === '/health') return new Response('Healthy')
     if (path === '/api/auth/me') return me(options)
+    if (path === '/api/items') return json([], 200)
     return auth()
   })
   vi.stubGlobal('fetch', fetchStub)
@@ -24,6 +25,8 @@ function stubApi({ me = signedOut, auth = neverAnswers } = {}) {
 const openAt = (path) => window.history.replaceState(null, '', path)
 const type = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent
+// The library is the page someone signed in lands on.
+const showsLibrary = () => expect(screen.getByRole('heading', { level: 2, name: 'Library' })).toBeTruthy()
 
 // Renders, then waits for the answer about who's signed in.
 async function renderApp() {
@@ -48,14 +51,14 @@ describe('App', () => {
     it('opens the app when the cookie says who this is', async () => {
       stubApi({ me: async () => json(ACCOUNT, 200) })
       await renderApp()
-      expect(heading()).toBe('Welcome, Courtney')
+      showsLibrary()
     })
 
     it('opens the app at home when signed in at an auth screen’s address', async () => {
       stubApi({ me: async () => json(ACCOUNT, 200) })
       openAt(SIGN_IN_PATH)
       await renderApp()
-      expect(heading()).toBe('Welcome, Courtney')
+      showsLibrary()
       expect(window.location.pathname).toBe('/')
     })
 
@@ -63,6 +66,7 @@ describe('App', () => {
       stubApi()
       await renderApp()
       expect(heading()).toBe('Welcome back')
+      expect(window.location.pathname).toBe(SIGN_IN_PATH)
     })
 
     it.each([
@@ -101,11 +105,36 @@ describe('App', () => {
     })
   })
 
-  it('shows sign-in at the home address while signed out', async () => {
+  it('sends a signed-out visitor from home to sign in', async () => {
     stubApi()
     await renderApp()
     expect(heading()).toBe('Welcome back')
+    expect(window.location.pathname).toBe(SIGN_IN_PATH)
     expect(screen.getByRole('link', { name: 'Create an account' }).getAttribute('href')).toBe(CREATE_ACCOUNT_PATH)
+  })
+
+  it('switches between signing in and creating an account without reloading', async () => {
+    const fetchStub = stubApi()
+    await renderApp()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Create an account' }))
+    expect(heading()).toBe('Start your journal')
+    expect(window.location.pathname).toBe(CREATE_ACCOUNT_PATH)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Sign in' }))
+    expect(heading()).toBe('Welcome back')
+    // A reload would have asked who's signed in again.
+    expect(fetchStub.mock.calls.filter(([path]) => path === '/api/auth/me')).toHaveLength(1)
+  })
+
+  it.each([
+    ['signed out', signedOut, SIGN_IN_PATH],
+    ['signed in', async () => json(ACCOUNT, 200), '/'],
+  ])('sends an unknown address home, which while %s is %s', async (_, me, path) => {
+    stubApi({ me })
+    openAt('/no-such-page')
+    await renderApp()
+    expect(window.location.pathname).toBe(path)
   })
 
   it('shows creating an account at its own path', async () => {
@@ -126,7 +155,7 @@ describe('App', () => {
     type('Password', 'tides and statues')
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
 
-    await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+    await vi.waitFor(showsLibrary)
     expect(fetchStub.mock.calls.map(([path]) => path)).toContain('/api/auth/register')
     expect(window.location.pathname).toBe('/')
     expect(screen.getByRole('button', { name: /Courtney/ })).toBeTruthy()
@@ -141,18 +170,53 @@ describe('App', () => {
     type('Password', 'tides and statues')
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    await vi.waitFor(() => expect(heading()).toBe('Welcome, Courtney'))
+    await vi.waitFor(showsLibrary)
     expect(fetchStub.mock.calls.map(([path]) => path)).toContain('/api/auth/sign-in')
     expect(window.location.pathname).toBe('/')
+  })
+
+  describe('returning to the page asked for', () => {
+    function signInWithForm() {
+      type('Email', 'reader@example.com')
+      type('Password', 'tides and statues')
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    }
+
+    it('goes back to it once signed in', async () => {
+      stubApi({ auth: async () => json(ACCOUNT, 200) })
+      openAt('/?view=grid#top')
+      await renderApp()
+      expect(window.location.pathname).toBe(SIGN_IN_PATH)
+
+      signInWithForm()
+
+      await vi.waitFor(showsLibrary)
+      expect(window.location.pathname + window.location.search + window.location.hash).toBe('/?view=grid#top')
+    })
+
+    it('still goes back to it after a detour to creating an account', async () => {
+      stubApi({ auth: async () => json(ACCOUNT, 201) })
+      openAt('/?view=grid')
+      await renderApp()
+
+      fireEvent.click(screen.getByRole('link', { name: 'Create an account' }))
+      type('Your name', 'Courtney')
+      type('Email', 'reader@example.com')
+      type('Password', 'tides and statues')
+      fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+
+      await vi.waitFor(showsLibrary)
+      expect(window.location.search).toBe('?view=grid')
+    })
   })
 
   describe('signing out', () => {
     // Signed in, with the account menu open, ready to choose Sign out.
     async function openAccountMenu(signOutAnswer) {
       const fetchStub = vi.fn(async (path) => {
-        if (path === '/health') return new Response('Healthy')
         if (path === '/api/auth/me') return json(ACCOUNT, 200)
-        return signOutAnswer()
+        if (path === '/api/items') return json([], 200)
+        return signOutAnswer(path)
       })
       vi.stubGlobal('fetch', fetchStub)
       await renderApp()
@@ -167,6 +231,23 @@ describe('App', () => {
       await vi.waitFor(() => expect(heading()).toBe('Welcome back'))
       const call = fetchStub.mock.calls.find(([path]) => path === '/api/auth/sign-out')
       expect(call[1].method).toBe('POST')
+      expect(window.location.pathname).toBe(SIGN_IN_PATH)
+    })
+
+    it('doesn’t remember the page, since the next person to sign in may not be the same', async () => {
+      openAt('/?view=grid')
+      await openAccountMenu(async (path) =>
+        path === '/api/auth/sign-in' ? json(ACCOUNT, 200) : new Response(null, { status: 204 }),
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+      await vi.waitFor(() => expect(heading()).toBe('Welcome back'))
+
+      type('Email', 'reader@example.com')
+      type('Password', 'tides and statues')
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+      await vi.waitFor(showsLibrary)
+      expect(window.location.search).toBe('')
     })
 
     it('stays signed in, and says so, when the API can’t sign out', async () => {
@@ -174,7 +255,7 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
 
       await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toMatch("Couldn't sign out"))
-      expect(heading()).toBe('Welcome, Courtney')
+      showsLibrary()
       expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
     })
   })

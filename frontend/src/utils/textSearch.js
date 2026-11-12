@@ -7,11 +7,12 @@ export const simplify = (text = '') =>
 
 /**
  * Whether any of the fields contains what was typed, ignoring case and accents.
- * An empty query matches everything. Missing fields are skipped.
+ * An empty query matches everything. Missing fields, undefined or null as the
+ * API sends an item with no creator, are skipped.
  */
 export function matchesSearch(fields, query) {
   const wanted = simplify(query.trim())
-  return !wanted || fields.some((field) => simplify(field).includes(wanted))
+  return !wanted || fields.some((field) => field != null && simplify(field).includes(wanted))
 }
 
 /**

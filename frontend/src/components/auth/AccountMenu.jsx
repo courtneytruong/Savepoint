@@ -3,6 +3,7 @@ import styles from './AccountMenu.module.css'
 import { ExpandIcon, SettingsIcon, SignOutIcon } from '../icons.js'
 import { useAnchoredPopup } from '../../hooks/useAnchoredPopup.js'
 import { VisuallyHidden } from '../ui/VisuallyHidden.jsx'
+import { Link } from '../ui/Link.jsx'
 
 // The first letter of the name, for the circle. Array.from keeps a letter made of
 // two UTF-16 units, such as many emoji, in one piece.
@@ -87,10 +88,10 @@ export function AccountMenu({ name, email, settingsHref, onSignOut }) {
             <ul className={styles.items}>
               {settingsHref && (
                 <li>
-                  <a href={settingsHref} className={styles.item} onClick={() => close()}>
+                  <Link href={settingsHref} className={styles.item} onClick={() => close()}>
                     <SettingsIcon aria-hidden="true" />
                     Settings
-                  </a>
+                  </Link>
                 </li>
               )}
               <li>

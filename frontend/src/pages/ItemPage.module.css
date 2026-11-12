@@ -1,0 +1,63 @@
+/* The same padding as the library's toolbar, so moving between them doesn't jump. */
+.back {
+  padding: var(--spacing-16) var(--spacing-24);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.back a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  color: var(--color-ash-lilac);
+  text-decoration: none;
+}
+
+.back a:hover {
+  color: var(--color-soft-quartz);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  padding: var(--spacing-24);
+}
+
+/* Edit and Delete sit at the end of the title's line, and wrap below a long title on phones. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-12) var(--spacing-16);
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-8);
+}
+
+.creator {
+  margin-top: var(--spacing-4);
+}
+
+.statuses[aria-busy='true'] button {
+  cursor: progress;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-16) var(--spacing-32);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+}
+
+.facts dd {
+  margin: 2px 0 0;
+  color: var(--color-soft-quartz);
+}

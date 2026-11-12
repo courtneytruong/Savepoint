@@ -3,6 +3,7 @@ import { classNames } from '../../utils/classNames.js'
 import { MediumLabel } from '../library/ItemCard.jsx'
 import { MoodBadge } from './Mood.jsx'
 import styles from './ReflectionCard.module.css'
+import { Link } from '../ui/Link.jsx'
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
 const fullDayFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -61,7 +62,7 @@ export function ReflectionCard({
       <div className={styles.top}>
         {item ? (
           <ItemHeading className={styles.itemTitle}>
-            {item.href ? <a href={item.href}>{item.title}</a> : item.title}
+            {item.href ? <Link href={item.href}>{item.title}</Link> : item.title}
           </ItemHeading>
         ) : (
           <p className={styles.title}>

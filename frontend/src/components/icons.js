@@ -41,6 +41,7 @@ export {
   LuLogOut as SignOutIcon,
   LuList as ListIcon,
   LuListFilter as FilterIcon,
+  LuPencil as EditIcon,
   LuX as CloseIcon,
   LuSearch as SearchIcon,
   LuSearchX as NoResultsIcon,
