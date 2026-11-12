@@ -7,6 +7,7 @@ import { classNames } from '../../utils/classNames.js'
 import { Input, PasswordField } from '../forms/Field.jsx'
 import { LengthCounter } from '../forms/LengthCounter.jsx'
 import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
+import { Link } from '../ui/Link.jsx'
 
 const FAILED = {
   title: "Couldn't create your account",
@@ -42,7 +43,7 @@ export function CreateAccountForm({ onSubmit, signInHref, className }) {
   if (serverError === 'emailTaken' && !errors.email) {
     errors.email = signInHref ? (
       <>
-        That email already has an account. <a href={signInHref}>Sign in</a> instead?
+        That email already has an account. <Link href={signInHref}>Sign in</Link> instead?
       </>
     ) : (
       'That email already has an account.'

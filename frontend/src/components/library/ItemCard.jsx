@@ -3,6 +3,7 @@ import { MoodBadge } from '../reflections/Mood.jsx'
 import { StatusBadge } from './StatusBadge.jsx'
 import { classNames } from '../../utils/classNames.js'
 import { BookIcon, GameIcon, RatingIcon } from '../icons.js'
+import { Link } from '../ui/Link.jsx'
 
 // Keyed by the medium values in docs/data-model.md.
 const MEDIA = {
@@ -58,9 +59,9 @@ export function ItemCard({ title, creator, medium, status, mood, rating, excerpt
       </div>
       <div>
         <Title className={styles.title}>
-          <a href={href} className={styles.link}>
+          <Link href={href} className={styles.link}>
             {title}
-          </a>
+          </Link>
         </Title>
         {creator && <p className={styles.creator}>{creator}</p>}
       </div>
