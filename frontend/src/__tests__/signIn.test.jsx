@@ -20,6 +20,11 @@ describe('validateSignIn', () => {
     expect(validateSignIn({ email: 'reader', password: 'x' }).email).toBe('Enter an email like name@example.com.')
   })
 
+  it('turns away an email too long for any account to have', () => {
+    const email = `${'a'.repeat(257 - '@example.com'.length)}@example.com`
+    expect(validateSignIn({ email, password: 'x' }).email).toBe('Use 256 characters or fewer.')
+  })
+
   it("doesn't trim the password, since spaces can be part of it", () => {
     expect(validateSignIn({ email: 'a@b', password: '  ' })).toEqual({})
   })

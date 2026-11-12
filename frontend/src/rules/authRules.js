@@ -1,16 +1,25 @@
 // What the auth forms check before sending anything. The API checks again, and
 // only it knows whether an account exists or a password is right.
 
+// The account rules in docs/data-model.md.
+export const MIN_PASSWORD_LENGTH = 12
+export const MAX_PASSWORD_LENGTH = 128
+export const MAX_DISPLAY_NAME_LENGTH = 50
+export const MAX_EMAIL_LENGTH = 256
+
 // Something, an @, then something, with no spaces. Stricter checks turn away
 // real addresses, and the API is the one that has to accept it.
 const EMAIL = /^[^\s@]+@[^\s@]+$/
 
 export const looksLikeEmail = (text = '') => EMAIL.test(text.trim())
 
-// The same email messages on every form.
+// The same email messages on every form, checked in the API's order. No account
+// can have a longer email, so signing in with one could only fail.
 function emailError(email) {
-  if (email.trim() === '') return 'Enter your email.'
-  if (!looksLikeEmail(email)) return 'Enter an email like name@example.com.'
+  const trimmed = email.trim()
+  if (trimmed === '') return 'Enter your email.'
+  if (trimmed.length > MAX_EMAIL_LENGTH) return `Use ${MAX_EMAIL_LENGTH} characters or fewer.`
+  if (!looksLikeEmail(trimmed)) return 'Enter an email like name@example.com.'
   return undefined
 }
 
@@ -29,11 +38,6 @@ export function validateSignIn({ email = '', password = '' }) {
  * above the form.
  */
 export const SIGN_IN_ERRORS = ['unknownEmail', 'wrongPassword', 'tooManyTries', 'failed']
-
-// The account rules in docs/data-model.md.
-export const MIN_PASSWORD_LENGTH = 12
-export const MAX_PASSWORD_LENGTH = 128
-export const MAX_DISPLAY_NAME_LENGTH = 50
 
 /**
  * Returns a message for each field that breaks a rule for a new account, or an
