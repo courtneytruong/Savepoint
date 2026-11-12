@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createAccount, signIn } from '../api/auth.js'
+import { createAccount, getAccount, signIn } from '../api/auth.js'
 
 const ACCOUNT = { id: '6f1c2c1e-0000-4000-8000-000000000000', displayName: 'Courtney', email: 'reader@example.com' }
 const NEW_ACCOUNT = { displayName: 'Courtney', email: 'reader@example.com', password: 'tides and statues' }
@@ -90,5 +90,30 @@ describe('signIn', () => {
   it('leaves out a time left that isn’t a positive number', async () => {
     stubFetch(async () => problem(429, { error: 'tooManyTries', retryAfterSeconds: 'soon' }))
     expect(await signIn(DETAILS)).toEqual({ error: 'tooManyTries' })
+  })
+})
+
+describe('getAccount', () => {
+  it('asks the me endpoint, and answers with the signed-in account', async () => {
+    const fetchStub = stubFetch(async () => new Response(JSON.stringify(ACCOUNT), { status: 200 }))
+    expect(await getAccount()).toEqual(ACCOUNT)
+    expect(fetchStub.mock.calls[0][0]).toBe('/api/auth/me')
+  })
+
+  it('answers null when no one is signed in', async () => {
+    stubFetch(async () => problem(401))
+    expect(await getAccount()).toBeNull()
+  })
+
+  it('throws on any other answer', async () => {
+    stubFetch(async () => problem(500))
+    await expect(getAccount()).rejects.toThrow('500')
+  })
+
+  it('passes on a signal, so the request can be cancelled', async () => {
+    const fetchStub = stubFetch(async () => problem(401))
+    const controller = new AbortController()
+    await getAccount({ signal: controller.signal })
+    expect(fetchStub.mock.calls[0][1].signal).toBe(controller.signal)
   })
 })

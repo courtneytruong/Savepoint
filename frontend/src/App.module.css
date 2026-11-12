@@ -1,0 +1,15 @@
+/* While asking who's signed in: a spinner in the middle of the page. */
+.checking {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  /* Hidden at first, so a quick answer doesn't flash a spinner. */
+  opacity: 0;
+  animation: appear 0s 400ms forwards;
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}

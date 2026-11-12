@@ -1,6 +1,16 @@
-import { useState } from 'react'
-import { createAccount, signIn } from './api/auth.js'
-import { AccountMenu, AuthLayout, CreateAccountForm, Header, Heading, Section, SignInForm } from './components/index.js'
+import { useEffect, useState } from 'react'
+import { createAccount, getAccount, signIn } from './api/auth.js'
+import {
+  AccountMenu,
+  AuthLayout,
+  CreateAccountForm,
+  Header,
+  Heading,
+  Section,
+  SignInForm,
+  Spinner,
+} from './components/index.js'
+import styles from './App.module.css'
 import { HealthStatus } from './HealthStatus.jsx'
 
 // Until there's real routing, each auth screen has its own path, and the links
@@ -9,17 +19,45 @@ export const SIGN_IN_PATH = '/sign-in'
 export const CREATE_ACCOUNT_PATH = '/create-account'
 
 function App() {
+  // Whether the API has said who's signed in yet, and who, if anyone.
+  const [checked, setChecked] = useState(false)
   const [account, setAccount] = useState(null)
 
-  // Once the API has signed someone in, opens the app at its home address. The
-  // answer goes back to the form either way, so it can show any error.
+  // Opens the app at its home address, rather than an auth screen's.
+  const open = (found) => {
+    window.history.replaceState(null, '', '/')
+    setAccount(found)
+    setChecked(true)
+  }
+
+  // On load, the auth cookie may already say who this is, so a reload doesn't
+  // sign anyone out. If the API can't say, the sign-in screen shows, and the
+  // form says so if signing in fails too.
+  useEffect(() => {
+    const controller = new AbortController()
+    getAccount({ signal: controller.signal })
+      .then((found) => (found ? open(found) : setChecked(true)))
+      .catch((error) => {
+        // An abort means the page cleaned up this request, not that it failed.
+        if (error.name !== 'AbortError') setChecked(true)
+      })
+    return () => controller.abort()
+  }, [])
+
+  // Once the API has signed someone in, opens the app. The answer goes back to
+  // the form either way, so it can show any error.
   const thenOpen = (send) => async (details) => {
     const result = await send(details)
-    if (result.account) {
-      window.history.replaceState(null, '', '/')
-      setAccount(result.account)
-    }
+    if (result.account) open(result.account)
     return result
+  }
+
+  if (!checked) {
+    return (
+      <main className={styles.checking}>
+        <Spinner size="large" label="Opening Savepoint" />
+      </main>
+    )
   }
 
   if (account) return <Home account={account} />

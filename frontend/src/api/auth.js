@@ -44,3 +44,15 @@ export const createAccount = ({ displayName, email, password }) =>
  * or failed.
  */
 export const signIn = ({ email, password }) => post('/api/auth/sign-in', { email, password })
+
+/**
+ * Who's signed in, from the auth cookie, for the app to choose what to show on
+ * load. Resolves with the account, or null when no one is. Unlike the calls
+ * above, nothing here needs an error code, so any other answer throws.
+ */
+export async function getAccount({ signal } = {}) {
+  const response = await fetch('/api/auth/me', { signal })
+  if (response.status === 401) return null
+  if (!response.ok) throw new Error(`Checking who's signed in got ${response.status}`)
+  return response.json()
+}
