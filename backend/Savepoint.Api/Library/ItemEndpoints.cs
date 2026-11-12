@@ -21,6 +21,7 @@ public static class ItemEndpoints
         // :guid, so an id that isn't one is a 404 like any other unknown item.
         items.MapGet("/{id:guid}", Get);
         items.MapPost("/", Create);
+        items.MapPut("/{id:guid}", Update);
         return app;
     }
 
@@ -76,6 +77,8 @@ public static class ItemEndpoints
     // field code rather than a request the JSON reader refuses outright.
     public record CreateItemRequest(string? Medium, string? Title, string? Creator, string? Status);
 
+    public record UpdateItemRequest(string? Medium, string? Title, string? Creator);
+
     /// <summary>
     /// An item as the frontend sees it, with its current status: the newest of its
     /// status changes, and when that happened.
@@ -98,20 +101,8 @@ public static class ItemEndpoints
         CreateItemRequest request, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
         CancellationToken cancellationToken)
     {
-        var title = request.Title?.Trim() ?? "";
-        // An empty creator means none is known, saved as null.
-        var creator = string.IsNullOrWhiteSpace(request.Creator) ? null : request.Creator.Trim();
-
         var errors = new Dictionary<string, string[]>();
-
-        Medium medium = default;
-        if (request.Medium is null) errors["medium"] = ["required"];
-        else if (!TryParseName(request.Medium, out medium)) errors["medium"] = ["invalid"];
-
-        if (title.Length == 0) errors["title"] = ["required"];
-        else if (title.Length > LibraryRules.MaxTitleLength) errors["title"] = ["tooLong"];
-
-        if (creator?.Length > LibraryRules.MaxCreatorLength) errors["creator"] = ["tooLong"];
+        var details = CheckDetails(request.Medium, request.Title, request.Creator, errors);
 
         var status = ItemStatus.Backlog;
         if (request.Status is not null && !TryParseName(request.Status, out status)) errors["status"] = ["invalid"];
@@ -121,9 +112,9 @@ public static class ItemEndpoints
         var item = new Item
         {
             UserId = CurrentUserId(principal, users),
-            Medium = medium,
-            Title = title,
-            Creator = creator,
+            Medium = details.Medium,
+            Title = details.Title,
+            Creator = details.Creator,
             StatusChanges = { new StatusChange { Status = status } },
         };
         // One save, so the item and its first status are one transaction: both are
@@ -133,6 +124,62 @@ public static class ItemEndpoints
 
         // A new item has only its first status, which is its current one.
         return TypedResults.Created($"/api/items/{item.Id}", ToResponse(item, item.StatusChanges.Single()));
+    }
+
+    /// <summary>
+    /// Replaces an item's medium, title and creator, so all three are sent each time
+    /// and a missing or empty creator clears it. Its status isn't changed here,
+    /// because a change of status adds to its history. 200 with the item, 404 as for
+    /// Get, or 400 with a code per field.
+    /// </summary>
+    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem>> Update(
+        Guid id, UpdateItemRequest request, ClaimsPrincipal principal, UserManager<User> users,
+        SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+        var details = CheckDetails(request.Medium, request.Title, request.Creator, errors);
+        if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
+
+        var userId = CurrentUserId(principal, users);
+        var mine = db.Items.Where(i => i.Id == id && i.UserId == userId);
+        // One UPDATE, which also says whether the item was there to change.
+        var changed = await mine.ExecuteUpdateAsync(
+            set => set
+                .SetProperty(i => i.Medium, details.Medium)
+                .SetProperty(i => i.Title, details.Title)
+                .SetProperty(i => i.Creator, details.Creator),
+            cancellationToken);
+        if (changed == 0) return TypedResults.NotFound();
+
+        var row = await mine.WithCurrentStatus().SingleAsync(cancellationToken);
+        return TypedResults.Ok(ToResponse(row.Item, row.Current));
+    }
+
+    // The checked, trimmed fields shared by creating and editing.
+    private sealed record ItemDetails(Medium Medium, string Title, string? Creator);
+
+    /// <summary>
+    /// Checks the fields that creating and editing share, adding a code to errors
+    /// for each one that's wrong. The details it returns are only meaningful when
+    /// it added none.
+    /// </summary>
+    private static ItemDetails CheckDetails(
+        string? mediumText, string? titleText, string? creatorText, Dictionary<string, string[]> errors)
+    {
+        var title = titleText?.Trim() ?? "";
+        // An empty creator means none is known, saved as null.
+        var creator = string.IsNullOrWhiteSpace(creatorText) ? null : creatorText.Trim();
+
+        Medium medium = default;
+        if (mediumText is null) errors["medium"] = ["required"];
+        else if (!TryParseName(mediumText, out medium)) errors["medium"] = ["invalid"];
+
+        if (title.Length == 0) errors["title"] = ["required"];
+        else if (title.Length > LibraryRules.MaxTitleLength) errors["title"] = ["tooLong"];
+
+        if (creator?.Length > LibraryRules.MaxCreatorLength) errors["creator"] = ["tooLong"];
+
+        return new ItemDetails(medium, title, creator);
     }
 
     private static ItemResponse ToResponse(Item item, StatusChange current) =>
