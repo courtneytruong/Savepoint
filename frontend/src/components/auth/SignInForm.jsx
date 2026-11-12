@@ -6,17 +6,45 @@ import { Button } from '../ui/Button.jsx'
 import { classNames } from '../../utils/classNames.js'
 import { Input, PasswordField } from '../forms/Field.jsx'
 import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
+import { useSecondsLeft } from '../../hooks/useSecondsLeft.js'
+import { formatClock, formatDuration } from '../../utils/duration.js'
+import { VisuallyHidden } from '../ui/VisuallyHidden.jsx'
 
 // Problems with the whole sign-in, rather than one field, shown above the form.
 const FORM_ERRORS = {
   tooManyTries: {
     title: 'Too many tries',
+    // Only when the answer doesn't say how long; otherwise lockoutMessage counts down.
     body: 'To keep your account safe, signing in is paused for a few minutes. Wait, then try again.',
   },
   failed: {
     title: "Couldn't sign in",
-    body: "Savepoint's server didn't answer. Check that it's running, then try again.",
+    body: "Something went wrong on Savepoint's server. Try again.",
   },
+}
+
+/**
+ * The pause after too many tries, counting down to when signing in works again.
+ * The alert is a live region, so the ticking clock is hidden from screen readers,
+ * which would otherwise read it out every second. They hear the time left once,
+ * when the alert appears, and again only when the pause is over.
+ */
+function lockoutMessage(secondsLeft, totalSeconds) {
+  if (secondsLeft === 0) {
+    return { title: 'You can try again', body: "Signing in isn't paused any more." }
+  }
+  return {
+    title: 'Too many tries',
+    body: (
+      <>
+        To keep your account safe, signing in is paused. You can try again in{' '}
+        <span aria-hidden="true" className={styles.countdown}>
+          {formatClock(secondsLeft)}
+        </span>
+        <VisuallyHidden>{formatDuration(totalSeconds)}</VisuallyHidden>.
+      </>
+    ),
+  }
 }
 
 /**
@@ -28,19 +56,25 @@ const FORM_ERRORS = {
  * onSubmit receives { email, password }, with the email trimmed, and returns a
  * Promise. It resolves with nothing when signed in, or with { error } naming what
  * went wrong: unknownEmail, wrongPassword, tooManyTries or failed. If it throws,
- * as when the server can't be reached, that counts as failed.
+ * as when the server can't be reached, that counts as failed. With tooManyTries,
+ * retryAfterSeconds shows a countdown to when trying works again.
  *
  * createAccountHref: where "Create an account" goes, offered with an unknown email.
  */
 export function SignInForm({ onSubmit, createAccountHref, className }) {
   const [values, setValues] = useState({ email: '', password: '' })
-  const { errors: checkErrors, serverError, setServerError, loading, handleSubmit, formRef, alertRef } = useAuthSubmit({
-    values,
-    validate: validateSignIn,
-    send: () => onSubmit({ email: values.email.trim(), password: values.password }),
-    knownErrors: SIGN_IN_ERRORS,
-    formErrors: Object.keys(FORM_ERRORS),
-  })
+  const { errors: checkErrors, serverError, serverAnswer, setServerError, loading, handleSubmit, formRef, alertRef } =
+    useAuthSubmit({
+      values,
+      validate: validateSignIn,
+      send: () => onSubmit({ email: values.email.trim(), password: values.password }),
+      knownErrors: SIGN_IN_ERRORS,
+      formErrors: Object.keys(FORM_ERRORS),
+    })
+
+  // Counted from when the answer arrived, since that's when the API measured it.
+  const lockout = serverError === 'tooManyTries' && serverAnswer?.retryAfterSeconds ? serverAnswer : null
+  const secondsLeft = useSecondsLeft(lockout ? lockout.receivedAt + lockout.retryAfterSeconds * 1000 : null)
 
   // A copy, because what a hook returns mustn't be changed.
   const errors = { ...checkErrors }
@@ -54,7 +88,7 @@ export function SignInForm({ onSubmit, createAccountHref, className }) {
     )
   }
   if (serverError === 'wrongPassword' && !errors.password) errors.password = 'That password is wrong.'
-  const formError = FORM_ERRORS[serverError]
+  const formError = lockout ? lockoutMessage(secondsLeft, lockout.retryAfterSeconds) : FORM_ERRORS[serverError]
 
   const update = (field) => (event) => {
     setValues({ ...values, [field]: event.target.value })

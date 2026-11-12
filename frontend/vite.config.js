@@ -10,6 +10,7 @@ export default defineConfig({
       // to the API, so the API doesn't need CORS rules. 127.0.0.1 avoids the
       // delay of trying IPv6 first, because the API only listens on IPv4.
       '/health': 'http://127.0.0.1:8080',
+      '/api/': 'http://127.0.0.1:8080',
     },
   },
   test: {

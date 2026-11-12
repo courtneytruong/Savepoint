@@ -20,6 +20,11 @@ describe('validateSignIn', () => {
     expect(validateSignIn({ email: 'reader', password: 'x' }).email).toBe('Enter an email like name@example.com.')
   })
 
+  it('turns away an email too long for any account to have', () => {
+    const email = `${'a'.repeat(257 - '@example.com'.length)}@example.com`
+    expect(validateSignIn({ email, password: 'x' }).email).toBe('Use 256 characters or fewer.')
+  })
+
   it("doesn't trim the password, since spaces can be part of it", () => {
     expect(validateSignIn({ email: 'a@b', password: '  ' })).toEqual({})
   })
@@ -139,9 +144,58 @@ describe('SignInForm', () => {
     expect(email().getAttribute('aria-invalid')).toBeNull()
   })
 
-  it("says the server didn't answer when sending fails", async () => {
+  describe('with the time a pause has left', () => {
+    afterEach(() => vi.useRealTimers())
+
+    // The clock the eye sees; screen readers skip it.
+    const clock = () => screen.getByRole('alert').querySelector('[aria-hidden="true"]:not(svg)').textContent
+
+    it('counts down each second', async () => {
+      vi.useFakeTimers()
+      await signInWith({ error: 'tooManyTries', retryAfterSeconds: 287 })
+      expect(screen.getByRole('alert').textContent).toMatch('You can try again in 4:47')
+      act(() => vi.advanceTimersByTime(1000))
+      expect(clock()).toBe('4:46')
+      act(() => vi.advanceTimersByTime(60_000))
+      expect(clock()).toBe('3:46')
+    })
+
+    it('gives screen readers the time once, in words, rather than every tick', async () => {
+      vi.useFakeTimers()
+      await signInWith({ error: 'tooManyTries', retryAfterSeconds: 287 })
+      const spoken = () => screen.getByText('4 minutes 47 seconds')
+      expect(spoken()).toBeTruthy()
+      act(() => vi.advanceTimersByTime(5000))
+      // Unchanged, so the live region has nothing new to read out.
+      expect(spoken()).toBeTruthy()
+    })
+
+    it('says when trying works again, in the same alert', async () => {
+      vi.useFakeTimers()
+      await signInWith({ error: 'tooManyTries', retryAfterSeconds: 3 })
+      const alert = screen.getByRole('alert')
+      act(() => vi.advanceTimersByTime(3000))
+      expect(screen.getByRole('alert')).toBe(alert)
+      expect(alert.textContent).toMatch('You can try again')
+      expect(alert.textContent).toMatch("Signing in isn't paused any more.")
+      // Nothing left to count, so no timer keeps running.
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('keeps the right time when the tab was asleep and timers ran late', async () => {
+      vi.useFakeTimers()
+      await signInWith({ error: 'tooManyTries', retryAfterSeconds: 287 })
+      // The clock moves on without the timer firing, as in a background tab.
+      vi.setSystemTime(Date.now() + 120_000)
+      act(() => vi.advanceTimersByTime(1000))
+      expect(clock()).toBe('2:46')
+    })
+  })
+
+  it('says something went wrong when sending fails', async () => {
     await signInWith(new Error('Network down'))
     expect(screen.getByRole('alert').textContent).toMatch("Couldn't sign in")
+    expect(screen.getByRole('alert').textContent).toMatch("Something went wrong on Savepoint's server. Try again.")
     expect(submit().textContent).toBe('Sign in')
   })
 

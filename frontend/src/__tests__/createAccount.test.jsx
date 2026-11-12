@@ -23,6 +23,14 @@ describe('validateNewAccount', () => {
     expect(check({ email: 'reader' }).email).toBe('Enter an email like name@example.com.')
   })
 
+  it('needs an email, trimmed, of 256 characters or fewer, as the API does', () => {
+    const ofLength = (n) => `${'a'.repeat(n - '@example.com'.length)}@example.com`
+    expect(check({ email: ` ${ofLength(256)} ` })).toEqual({})
+    expect(check({ email: ofLength(257) }).email).toBe('Use 256 characters or fewer.')
+    // Too long is said first, like the API, even when it doesn't look like an email either.
+    expect(check({ email: 'a'.repeat(257) }).email).toBe('Use 256 characters or fewer.')
+  })
+
   it('needs a password of 12 to 128 characters, and says how many more', () => {
     expect(check({ password: '' }).password).toBe('Choose a password.')
     expect(check({ password: 'a'.repeat(11) }).password).toMatch('1 more to go')
@@ -134,10 +142,11 @@ describe('CreateAccountForm', () => {
     expect(screen.queryByText('That email already has an account.')).toBeNull()
   })
 
-  it("says the server didn't answer, above the form, and moves there", async () => {
+  it('says something went wrong, above the form, and moves there', async () => {
     await createWith(new Error('Network down'))
     const alert = screen.getByRole('alert')
     expect(alert.textContent).toMatch("Couldn't create your account")
+    expect(alert.textContent).toMatch("Something went wrong on Savepoint's server. Try again.")
     expect(document.activeElement).toBe(alert)
   })
 

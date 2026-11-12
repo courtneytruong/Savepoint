@@ -11,7 +11,8 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 async function demoSignIn({ email, password }) {
   await wait(800)
   if (email === 'offline@example.com') throw new Error('No answer')
-  if (email === 'locked@example.com') return { error: 'tooManyTries' }
+  // Short, so the countdown can be watched to the end.
+  if (email === 'locked@example.com') return { error: 'tooManyTries', retryAfterSeconds: 15 }
   if (email.toLowerCase() !== DEMO_EMAIL) return { error: 'unknownEmail' }
   if (password !== DEMO_PASSWORD) return { error: 'wrongPassword' }
   return undefined

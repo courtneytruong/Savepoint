@@ -15,11 +15,15 @@ import { showErrorsAndFocus } from '../utils/focusFirstProblem.js'
  * about a field, which the form shows on it.
  *
  * Returns the field errors to show, the server's answer, whether it's sending,
- * the submit handler, and refs for the form and its alert.
+ * the submit handler, and refs for the form and its alert. serverError is the
+ * kind of error; serverAnswer is everything the last unsuccessful send resolved
+ * with, plus receivedAt, when it arrived (from Date.now()), for answers that
+ * carry more, such as how long a lockout lasts.
  */
 export function useAuthSubmit({ values, validate, send, knownErrors, formErrors }) {
   const [triedToSave, setTriedToSave] = useState(false)
   const [serverError, setServerError] = useState(null)
+  const [serverAnswer, setServerAnswer] = useState(null)
   const [loading, setLoading] = useState(false)
   const formRef = useRef(null)
   const alertRef = useRef(null)
@@ -50,6 +54,7 @@ export function useAuthSubmit({ values, validate, send, knownErrors, formErrors 
     if (!error) return
     // An answer the form doesn't recognise still needs saying, so it counts as failed.
     const kind = knownErrors.includes(error) ? error : 'failed'
+    setServerAnswer({ ...result, receivedAt: Date.now() })
     if (formErrors.includes(kind)) {
       flushSync(() => setServerError(kind))
       alertRef.current?.focus()
@@ -61,6 +66,7 @@ export function useAuthSubmit({ values, validate, send, knownErrors, formErrors 
   return {
     errors: triedToSave ? validate(values) : {},
     serverError,
+    serverAnswer,
     setServerError,
     loading,
     handleSubmit,

@@ -1,49 +1,133 @@
 import { useEffect, useState } from 'react'
-import { Heading, Section } from './components/index.js'
+import { createAccount, getAccount, signIn, signOut } from './api/auth.js'
+import {
+  AccountMenu,
+  AuthLayout,
+  CreateAccountForm,
+  Header,
+  Heading,
+  Section,
+  SignInForm,
+  Spinner,
+  useToast,
+} from './components/index.js'
+import styles from './App.module.css'
+import { HealthStatus } from './HealthStatus.jsx'
 
-const MESSAGES = {
-  checking: 'Checking...',
-  connected: 'All systems connected',
-  databaseUnreachable: "The API is up, but it can't reach the database",
-  apiUnreachable: "Can't reach the API",
-}
-
-async function checkHealth(signal) {
-  const response = await fetch('/health', { signal })
-  const body = await response.text()
-
-  // Checking the body as well means an unexpected page, such as an error page
-  // from a proxy, can't be mistaken for a real answer from the API.
-  if (response.status === 200 && body === 'Healthy') return 'connected'
-  if (response.status === 503 && body === 'Unhealthy') return 'databaseUnreachable'
-  return 'apiUnreachable'
-}
+// Until there's real routing, each auth screen has its own path, and the links
+// between them load the page again. nginx and Vite answer any path with the app.
+export const SIGN_IN_PATH = '/sign-in'
+export const CREATE_ACCOUNT_PATH = '/create-account'
 
 function App() {
-  const [status, setStatus] = useState('checking')
+  // Whether the API has said who's signed in yet, and who, if anyone.
+  const [checked, setChecked] = useState(false)
+  const [account, setAccount] = useState(null)
 
+  // Opens the app at its home address, rather than an auth screen's.
+  const open = (found) => {
+    window.history.replaceState(null, '', '/')
+    setAccount(found)
+    setChecked(true)
+  }
+
+  // On load, the auth cookie may already say who this is, so a reload doesn't
+  // sign anyone out. If the API can't say, the sign-in screen shows, and the
+  // form says so if signing in fails too.
   useEffect(() => {
     const controller = new AbortController()
-
-    checkHealth(controller.signal)
-      .then(setStatus)
+    getAccount({ signal: controller.signal })
+      .then((found) => (found ? open(found) : setChecked(true)))
       .catch((error) => {
         // An abort means the page cleaned up this request, not that it failed.
-        if (error.name !== 'AbortError') setStatus('apiUnreachable')
+        if (error.name !== 'AbortError') setChecked(true)
       })
-
     return () => controller.abort()
   }, [])
 
+  // Once the API has signed someone in, opens the app. The answer goes back to
+  // the form either way, so it can show any error.
+  const thenOpen = (send) => async (details) => {
+    const result = await send(details)
+    if (result.account) open(result.account)
+    return result
+  }
+
+  if (!checked) {
+    return (
+      <main className={styles.checking}>
+        <Spinner size="large" label="Opening Savepoint" />
+      </main>
+    )
+  }
+
+  if (account) return <Home account={account} onSignedOut={() => setAccount(null)} />
+
+  if (window.location.pathname === CREATE_ACCOUNT_PATH) {
+    return (
+      <AuthLayout
+        title="Start your journal"
+        description="Keep track of what you read and play, and how you feel about it."
+        switchTo={
+          <>
+            Already have an account? <a href={SIGN_IN_PATH}>Sign in</a>
+          </>
+        }
+      >
+        <CreateAccountForm signInHref={SIGN_IN_PATH} onSubmit={thenOpen(createAccount)} />
+      </AuthLayout>
+    )
+  }
+
   return (
-    <Section as="main">
-      <Heading as="h1" size="large">
-        Savepoint
-      </Heading>
-      <p className={`status status-${status}`} role="status">
-        {MESSAGES[status]}
-      </p>
-    </Section>
+    <AuthLayout
+      title="Welcome back"
+      description="Sign in to pick up where you left off."
+      switchTo={
+        <>
+          New to Savepoint? <a href={CREATE_ACCOUNT_PATH}>Create an account</a>
+        </>
+      }
+    >
+      <SignInForm createAccountHref={CREATE_ACCOUNT_PATH} onSubmit={thenOpen(signIn)} />
+    </AuthLayout>
+  )
+}
+
+// A stand-in for the library, until that feature is built.
+function Home({ account, onSignedOut }) {
+  const toast = useToast()
+
+  // Sign-in shows only once the API has deleted the cookie. Otherwise the next
+  // reload would sign them straight back in, so they stay here and can retry.
+  async function handleSignOut() {
+    try {
+      await signOut()
+    } catch {
+      toast.show({
+        tone: 'error',
+        title: "Couldn't sign out",
+        description: "Something went wrong on Savepoint's server. Try again.",
+        action: { label: 'Try again', onClick: handleSignOut },
+      })
+      return
+    }
+    onSignedOut()
+  }
+
+  return (
+    <>
+      <Header
+        brand="Savepoint"
+        actions={<AccountMenu name={account.displayName} email={account.email} onSignOut={handleSignOut} />}
+      />
+      <Section as="main">
+        <Heading as="h1" size="large">
+          Welcome, {account.displayName}
+        </Heading>
+        <HealthStatus />
+      </Section>
+    </>
   )
 }
 
