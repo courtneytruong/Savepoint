@@ -38,3 +38,20 @@ export async function createItem({ medium, title, creator, status }) {
   if (response.status !== 201) return { error: 'failed' }
   return { item: await response.json() }
 }
+
+/**
+ * Moves an item to another status. Resolves with { item }, in the shape getItems
+ * gives, { error: 'missing' } when it's no longer in this library, or
+ * { error: 'failed' } for any other answer. If the server can't be reached,
+ * fetch throws, which counts as failed too.
+ */
+export async function changeItemStatus(id, status) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (response.status === 404) return { error: 'missing' }
+  if (!response.ok) return { error: 'failed' }
+  return { item: await response.json() }
+}

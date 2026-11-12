@@ -27,11 +27,8 @@
   margin-top: var(--spacing-4);
 }
 
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-12);
+.statuses[aria-busy='true'] button {
+  cursor: progress;
 }
 
 .facts {

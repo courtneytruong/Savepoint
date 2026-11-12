@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getItem, getItems } from '../api/items.js'
+import { changeItemStatus, getItem, getItems } from '../api/items.js'
 import { itemPath } from '../paths.js'
 
 function stubFetch(answer) {
@@ -60,5 +60,28 @@ describe('getItem', () => {
 describe('itemPath', () => {
   it('is the item page for that id', () => {
     expect(itemPath('abc')).toBe('/items/abc')
+  })
+})
+
+describe('changeItemStatus', () => {
+  it('sends the new status and answers with the item', async () => {
+    const item = { id: 'abc', medium: 'Book', title: 'Piranesi', creator: null, status: 'Finished' }
+    const fetchStub = stubFetch(async () => new Response(JSON.stringify(item), { status: 200 }))
+
+    expect(await changeItemStatus('abc', 'Finished')).toEqual({ item })
+    const [url, options] = fetchStub.mock.calls[0]
+    expect(url).toBe('/api/items/abc/status')
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual({ status: 'Finished' })
+  })
+
+  it('says when the item is no longer there', async () => {
+    stubFetch(async () => new Response(null, { status: 404 }))
+    expect(await changeItemStatus('abc', 'Finished')).toEqual({ error: 'missing' })
+  })
+
+  it('says it failed on any other answer', async () => {
+    stubFetch(async () => new Response(null, { status: 500 }))
+    expect(await changeItemStatus('abc', 'Finished')).toEqual({ error: 'failed' })
   })
 })

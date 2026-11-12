@@ -102,4 +102,82 @@ describe('ItemPage', () => {
     expect(screen.getByRole('status', { name: 'Loading this item' })).toBeTruthy()
     expect(await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })).toBeTruthy()
   })
+
+  describe('changing the status', () => {
+    const statuses = () => screen.getByRole('group', { name: 'Status' })
+    const pill = (name) => within(statuses()).getByRole('button', { name })
+
+    async function loaded(...answers) {
+      const fetchStub = stubFetch(async () => json(ITEM), ...answers)
+      renderPage()
+      await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })
+      return fetchStub
+    }
+
+    it('shows the current status as the pressed one', async () => {
+      await loaded()
+      expect(pill('In progress').getAttribute('aria-pressed')).toBe('true')
+      expect(pill('Finished').getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('saves the new status and shows it', async () => {
+      const changedAt = '2026-11-12T09:00:00+00:00'
+      const fetchStub = await loaded(async () => json({ ...ITEM, status: 'Finished', statusChangedAt: changedAt }))
+
+      fireEvent.click(pill('Finished'))
+
+      const [url, options] = fetchStub.mock.calls[1]
+      expect(url).toBe('/api/items/abc/status')
+      expect(JSON.parse(options.body)).toEqual({ status: 'Finished' })
+      expect(await screen.findByText('Outer Wilds moved to Finished')).toBeTruthy()
+      expect(pill('Finished').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByRole('article').querySelector(`time[datetime="${changedAt}"]`)).toBeTruthy()
+    })
+
+    it('says which status it is moving to while it saves, and ignores other presses', async () => {
+      const fetchStub = await loaded(neverAnswers)
+
+      fireEvent.click(pill('Finished'))
+      expect(pill('Moving to Finished…')).toBeTruthy()
+      expect(statuses().getAttribute('aria-busy')).toBe('true')
+
+      fireEvent.click(pill('Dropped'))
+      expect(fetchStub).toHaveBeenCalledTimes(2)
+    })
+
+    it('sends nothing for the status it already has', async () => {
+      const fetchStub = await loaded()
+      fireEvent.click(pill('In progress'))
+      expect(fetchStub).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps the old status when saving fails, and offers to try again', async () => {
+      const fetchStub = await loaded(
+        async () => new Response(null, { status: 500 }),
+        async () => json({ ...ITEM, status: 'Finished' }),
+      )
+
+      fireEvent.click(pill('Finished'))
+      await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toMatch("Couldn't change the status"))
+      expect(pill('In progress').getAttribute('aria-pressed')).toBe('true')
+
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Try again' }))
+      expect(await screen.findByText('Outer Wilds moved to Finished')).toBeTruthy()
+      expect(JSON.parse(fetchStub.mock.calls[2][1].body)).toEqual({ status: 'Finished' })
+    })
+
+    it('counts a server that cannot be reached as failing', async () => {
+      await loaded(async () => {
+        throw new TypeError('Failed to fetch')
+      })
+      fireEvent.click(pill('Finished'))
+      await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toMatch("Couldn't change the status"))
+    })
+
+    it('says the item is gone if it was deleted meanwhile', async () => {
+      await loaded(async () => new Response(null, { status: 404 }))
+      fireEvent.click(pill('Finished'))
+      expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+    })
+  })
 })

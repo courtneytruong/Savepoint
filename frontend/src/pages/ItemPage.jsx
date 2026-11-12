@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
-import { getItem } from '../api/items.js'
+import { changeItemStatus, getItem } from '../api/items.js'
 import {
   Button,
   EmptyState,
+  FilterGroup,
+  FilterPill,
   Heading,
   Link,
   MediumLabel,
   Skeleton,
   SkeletonGroup,
   SkeletonText,
-  StatusBadge,
+  STATUSES,
   Text,
+  useToast,
 } from '../components/index.js'
 import { ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
@@ -35,6 +38,9 @@ export function ItemPage({ account, onSignedOut }) {
   const [loaded, setLoaded] = useState({ id: null, state: 'loading', item: null })
   // Counting tries makes Try again load afresh, through the same effect.
   const [tries, setTries] = useState(0)
+  // The status being saved, if any, so a second press waits for the first.
+  const [changing, setChanging] = useState(null)
+  const toast = useToast()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -53,6 +59,36 @@ export function ItemPage({ account, onSignedOut }) {
   }
 
   const { state, item } = loaded.id === id ? loaded : { state: 'loading', item: null }
+
+  // Saves straight away, since each press is one small change that's easy to
+  // undo by pressing the old status again.
+  async function changeStatus(status) {
+    if (changing || status === item.status) return
+    setChanging(status)
+    let result
+    try {
+      result = await changeItemStatus(item.id, status)
+    } catch {
+      result = { error: 'failed' }
+    }
+    setChanging(null)
+
+    // Only if this page still shows the same item, in case they moved on.
+    const stillHere = (next) => setLoaded((current) => (current.id === item.id ? next : current))
+    if (result.item) {
+      stillHere({ id: item.id, state: 'ready', item: result.item })
+      toast.show({ title: `${result.item.title} moved to ${STATUSES[status].label}` })
+    } else if (result.error === 'missing') {
+      stillHere({ id: item.id, state: 'missing', item: null })
+    } else {
+      toast.show({
+        tone: 'error',
+        title: "Couldn't change the status",
+        description: FAILED_MESSAGE,
+        action: { label: 'Try again', onClick: () => changeStatus(status) },
+      })
+    }
+  }
 
   let content
   if (state === 'loading') {
@@ -99,10 +135,22 @@ export function ItemPage({ account, onSignedOut }) {
           <Heading as="h2">{item.title}</Heading>
           {item.creator && <Text className={styles.creator}>{item.creator}</Text>}
         </header>
-        <div className={styles.badges}>
-          <MediumLabel medium={item.medium} />
-          <StatusBadge status={item.status} />
-        </div>
+        <MediumLabel medium={item.medium} />
+        {/* The current status is the pressed one, so there's no badge as well. */}
+        <FilterGroup label="Status" aria-busy={changing ? true : undefined} className={styles.statuses}>
+          {Object.entries(STATUSES).map(([value, { label, color, Icon }]) => (
+            <FilterPill
+              key={value}
+              color={color}
+              selected={item.status === value}
+              aria-disabled={changing ? true : undefined}
+              onClick={() => changeStatus(value)}
+            >
+              <Icon aria-hidden="true" />
+              {changing === value ? `Moving to ${label}…` : label}
+            </FilterPill>
+          ))}
+        </FilterGroup>
         <dl className={styles.facts}>
           <div>
             <dt>Added</dt>
