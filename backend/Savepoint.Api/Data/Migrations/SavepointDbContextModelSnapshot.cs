@@ -183,6 +183,73 @@ namespace Savepoint.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Savepoint.Api.Library.Item", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Creator")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Medium")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Items", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Items_Creator_Length", "char_length(\"Creator\") BETWEEN 1 AND 200");
+
+                            t.HasCheckConstraint("CK_Items_Medium", "\"Medium\" IN ('Book', 'Game')");
+
+                            t.HasCheckConstraint("CK_Items_Title_Length", "char_length(\"Title\") BETWEEN 1 AND 200");
+                        });
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Library.StatusChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId", "ChangedAt");
+
+                    b.ToTable("StatusChanges", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_StatusChanges_Status", "\"Status\" IN ('Backlog', 'InProgress', 'Finished', 'Dropped')");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.HasOne("Savepoint.Api.Accounts.User", null)
@@ -208,6 +275,29 @@ namespace Savepoint.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Library.Item", b =>
+                {
+                    b.HasOne("Savepoint.Api.Accounts.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Library.StatusChange", b =>
+                {
+                    b.HasOne("Savepoint.Api.Library.Item", null)
+                        .WithMany("StatusChanges")
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Library.Item", b =>
+                {
+                    b.Navigation("StatusChanges");
                 });
 #pragma warning restore 612, 618
         }

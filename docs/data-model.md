@@ -74,6 +74,8 @@ erDiagram
 | Table | Column | Rule |
 |---|---|---|
 | Items | `Medium` | `Book` or `Game` |
+| Items | `Title` | 1 to 200 characters after trimming whitespace |
+| Items | `Creator` | Optional; 1 to 200 characters after trimming, and saved as null when empty |
 | StatusChanges | `Status` | `Backlog`, `InProgress`, `Finished` or `Dropped` |
 | RatingChanges | `Rating` | Whole number from 1 to 10 |
 | Sessions | `Date` | Not after today |

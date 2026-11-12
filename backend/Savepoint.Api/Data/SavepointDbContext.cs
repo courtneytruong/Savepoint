@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
+using Savepoint.Api.Library;
 
 namespace Savepoint.Api.Data;
 
@@ -17,6 +18,10 @@ public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
     /// container, so rebuilding the API doesn't sign everyone out.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
+    public DbSet<Item> Items => Set<Item>();
+
+    public DbSet<StatusChange> StatusChanges => Set<StatusChange>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -43,5 +48,7 @@ public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
             // The database's clock sets this, whatever creates the row.
             user.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
         });
+
+        builder.ConfigureLibrary();
     }
 }
