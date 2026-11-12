@@ -18,8 +18,39 @@ public static class ItemEndpoints
     {
         var items = app.MapGroup("/api/items").RequireAuthorization();
         items.MapGet("/", List);
+        // :guid, so an id that isn't one is a 404 like any other unknown item.
+        items.MapGet("/{id:guid}", Get);
         items.MapPost("/", Create);
         return app;
+    }
+
+    // An item with its newest status change. The database picks the newest, rather
+    // than every change being loaded to find it.
+    private sealed record ItemRow(Item Item, StatusChange Current);
+
+    // Filters and ordering go before this, on Items, where they can become SQL.
+    private static IQueryable<ItemRow> WithCurrentStatus(this IQueryable<Item> items) => items
+        .Select(i => new ItemRow(
+            i,
+            // Ids are made in time order, so they break a tie between changes saved at once.
+            i.StatusChanges.OrderByDescending(s => s.ChangedAt).ThenByDescending(s => s.Id).First()))
+        .AsNoTracking();
+
+    /// <summary>
+    /// One item, with its current status. 404 when there's no such item, and also
+    /// when it's someone else's, so the answer never says that it exists.
+    /// </summary>
+    private static async Task<Results<Ok<ItemResponse>, NotFound>> Get(
+        Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId(principal, users);
+        var row = await db.Items
+            .Where(i => i.Id == id && i.UserId == userId)
+            .WithCurrentStatus()
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return row is null ? TypedResults.NotFound() : TypedResults.Ok(ToResponse(row.Item, row.Current));
     }
 
     /// <summary>
@@ -35,14 +66,7 @@ public static class ItemEndpoints
             .Where(i => i.UserId == userId)
             // Ids are made in time order, so they break a tie between items made at once.
             .OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id)
-            // The database picks each item's newest status change, rather than every
-            // change being loaded to find it.
-            .Select(i => new
-            {
-                Item = i,
-                Current = i.StatusChanges.OrderByDescending(s => s.ChangedAt).ThenByDescending(s => s.Id).First(),
-            })
-            .AsNoTracking()
+            .WithCurrentStatus()
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(rows.Select(row => ToResponse(row.Item, row.Current)).ToList());
