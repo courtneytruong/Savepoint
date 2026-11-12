@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { useEffect } from 'react'
+import { Link as RouterLink, MemoryRouter, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ToastProvider } from '../components/index.js'
+import { LinkProvider, ToastProvider } from '../components/index.js'
 import { LibraryPage } from '../pages/LibraryPage.jsx'
 
 const ACCOUNT = { id: 'a1', displayName: 'Courtney', email: 'reader@example.com' }
@@ -17,10 +18,11 @@ const item = (overrides) => ({
   ...overrides,
 })
 
+// Newest first, as the API sends them.
 const ITEMS = [
-  item({ medium: 'Game', title: 'Hades', creator: 'Supergiant Games', status: 'InProgress' }),
-  item({ title: 'Piranesi' }),
-  item({ title: 'Tetris', medium: 'Game', creator: null, status: 'Finished' }),
+  item({ medium: 'Game', title: 'Hades', creator: 'Supergiant Games', status: 'InProgress', createdAt: '2026-11-10T12:00:00+00:00' }),
+  item({ title: 'Piranesi', createdAt: '2026-11-09T12:00:00+00:00' }),
+  item({ title: 'Tetris', medium: 'Game', creator: null, status: 'Finished', createdAt: '2026-11-08T12:00:00+00:00' }),
 ]
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status })
@@ -33,12 +35,27 @@ function stubItems(...answers) {
   return fetchStub
 }
 
-function renderPage() {
+// Where the page has navigated to, as the router sees it. Kept in an effect,
+// since changing something outside a component while rendering is a side effect.
+const seen = { location: null }
+function LocationProbe() {
+  const location = useLocation()
+  useEffect(() => {
+    seen.location = location
+  })
+  return null
+}
+
+function renderPage(path = '/') {
   return render(
-    <MemoryRouter>
-      <ToastProvider>
-        <LibraryPage account={ACCOUNT} onSignedOut={vi.fn()} />
-      </ToastProvider>
+    // With the router's links, as in the app, so the sidebar's shortcuts work.
+    <MemoryRouter initialEntries={[path]}>
+      <LinkProvider component={RouterLink}>
+        <ToastProvider>
+          <LibraryPage account={ACCOUNT} onSignedOut={vi.fn()} />
+          <LocationProbe />
+        </ToastProvider>
+      </LinkProvider>
     </MemoryRouter>,
   )
 }
@@ -89,7 +106,8 @@ describe('LibraryPage', () => {
     stubItems(async () => json(ITEMS))
     renderPage()
 
-    await vi.waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(ITEMS.length + 1))
+    // Each card's title is a level 3 heading.
+    await vi.waitFor(() => expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(ITEMS.length))
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Tetris' })).toBeTruthy()
   })
@@ -138,5 +156,127 @@ describe('LibraryPage', () => {
     const { signal } = fetchStub.mock.calls[0][1]
     unmount()
     expect(signal.aborted).toBe(true)
+  })
+
+  describe('finding things', () => {
+    // The titles shown, in order: the list view's first cell in each row.
+    const titles = () =>
+      screen
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => within(row).getAllByRole('cell')[0].firstChild.textContent)
+
+    async function loaded(items = ITEMS, path = '/') {
+      stubItems(async () => json(items))
+      renderPage(path)
+      // The sidebar's count, since a filter in the address may hide some items.
+      await vi.waitFor(() => expect(sidebarLink(items.length)).toBeTruthy())
+    }
+
+    const search = (text) => fireEvent.change(screen.getByRole('searchbox'), { target: { value: text } })
+
+    it('shows the most recently added first', async () => {
+      await loaded()
+      expect(titles()).toEqual(['Hades', 'Piranesi', 'Tetris'])
+    })
+
+    it('searches titles and creators, ignoring case', async () => {
+      await loaded()
+      search('susanna')
+      expect(titles()).toEqual(['Piranesi'])
+      search('TET')
+      expect(titles()).toEqual(['Tetris'])
+    })
+
+    it('filters by type, keeping it in the address', async () => {
+      await loaded()
+      fireEvent.click(screen.getByRole('button', { name: 'Games' }))
+
+      expect(titles()).toEqual(['Hades', 'Tetris'])
+      expect(seen.location.search).toBe('?medium=Game')
+      expect(screen.getByRole('button', { name: 'Games' }).getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it('filters by status alongside the type', async () => {
+      await loaded()
+      fireEvent.click(screen.getByRole('button', { name: 'Games' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Finished' }))
+
+      expect(titles()).toEqual(['Tetris'])
+      expect(seen.location.search).toBe('?medium=Game&status=Finished')
+    })
+
+    it('starts filtered when the address says so, and marks the sidebar shortcut', async () => {
+      await loaded(ITEMS, '/?medium=Book')
+      expect(titles()).toEqual(['Piranesi'])
+      expect(screen.getByRole('link', { name: /^Books/ }).getAttribute('aria-current')).toBe('page')
+      expect(screen.getByRole('link', { name: /^Library/, current: false })).toBeTruthy()
+    })
+
+    it('filters by type from the sidebar, with counts for each', async () => {
+      await loaded()
+      expect(screen.getByRole('link', { name: /^Books\s*,\s*1$/ })).toBeTruthy()
+      fireEvent.click(screen.getByRole('link', { name: /^Games\s*,\s*2$/ }))
+      expect(titles()).toEqual(['Hades', 'Tetris'])
+    })
+
+    it('ignores a filter in the address that isn’t one of the choices', async () => {
+      await loaded(ITEMS, '/?medium=Film&status=Paused')
+      expect(titles()).toEqual(['Hades', 'Piranesi', 'Tetris'])
+    })
+
+    it('says when nothing matches, and clears the search and filters', async () => {
+      await loaded(ITEMS, '/?medium=Book')
+      search('zelda')
+      expect(screen.getByText('Nothing matches “zelda”')).toBeTruthy()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear search and filters' }))
+
+      expect(titles()).toEqual(['Hades', 'Piranesi', 'Tetris'])
+      expect(seen.location.search).toBe('')
+      expect(screen.getByRole('searchbox').value).toBe('')
+    })
+
+    it('sorts by a column header in the list view', async () => {
+      await loaded()
+      fireEvent.click(screen.getByRole('button', { name: /Title/ }))
+      expect(titles()).toEqual(['Hades', 'Piranesi', 'Tetris'])
+      fireEvent.click(screen.getByRole('button', { name: /Title/ }))
+      expect(titles()).toEqual(['Tetris', 'Piranesi', 'Hades'])
+    })
+
+    it('sorts from a menu in the grid view, which has no headers', async () => {
+      window.localStorage.setItem('savepoint.library.view', 'grid')
+      await loaded()
+      fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'createdAt:ascending' } })
+      const cardTitles = screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
+      expect(cardTitles).toEqual(['Tetris', 'Piranesi', 'Hades'])
+    })
+
+    describe('pages', () => {
+      // 13 books, one more than a page, newest first.
+      const MANY = Array.from({ length: 13 }, (_, index) =>
+        item({ title: `Book ${index + 1}`, createdAt: new Date(Date.UTC(2026, 10, 30 - index)).toISOString() }),
+      )
+
+      it('shows 12 at a time, with the rest on the next page', async () => {
+        await loaded(MANY)
+        expect(titles()).toHaveLength(12)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+
+        expect(titles()).toEqual(['Book 13'])
+      })
+
+      it('goes back to the first page when what’s shown changes', async () => {
+        await loaded(MANY)
+        fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+
+        search('Book')
+
+        expect(titles()).toHaveLength(12)
+        expect(titles()[0]).toBe('Book 1')
+      })
+    })
   })
 })

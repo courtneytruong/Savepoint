@@ -20,6 +20,9 @@ describe('matchesSearch', () => {
   it('skips missing fields', () => {
     expect(matchesSearch(['Hyperion', undefined], 'hyp')).toBe(true)
     expect(matchesSearch([undefined], 'hyp')).toBe(false)
+    // The API sends null for an item with no creator.
+    expect(matchesSearch(['Tetris', null], 'tet')).toBe(true)
+    expect(matchesSearch([null], 'tet')).toBe(false)
   })
 })
 

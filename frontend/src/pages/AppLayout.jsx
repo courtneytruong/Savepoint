@@ -15,8 +15,8 @@ import {
   Text,
   useToast,
 } from '../components/index.js'
-import { LibraryIcon } from '../components/icons.js'
-import { SIGN_IN_PATH } from '../paths.js'
+import { BookIcon, GameIcon, LibraryIcon } from '../components/icons.js'
+import { LIBRARY_PATH, libraryPath, SIGN_IN_PATH } from '../paths.js'
 import styles from './AppLayout.module.css'
 
 /**
@@ -24,9 +24,11 @@ import styles from './AppLayout.module.css'
  * header, the intro, and a glowing panel with the sidebar beside the page. The
  * header and sidebar list only pages that exist; more join as they're built.
  *
- * libraryCount: how many items the library has, shown in the sidebar once known.
+ * counts: how many items the library has, and how many are a Book or a Game,
+ * shown in the sidebar once known. medium: the library's type filter, if any,
+ * which marks its shortcut in the sidebar as the page you're on.
  */
-export function AppLayout({ account, onSignedOut, libraryCount, children }) {
+export function AppLayout({ account, onSignedOut, counts = {}, medium = null, children }) {
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -61,7 +63,7 @@ export function AppLayout({ account, onSignedOut, libraryCount, children }) {
         brand="Savepoint"
         actions={<AccountMenu name={account.displayName} email={account.email} onSignOut={handleSignOut} />}
       >
-        <Link href="/" aria-current="page">
+        <Link href={LIBRARY_PATH} aria-current="page">
           Library
         </Link>
       </Header>
@@ -74,8 +76,27 @@ export function AppLayout({ account, onSignedOut, libraryCount, children }) {
                 sidebar={
                   <Sidebar>
                     <SidebarGroup>
-                      <SidebarLink href="/" icon={<LibraryIcon />} count={libraryCount} active>
+                      <SidebarLink href={LIBRARY_PATH} icon={<LibraryIcon />} count={counts.library} active={!medium}>
                         Library
+                      </SidebarLink>
+                    </SidebarGroup>
+                    {/* Shortcuts to the library's type filter. */}
+                    <SidebarGroup title="Browse">
+                      <SidebarLink
+                        href={libraryPath({ medium: 'Book' })}
+                        icon={<BookIcon />}
+                        count={counts.Book}
+                        active={medium === 'Book'}
+                      >
+                        Books
+                      </SidebarLink>
+                      <SidebarLink
+                        href={libraryPath({ medium: 'Game' })}
+                        icon={<GameIcon />}
+                        count={counts.Game}
+                        active={medium === 'Game'}
+                      >
+                        Games
                       </SidebarLink>
                     </SidebarGroup>
                   </Sidebar>

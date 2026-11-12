@@ -2,3 +2,15 @@
 export const SIGN_IN_PATH = '/sign-in'
 export const CREATE_ACCOUNT_PATH = '/create-account'
 export const LIBRARY_PATH = '/'
+
+/**
+ * The library, filtered by medium (Book or Game) and status, each left out of
+ * the address when it's not filtered by.
+ */
+export function libraryPath({ medium = null, status = null } = {}) {
+  const params = new URLSearchParams()
+  if (medium) params.set('medium', medium)
+  if (status) params.set('status', status)
+  const query = params.toString()
+  return query ? `${LIBRARY_PATH}?${query}` : LIBRARY_PATH
+}
