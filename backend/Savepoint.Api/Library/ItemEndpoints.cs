@@ -22,6 +22,7 @@ public static class ItemEndpoints
         items.MapGet("/{id:guid}", Get);
         items.MapPost("/", Create);
         items.MapPut("/{id:guid}", Update);
+        items.MapPost("/{id:guid}/status", ChangeStatus);
         return app;
     }
 
@@ -78,6 +79,8 @@ public static class ItemEndpoints
     public record CreateItemRequest(string? Medium, string? Title, string? Creator, string? Status);
 
     public record UpdateItemRequest(string? Medium, string? Title, string? Creator);
+
+    public record ChangeStatusRequest(string? Status);
 
     /// <summary>
     /// An item as the frontend sees it, with its current status: the newest of its
@@ -153,6 +156,42 @@ public static class ItemEndpoints
 
         var row = await mine.WithCurrentStatus().SingleAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(row.Item, row.Current));
+    }
+
+    /// <summary>
+    /// Changes an item's status by adding to its history, so the timeline can show
+    /// when it changed. Asking for the status it already has adds nothing, since
+    /// that row would show no change, and makes retrying harmless. 200 with the
+    /// item, 404 as for Get, or 400 with required or invalid.
+    /// </summary>
+    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem>> ChangeStatus(
+        Guid id, ChangeStatusRequest request, ClaimsPrincipal principal, UserManager<User> users,
+        SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        ItemStatus status = default;
+        string? problem = request.Status is null ? "required"
+            : !TryParseName(request.Status, out status) ? "invalid"
+            : null;
+        if (problem is not null)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["status"] = [problem] });
+        }
+
+        var userId = CurrentUserId(principal, users);
+        var row = await db.Items
+            .Where(i => i.Id == id && i.UserId == userId)
+            .WithCurrentStatus()
+            .SingleOrDefaultAsync(cancellationToken);
+        if (row is null) return TypedResults.NotFound();
+        if (row.Current.Status == status) return TypedResults.Ok(ToResponse(row.Item, row.Current));
+
+        // Its own transaction, so the database's clock gives it a later time than
+        // the change before.
+        var change = new StatusChange { ItemId = id, Status = status };
+        db.StatusChanges.Add(change);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return TypedResults.Ok(ToResponse(row.Item, change));
     }
 
     // The checked, trimmed fields shared by creating and editing.
