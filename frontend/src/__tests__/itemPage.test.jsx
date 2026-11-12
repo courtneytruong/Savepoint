@@ -180,4 +180,52 @@ describe('ItemPage', () => {
       expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
     })
   })
+
+  describe('editing the details', () => {
+    async function loaded(...answers) {
+      const fetchStub = stubFetch(async () => json(ITEM), ...answers)
+      renderPage()
+      await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+      return fetchStub
+    }
+
+    const dialog = () => screen.getByRole('dialog', { name: 'Edit details' })
+    const save = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Save changes' }))
+
+    it('opens the form with the item as it is', async () => {
+      await loaded()
+      expect(within(dialog()).getByLabelText('Title').value).toBe('Outer Wilds')
+    })
+
+    it('saves the changes and shows them', async () => {
+      const fetchStub = await loaded(async () => json({ ...ITEM, title: 'Outer Wilds: Echoes of the Eye' }))
+      fireEvent.change(within(dialog()).getByLabelText('Title'), { target: { value: 'Outer Wilds: Echoes of the Eye' } })
+      save()
+
+      expect(await screen.findByText('Changes saved')).toBeTruthy()
+      const [url, options] = fetchStub.mock.calls[1]
+      expect(url).toBe('/api/items/abc')
+      expect(JSON.parse(options.body)).toEqual({
+        medium: 'Game',
+        title: 'Outer Wilds: Echoes of the Eye',
+        creator: 'Mobius Digital',
+      })
+      expect(screen.getByRole('heading', { level: 2, name: 'Outer Wilds: Echoes of the Eye' })).toBeTruthy()
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('keeps the form open when saving fails', async () => {
+      await loaded(async () => new Response(null, { status: 500 }))
+      save()
+      await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't save your changes"))
+    })
+
+    it('says the item is gone if it was deleted meanwhile', async () => {
+      await loaded(async () => new Response(null, { status: 404 }))
+      save()
+      expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+  })
 })

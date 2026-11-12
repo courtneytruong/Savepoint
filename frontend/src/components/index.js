@@ -1,5 +1,5 @@
 export { AccountMenu } from './auth/AccountMenu.jsx'
-export { AddItemModal } from './library/AddItemModal.jsx'
+export { AddItemModal, EditItemModal } from './library/ItemModal.jsx'
 export { Alert } from './feedback/Alert.jsx'
 export { AuthLayout } from './layout/AuthLayout.jsx'
 export {

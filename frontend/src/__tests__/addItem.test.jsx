@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createItem } from '../api/items.js'
-import { AddItemModal, validateItem } from '../components/index.js'
+import { AddItemModal, EditItemModal, validateItem } from '../components/index.js'
 
 afterEach(cleanup)
 
@@ -136,5 +136,72 @@ describe('AddItemModal', () => {
     rerender(<AddItemModal open onClose={vi.fn()} onSubmit={vi.fn()} />)
 
     expect(field('Title').value).toBe('')
+  })
+})
+
+describe('EditItemModal', () => {
+  const ITEM = { id: 'abc', medium: 'Game', title: 'Hades', creator: 'Supergiant Games', status: 'Finished' }
+  const field = (label) => screen.getByLabelText(label)
+  const type = (label, value) => fireEvent.change(field(label), { target: { value } })
+  const submit = () => screen.getByRole('button', { name: /^Save changes|^Saving/ })
+
+  function open(onSubmit = vi.fn(async () => ({ item: ITEM })), item = ITEM) {
+    const utils = render(<EditItemModal open item={item} onClose={vi.fn()} onSubmit={onSubmit} />)
+    return { onSubmit, ...utils }
+  }
+
+  it('starts from the item as it is, with the title ready to change', () => {
+    open()
+    expect(screen.getByRole('dialog', { name: 'Edit details' })).toBeTruthy()
+    expect(field('Title').value).toBe('Hades')
+    expect(field('Creator').value).toBe('Supergiant Games')
+    expect(field('Type').value).toBe('Game')
+    expect(document.activeElement).toBe(field('Title'))
+  })
+
+  it('starts with an empty creator for an item without one', () => {
+    open(undefined, { ...ITEM, creator: null })
+    expect(field('Creator').value).toBe('')
+  })
+
+  it('leaves out the status, which the item page changes by itself', () => {
+    open()
+    expect(screen.queryByLabelText('Status')).toBeNull()
+  })
+
+  it('sends the new details, trimmed, without a status', async () => {
+    const { onSubmit } = open()
+    type('Title', ' Hades II ')
+    type('Creator', '  ')
+    type('Type', 'Book')
+
+    await act(async () => fireEvent.click(submit()))
+
+    expect(onSubmit).toHaveBeenCalledWith({ medium: 'Book', title: 'Hades II', creator: null })
+  })
+
+  it('checks the same rules as adding', async () => {
+    const { onSubmit } = open()
+    type('Title', '   ')
+    await act(async () => fireEvent.click(submit()))
+
+    expect(screen.getByText('Enter a title.')).toBeTruthy()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('says when saving fails', async () => {
+    open(vi.fn(async () => ({ error: 'failed' })))
+    await act(async () => fireEvent.click(submit()))
+    expect(screen.getByRole('alert').textContent).toMatch("Couldn't save your changes")
+  })
+
+  it('starts again from the item each time it opens', () => {
+    const { rerender } = open()
+    type('Title', 'Half typed')
+
+    rerender(<EditItemModal open={false} item={ITEM} onClose={vi.fn()} onSubmit={vi.fn()} />)
+    rerender(<EditItemModal open item={ITEM} onClose={vi.fn()} onSubmit={vi.fn()} />)
+
+    expect(field('Title').value).toBe('Hades')
   })
 })

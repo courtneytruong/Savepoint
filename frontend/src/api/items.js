@@ -55,3 +55,19 @@ export async function changeItemStatus(id, status) {
   if (!response.ok) return { error: 'failed' }
   return { item: await response.json() }
 }
+
+/**
+ * Replaces an item's medium, title and creator, all three each time, so a null
+ * creator clears it. Answers as changeItemStatus does: { item }, { error:
+ * 'missing' } or { error: 'failed' }, and throws if the server can't be reached.
+ */
+export async function editItem(id, { medium, title, creator }) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ medium, title, creator }),
+  })
+  if (response.status === 404) return { error: 'missing' }
+  if (!response.ok) return { error: 'failed' }
+  return { item: await response.json() }
+}

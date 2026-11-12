@@ -23,6 +23,15 @@
   padding: var(--spacing-24);
 }
 
+/* Edit sits at the end of the title's line, and wraps below a long title on phones. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-12) var(--spacing-16);
+}
+
 .creator {
   margin-top: var(--spacing-4);
 }

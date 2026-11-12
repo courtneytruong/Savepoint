@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
-import { changeItemStatus, getItem } from '../api/items.js'
+import { changeItemStatus, editItem, getItem } from '../api/items.js'
 import {
   Button,
+  EditItemModal,
   EmptyState,
   FilterGroup,
   FilterPill,
@@ -16,7 +17,7 @@ import {
   Text,
   useToast,
 } from '../components/index.js'
-import { ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
+import { EditIcon, ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { AppLayout } from './AppLayout.jsx'
 import styles from './ItemPage.module.css'
@@ -40,6 +41,7 @@ export function ItemPage({ account, onSignedOut }) {
   const [tries, setTries] = useState(0)
   // The status being saved, if any, so a second press waits for the first.
   const [changing, setChanging] = useState(null)
+  const [editing, setEditing] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -60,6 +62,25 @@ export function ItemPage({ account, onSignedOut }) {
 
   const { state, item } = loaded.id === id ? loaded : { state: 'loading', item: null }
 
+  // Only if this page still shows the same item, in case they moved on.
+  const stillShowing = (forId, next) => setLoaded((current) => (current.id === forId ? next : current))
+
+  // Gone from the library means it was deleted since the page loaded, so the
+  // page says so, as it would on arriving now.
+  async function saveDetails(details) {
+    const result = await editItem(item.id, details)
+    if (result.item) {
+      setEditing(false)
+      stillShowing(item.id, { id: item.id, state: 'ready', item: result.item })
+      toast.show({ title: 'Changes saved' })
+    } else if (result.error === 'missing') {
+      setEditing(false)
+      stillShowing(item.id, { id: item.id, state: 'missing', item: null })
+      return {}
+    }
+    return result
+  }
+
   // Saves straight away, since each press is one small change that's easy to
   // undo by pressing the old status again.
   async function changeStatus(status) {
@@ -73,13 +94,11 @@ export function ItemPage({ account, onSignedOut }) {
     }
     setChanging(null)
 
-    // Only if this page still shows the same item, in case they moved on.
-    const stillHere = (next) => setLoaded((current) => (current.id === item.id ? next : current))
     if (result.item) {
-      stillHere({ id: item.id, state: 'ready', item: result.item })
+      stillShowing(item.id, { id: item.id, state: 'ready', item: result.item })
       toast.show({ title: `${result.item.title} moved to ${STATUSES[status].label}` })
     } else if (result.error === 'missing') {
-      stillHere({ id: item.id, state: 'missing', item: null })
+      stillShowing(item.id, { id: item.id, state: 'missing', item: null })
     } else {
       toast.show({
         tone: 'error',
@@ -131,9 +150,15 @@ export function ItemPage({ account, onSignedOut }) {
   } else {
     content = (
       <article className={styles.details}>
-        <header>
-          <Heading as="h2">{item.title}</Heading>
-          {item.creator && <Text className={styles.creator}>{item.creator}</Text>}
+        <header className={styles.header}>
+          <div>
+            <Heading as="h2">{item.title}</Heading>
+            {item.creator && <Text className={styles.creator}>{item.creator}</Text>}
+          </div>
+          <Button variant="outline" onClick={() => setEditing(true)}>
+            <EditIcon />
+            Edit
+          </Button>
         </header>
         <MediumLabel medium={item.medium} />
         {/* The current status is the pressed one, so there's no badge as well. */}
@@ -165,6 +190,7 @@ export function ItemPage({ account, onSignedOut }) {
             </dd>
           </div>
         </dl>
+        <EditItemModal open={editing} item={item} onClose={() => setEditing(false)} onSubmit={saveDetails} />
       </article>
     )
   }
