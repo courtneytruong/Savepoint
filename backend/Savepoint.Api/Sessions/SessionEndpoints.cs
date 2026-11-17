@@ -23,13 +23,15 @@ public static class SessionEndpoints
         var sessions = app.MapGroup("/api/items/{itemId:guid}/sessions").RequireAuthorization();
         sessions.MapGet("/", List);
         sessions.MapPost("/", Create);
+        sessions.MapPut("/{sessionId:guid}", Update);
         return app;
     }
 
     // Strings and nullable numbers, so a missing or unknown value gets a field code
     // rather than a request the JSON reader refuses outright. The frontend also
-    // sends reflection tags, which wait for the tags feature and are ignored.
-    public record CreateSessionRequest(string? Date, int? DurationMinutes, int? PagesRead, ReflectionRequest? Reflection);
+    // sends reflection tags, which wait for the tags feature and are ignored. The
+    // same body logs a session and edits one.
+    public record SessionRequest(string? Date, int? DurationMinutes, int? PagesRead, ReflectionRequest? Reflection);
 
     public record ReflectionRequest(string? Mood, string? Notes);
 
@@ -55,10 +57,9 @@ public static class SessionEndpoints
         Guid itemId, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
         CancellationToken cancellationToken)
     {
-        var userId = CurrentUser.IdOf(principal, users);
         // Asked first, so someone else's item is a 404 rather than an empty list that
         // would look the same as an item of theirs with no sessions.
-        if (!await db.Items.AnyAsync(i => i.Id == itemId && i.UserId == userId, cancellationToken))
+        if (await MediumOfOwnItem(itemId, principal, users, db, cancellationToken) is null)
         {
             return TypedResults.NotFound();
         }
@@ -81,36 +82,24 @@ public static class SessionEndpoints
     /// fields are named reflection.mood and reflection.notes.
     /// </summary>
     private static async Task<Results<Created<SessionResponse>, NotFound, ValidationProblem>> Create(
-        Guid itemId, CreateSessionRequest request, ClaimsPrincipal principal, UserManager<User> users,
+        Guid itemId, SessionRequest request, ClaimsPrincipal principal, UserManager<User> users,
         SavepointDbContext db, CancellationToken cancellationToken)
     {
         var errors = new Dictionary<string, string[]>();
-        var date = CheckDate(request.Date, errors);
-        var durationMinutes = CheckDuration(request.DurationMinutes, errors);
-        if (request.PagesRead <= 0) errors["pagesRead"] = ["invalid"];
-        var (mood, notes) = CheckReflection(request.Reflection, errors);
+        var details = CheckDetails(request, errors);
         if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
 
-        var userId = CurrentUser.IdOf(principal, users);
-        var medium = await db.Items
-            .Where(i => i.Id == itemId && i.UserId == userId)
-            .Select(i => (Medium?)i.Medium)
-            .SingleOrDefaultAsync(cancellationToken);
+        var medium = await MediumOfOwnItem(itemId, principal, users, db, cancellationToken);
         if (medium is null) return TypedResults.NotFound();
-
-        // Only books have pages. Checked after finding the item, since it depends on it.
-        if (medium == Medium.Game && request.PagesRead is not null)
-        {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["pagesRead"] = ["invalid"] });
-        }
+        if (PagesForAGame(medium.Value, details) is { } problem) return problem;
 
         var session = new Session
         {
             ItemId = itemId,
-            Date = date,
-            DurationMinutes = durationMinutes,
-            PagesRead = request.PagesRead,
-            Reflection = new Reflection { ItemId = itemId, Mood = mood, Notes = notes },
+            Date = details.Date,
+            DurationMinutes = details.DurationMinutes,
+            PagesRead = details.PagesRead,
+            Reflection = new Reflection { ItemId = itemId, Mood = details.Mood, Notes = details.Notes },
         };
         // One save, so it's one transaction.
         db.Sessions.Add(session);
@@ -118,6 +107,94 @@ public static class SessionEndpoints
 
         return TypedResults.Created($"/api/items/{itemId}/sessions/{session.Id}", ToResponse(session));
     }
+
+    /// <summary>
+    /// Replaces a session's date, duration and pages, and its reflection's mood and
+    /// notes, so everything is sent each time, as when logging it. One transaction,
+    /// so the two change together. The reflection's UpdatedAt moves only when its
+    /// mood or notes change, since fixing a session's duration isn't editing what was
+    /// thought. 200 with the session, 404 when the item isn't the signed-in person's
+    /// or the session isn't that item's, or 400 as for logging one.
+    /// </summary>
+    private static async Task<Results<Ok<SessionResponse>, NotFound, ValidationProblem>> Update(
+        Guid itemId, Guid sessionId, SessionRequest request, ClaimsPrincipal principal, UserManager<User> users,
+        SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+        var details = CheckDetails(request, errors);
+        if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
+
+        var medium = await MediumOfOwnItem(itemId, principal, users, db, cancellationToken);
+        if (medium is null) return TypedResults.NotFound();
+        if (PagesForAGame(medium.Value, details) is { } problem) return problem;
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // The item is the person's own, so matching it too keeps to their sessions.
+        var mine = db.Sessions.Where(s => s.Id == sessionId && s.ItemId == itemId);
+        // One UPDATE, which also says whether the session was there to change.
+        var changed = await mine.ExecuteUpdateAsync(
+            set => set
+                .SetProperty(s => s.Date, details.Date)
+                .SetProperty(s => s.DurationMinutes, details.DurationMinutes)
+                .SetProperty(s => s.PagesRead, details.PagesRead),
+            cancellationToken);
+        // Leaving without committing rolls the transaction back.
+        if (changed == 0) return TypedResults.NotFound();
+
+        await db.Reflections
+            .Where(r => r.SessionId == sessionId)
+            .ExecuteUpdateAsync(
+                set => set
+                    // The database's clock, as for CreatedAt, so the two always compare.
+                    // Worked out from the old values, since SET reads the row as it was.
+                    .SetProperty(
+                        r => r.UpdatedAt,
+                        r => r.Mood != details.Mood || r.Notes != details.Notes ? DateTimeOffset.UtcNow : r.UpdatedAt)
+                    .SetProperty(r => r.Mood, details.Mood)
+                    .SetProperty(r => r.Notes, details.Notes),
+                cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+
+        var session = await mine.Include(s => s.Reflection).AsNoTracking().SingleAsync(cancellationToken);
+        return TypedResults.Ok(ToResponse(session));
+    }
+
+    // The checked, trimmed fields shared by logging and editing a session.
+    private sealed record SessionDetails(DateOnly Date, int DurationMinutes, int? PagesRead, Mood Mood, string Notes);
+
+    /// <summary>
+    /// Checks the fields that logging and editing share, adding a code to errors for
+    /// each one that's wrong. The details it returns are only meaningful when it
+    /// added none.
+    /// </summary>
+    private static SessionDetails CheckDetails(SessionRequest request, Dictionary<string, string[]> errors)
+    {
+        var date = CheckDate(request.Date, errors);
+        var durationMinutes = CheckDuration(request.DurationMinutes, errors);
+        if (request.PagesRead <= 0) errors["pagesRead"] = ["invalid"];
+        var (mood, notes) = CheckReflection(request.Reflection, errors);
+        return new SessionDetails(date, durationMinutes, request.PagesRead, mood, notes);
+    }
+
+    // The item's medium when it's the signed-in person's, or null, which is a 404.
+    private static Task<Medium?> MediumOfOwnItem(
+        Guid itemId, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        return db.Items
+            .Where(i => i.Id == itemId && i.UserId == userId)
+            .Select(i => (Medium?)i.Medium)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    // Only books have pages. Checked after finding the item, since it depends on it.
+    private static ValidationProblem? PagesForAGame(Medium medium, SessionDetails details) =>
+        medium == Medium.Game && details.PagesRead is not null
+            ? TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["pagesRead"] = ["invalid"] })
+            : null;
 
     /// <summary>
     /// The session's day, which can't be after today. The API runs in UTC while the
