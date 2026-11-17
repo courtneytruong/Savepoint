@@ -7,7 +7,7 @@ import { AddIcon } from '../icons.js'
 import { Button } from '../ui/Button.jsx'
 import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
 import { useOpening } from '../../hooks/useOpening.js'
-import { ITEM_ERRORS, validateItem } from '../../rules/itemRules.js'
+import { ITEM_ERRORS, PAGES_LOGGED_MESSAGE, validateItem } from '../../rules/itemRules.js'
 import { STATUSES } from '../../rules/statuses.js'
 import styles from './ItemModal.module.css'
 
@@ -62,7 +62,8 @@ export function AddItemModal({ open, onClose, onSubmit }) {
  *
  * item: the item as it is now, which the form starts from each time it opens.
  * onSubmit receives { medium, title, creator }, as AddItemModal sends them, and
- * answers in the same way.
+ * answers in the same way, or with { error: 'pagesLogged' }, shown on the type
+ * field, when a book with pages logged can't become a game.
  */
 export function EditItemModal({ open, item, onClose, onSubmit }) {
   const opening = useOpening(open)
@@ -99,7 +100,7 @@ function ItemDialog({ open, onClose, onSubmit, text, icon, start }) {
   const formId = useId()
   const titleRef = useRef(null)
   const [values, setValues] = useState(start)
-  const { errors, serverError, loading, handleSubmit, formRef, alertRef } = useAuthSubmit({
+  const { errors: checkErrors, serverError, setServerError, loading, handleSubmit, formRef, alertRef } = useAuthSubmit({
     values,
     validate: validateItem,
     send: () =>
@@ -110,10 +111,18 @@ function ItemDialog({ open, onClose, onSubmit, text, icon, start }) {
         status: values.status,
       }),
     knownErrors: ITEM_ERRORS,
-    formErrors: ITEM_ERRORS,
+    formErrors: ['failed'],
   })
 
-  const update = (field) => (event) => setValues({ ...values, [field]: event.target.value })
+  // A copy, because what a hook returns mustn't be changed.
+  const errors = { ...checkErrors }
+  if (serverError === 'pagesLogged') errors.medium = PAGES_LOGGED_MESSAGE
+
+  const update = (field) => (event) => {
+    setValues({ ...values, [field]: event.target.value })
+    // Choosing again answers the message, until the next save says otherwise.
+    if (field === 'medium' && serverError === 'pagesLogged') setServerError(null)
+  }
 
   return (
     <Modal
@@ -156,7 +165,7 @@ function ItemDialog({ open, onClose, onSubmit, text, icon, start }) {
           onChange={update('creator')}
           error={errors.creator}
         />
-        <Select label="Type" value={values.medium} onChange={update('medium')}>
+        <Select label="Type" value={values.medium} onChange={update('medium')} error={errors.medium}>
           <option value="Book">Book</option>
           <option value="Game">Game</option>
         </Select>

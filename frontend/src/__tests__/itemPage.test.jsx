@@ -235,6 +235,31 @@ describe('ItemPage', () => {
       await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     })
 
+    it('says on the type field why a book with pages logged can’t become a game', async () => {
+      const BOOK = { ...ITEM, medium: 'Book', title: 'Piranesi' }
+      stubFetch(
+        async () => json(BOOK),
+        async () => json({ status: 409, error: 'pagesLogged' }, 409),
+      )
+      renderPage()
+      await screen.findByRole('heading', { level: 1, name: 'Piranesi' })
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+      const type = within(dialog()).getByLabelText('Type')
+      fireEvent.change(type, { target: { value: 'Game' } })
+      save()
+
+      await vi.waitFor(() => expect(type.getAttribute('aria-invalid')).toBe('true'))
+      expect(within(dialog()).getByText(/Its sessions have pages logged, and games don't have pages/)).toBeTruthy()
+      // It's about the type, so there's no alert about the whole form.
+      expect(within(dialog()).queryByRole('alert')).toBeNull()
+      expect(screen.getByRole('heading', { level: 1, name: 'Piranesi' })).toBeTruthy()
+
+      // Choosing again clears it.
+      fireEvent.change(type, { target: { value: 'Book' } })
+      expect(type.getAttribute('aria-invalid')).toBeNull()
+      expect(within(dialog()).queryByText(/Its sessions have pages logged/)).toBeNull()
+    })
+
     it('keeps the form open when saving fails', async () => {
       await loaded(async () => new Response(null, { status: 500 }))
       save()
