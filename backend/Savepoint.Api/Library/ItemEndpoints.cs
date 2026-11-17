@@ -47,7 +47,7 @@ public static class ItemEndpoints
         Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
         CancellationToken cancellationToken)
     {
-        var userId = CurrentUserId(principal, users);
+        var userId = CurrentUser.IdOf(principal, users);
         var row = await db.Items
             .Where(i => i.Id == id && i.UserId == userId)
             .WithCurrentStatus()
@@ -64,7 +64,7 @@ public static class ItemEndpoints
     private static async Task<Ok<List<ItemResponse>>> List(
         ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db, CancellationToken cancellationToken)
     {
-        var userId = CurrentUserId(principal, users);
+        var userId = CurrentUser.IdOf(principal, users);
         var rows = await db.Items
             .Where(i => i.UserId == userId)
             // Ids are made in time order, so they break a tie between items made at once.
@@ -109,13 +109,13 @@ public static class ItemEndpoints
         var details = CheckDetails(request.Medium, request.Title, request.Creator, errors);
 
         var status = ItemStatus.Backlog;
-        if (request.Status is not null && !TryParseName(request.Status, out status)) errors["status"] = ["invalid"];
+        if (request.Status is not null && !EnumNames.TryParse(request.Status, out status)) errors["status"] = ["invalid"];
 
         if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
 
         var item = new Item
         {
-            UserId = CurrentUserId(principal, users),
+            UserId = CurrentUser.IdOf(principal, users),
             Medium = details.Medium,
             Title = details.Title,
             Creator = details.Creator,
@@ -134,9 +134,10 @@ public static class ItemEndpoints
     /// Replaces an item's medium, title and creator, so all three are sent each time
     /// and a missing or empty creator clears it. Its status isn't changed here,
     /// because a change of status adds to its history. 200 with the item, 404 as for
-    /// Get, or 400 with a code per field.
+    /// Get, 400 with a code per field, or 409 pagesLogged for turning a book into a
+    /// game while any of its sessions has pages logged.
     /// </summary>
-    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem>> Update(
+    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem, ProblemHttpResult>> Update(
         Guid id, UpdateItemRequest request, ClaimsPrincipal principal, UserManager<User> users,
         SavepointDbContext db, CancellationToken cancellationToken)
     {
@@ -144,8 +145,21 @@ public static class ItemEndpoints
         var details = CheckDetails(request.Medium, request.Title, request.Creator, errors);
         if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
 
-        var userId = CurrentUserId(principal, users);
+        var userId = CurrentUser.IdOf(principal, users);
         var mine = db.Items.Where(i => i.Id == id && i.UserId == userId);
+
+        // Games have no pages, so a book with pages logged can't become one. Refused
+        // rather than clearing the page counts, which would quietly lose what was
+        // logged. Only for the person's own item, so someone else's is still a 404,
+        // which doesn't say that it exists.
+        if (details.Medium == Medium.Game
+            && await db.Sessions.AnyAsync(s => s.PagesRead != null && mine.Any(i => i.Id == s.ItemId), cancellationToken))
+        {
+            return TypedResults.Problem(
+                title: "This book has pages logged in its sessions, so it can't become a game.",
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["error"] = "pagesLogged" });
+        }
         // One UPDATE, which also says whether the item was there to change.
         var changed = await mine.ExecuteUpdateAsync(
             set => set
@@ -171,14 +185,14 @@ public static class ItemEndpoints
     {
         ItemStatus status = default;
         string? problem = request.Status is null ? "required"
-            : !TryParseName(request.Status, out status) ? "invalid"
+            : !EnumNames.TryParse(request.Status, out status) ? "invalid"
             : null;
         if (problem is not null)
         {
             return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["status"] = [problem] });
         }
 
-        var userId = CurrentUserId(principal, users);
+        var userId = CurrentUser.IdOf(principal, users);
         var row = await db.Items
             .Where(i => i.Id == id && i.UserId == userId)
             .WithCurrentStatus()
@@ -203,7 +217,7 @@ public static class ItemEndpoints
         Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
         CancellationToken cancellationToken)
     {
-        var userId = CurrentUserId(principal, users);
+        var userId = CurrentUser.IdOf(principal, users);
         // One DELETE, which also says whether the item was there.
         var deleted = await db.Items
             .Where(i => i.Id == id && i.UserId == userId)
@@ -229,7 +243,7 @@ public static class ItemEndpoints
 
         Medium medium = default;
         if (mediumText is null) errors["medium"] = ["required"];
-        else if (!TryParseName(mediumText, out medium)) errors["medium"] = ["invalid"];
+        else if (!EnumNames.TryParse(mediumText, out medium)) errors["medium"] = ["invalid"];
 
         if (title.Length == 0) errors["title"] = ["required"];
         else if (title.Length > LibraryRules.MaxTitleLength) errors["title"] = ["tooLong"];
@@ -248,17 +262,4 @@ public static class ItemEndpoints
             current.Status.ToString(),
             current.ChangedAt,
             item.CreatedAt);
-
-    // Only the exact names, such as "InProgress". Enum.TryParse alone would also take
-    // "inprogress" with ignoreCase, or a number like "1".
-    private static bool TryParseName<TEnum>(string value, out TEnum parsed) where TEnum : struct, Enum
-    {
-        parsed = default;
-        return Enum.GetNames<TEnum>().Contains(value) && Enum.TryParse(value, out parsed);
-    }
-
-    // The group requires someone signed in, so the cookie always holds their id.
-    private static Guid CurrentUserId(ClaimsPrincipal principal, UserManager<User> users) =>
-        Guid.Parse(users.GetUserId(principal)
-            ?? throw new InvalidOperationException("A signed-in request had no user id."));
 }

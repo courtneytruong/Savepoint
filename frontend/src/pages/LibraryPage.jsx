@@ -215,7 +215,7 @@ export function LibraryPage({ account, onSignedOut }) {
       counts={{ library: counted ? items.length : undefined, Book: countOf('Book'), Game: countOf('Game') }}
     >
       <div className={styles.toolbar}>
-        <Heading as="h2">Library</Heading>
+        <Heading as="h1">Library</Heading>
         <SearchField
           label="Search your library"
           placeholder="Search by title or creator"

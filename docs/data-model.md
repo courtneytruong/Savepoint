@@ -80,10 +80,10 @@ erDiagram
 | RatingChanges | `Rating` | Whole number from 1 to 10 |
 | Sessions | `Date` | Not after today |
 | Sessions | `DurationMinutes` | Greater than 0, and at most 1440 (24 hours) |
-| Sessions | `PagesRead` | Optional, books only (enforced by the API) |
+| Sessions | `PagesRead` | Optional and greater than 0; books only (enforced by the API) |
 | Reflections | `SessionId` | Optional and unique, so a session has at most one reflection |
 | Reflections | `Mood` | `Hooked`, `Delighted`, `Moved`, `Curious`, `Frustrated` or `Bored` |
-| Reflections | `Notes` | At least 20 characters after trimming whitespace |
+| Reflections | `Notes` | 20 to 10,000 characters after trimming whitespace |
 | Tags | `Name` | Unique per user |
 | Users | `DisplayName` | 1 to 50 characters after trimming whitespace |
 
@@ -106,7 +106,7 @@ People sign in with an email and a password, through ASP.NET Core Identity, whic
 
 Reflection is the reason the app exists, so logging a session requires one. A foreign key can't enforce this, so the API has a single endpoint that saves the session and its reflection in one transaction: both save, or neither does.
 
-A reflection requires a mood and notes. Without a minimum length, a required reflection could still be empty, so notes must be at least 20 characters, which is about one short sentence.
+A reflection requires a mood and notes. Without a minimum length, a required reflection could still be empty, so notes must be at least 20 characters, which is about one short sentence. They can be up to 10,000, room for a long entry while turning away pasted junk.
 
 ### Reflections can stand alone
 
@@ -119,6 +119,10 @@ A session's reflection must belong to the same item as the session. A composite 
 A session can't be dated after today, and can't be longer than the 24 hours of the day it's logged on.
 
 `Date` is the user's own calendar day, but the API runs in UTC, so its today can differ from the user's by up to a day either way. Until the app knows the user's time zone, the API allows dates up to one day after its own today. Rejecting a real session is worse than letting a slightly early one through.
+
+### A book with pages logged stays a book
+
+Only books count pages. Editing a book into a game while any of its sessions has `PagesRead` is refused with a clear error, rather than clearing the page counts, which would quietly lose what was logged. A book whose sessions have no page counts can still become a game.
 
 ### No reflection prompts
 

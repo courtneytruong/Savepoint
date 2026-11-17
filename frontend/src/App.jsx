@@ -4,6 +4,7 @@ import { createAccount, getAccount, signIn } from './api/auth.js'
 import { AuthLayout, CreateAccountForm, LinkProvider, SignInForm, Spinner } from './components/index.js'
 import styles from './App.module.css'
 import { ItemPage } from './pages/ItemPage.jsx'
+import { LandingPage } from './pages/LandingPage.jsx'
 import { LibraryPage } from './pages/LibraryPage.jsx'
 import { CREATE_ACCOUNT_PATH, ITEM_PATH, LIBRARY_PATH, SIGN_IN_PATH } from './paths.js'
 
@@ -20,7 +21,7 @@ function App() {
 }
 
 // Asks who's signed in, then shows the page for the address, sending signed-out
-// people to sign in and signed-in people away from it.
+// people to the landing page or sign in, and signed-in people away from them.
 function Session() {
   // Whether the API has said who's signed in yet, and who, if anyone.
   const [checked, setChecked] = useState(false)
@@ -67,11 +68,13 @@ function Session() {
   )
 }
 
-// The pages for someone signed in. Anyone else goes to sign in, which remembers
-// the page they wanted, so it can take them there afterwards.
+// The pages for someone signed in. Anyone else at plain home sees the landing
+// page. Asking for anything more, they go to sign in, which remembers the page
+// they wanted, so it can take them there afterwards.
 function SignedInOnly({ account }) {
   const { pathname, search, hash } = useLocation()
   if (account) return <Outlet />
+  if (pathname === LIBRARY_PATH && !search && !hash) return <LandingPage />
   return <Navigate to={SIGN_IN_PATH} replace state={{ from: pathname + search + hash }} />
 }
 

@@ -25,8 +25,9 @@ function stubApi({ me = signedOut, auth = neverAnswers } = {}) {
 const openAt = (path) => window.history.replaceState(null, '', path)
 const type = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent
+const LANDING_HEADING = 'Every thought, in order'
 // The library is the page someone signed in lands on.
-const showsLibrary = () => expect(screen.getByRole('heading', { level: 2, name: 'Library' })).toBeTruthy()
+const showsLibrary = () => expect(screen.getByRole('heading', { level: 1, name: 'Library' })).toBeTruthy()
 
 // Renders, then waits for the answer about who's signed in.
 async function renderApp() {
@@ -62,11 +63,11 @@ describe('App', () => {
       expect(window.location.pathname).toBe('/')
     })
 
-    it('shows sign-in when no one is signed in', async () => {
+    it('shows the landing page when no one is signed in', async () => {
       stubApi()
       await renderApp()
-      expect(heading()).toBe('Welcome back')
-      expect(window.location.pathname).toBe(SIGN_IN_PATH)
+      expect(heading()).toBe(LANDING_HEADING)
+      expect(window.location.pathname).toBe('/')
     })
 
     it.each([
@@ -77,10 +78,10 @@ describe('App', () => {
           throw new TypeError('Failed to fetch')
         },
       ],
-    ])('shows sign-in after %s', async (_, me) => {
+    ])('treats %s as signed out', async (_, me) => {
       stubApi({ me })
       await renderApp()
-      expect(heading()).toBe('Welcome back')
+      expect(heading()).toBe(LANDING_HEADING)
     })
 
     // StrictMode cancels the first request during development, and that must not
@@ -105,16 +106,49 @@ describe('App', () => {
     })
   })
 
-  it('sends a signed-out visitor from home to sign in', async () => {
-    stubApi()
-    await renderApp()
-    expect(heading()).toBe('Welcome back')
-    expect(window.location.pathname).toBe(SIGN_IN_PATH)
-    expect(screen.getByRole('link', { name: 'Create an account' }).getAttribute('href')).toBe(CREATE_ACCOUNT_PATH)
+  describe('the landing page', () => {
+    it.each([
+      ['Sign in', SIGN_IN_PATH, 'Welcome back'],
+      ['Create an account', CREATE_ACCOUNT_PATH, 'Start your journal'],
+    ])('goes to %s without reloading', async (name, path, title) => {
+      const fetchStub = stubApi()
+      await renderApp()
+
+      fireEvent.click(screen.getByRole('link', { name }))
+      expect(heading()).toBe(title)
+      expect(window.location.pathname).toBe(path)
+      expect(fetchStub.mock.calls.filter(([called]) => called === '/api/auth/me')).toHaveLength(1)
+    })
+
+    it('shows a preview of a library that can’t be used', async () => {
+      stubApi()
+      await renderApp()
+      const preview = screen.getByText('Piranesi').closest('[inert]')
+      expect(preview).toBeTruthy()
+      expect(preview.querySelectorAll('li')).toHaveLength(4)
+    })
+
+    it('is where the brand on the sign-in page leads', async () => {
+      stubApi()
+      openAt(SIGN_IN_PATH)
+      await renderApp()
+
+      fireEvent.click(screen.getByRole('link', { name: 'Savepoint' }))
+      expect(heading()).toBe(LANDING_HEADING)
+    })
+
+    it('isn’t shown for any other page asked for, which goes to sign in', async () => {
+      stubApi()
+      openAt('/items/abc')
+      await renderApp()
+      expect(heading()).toBe('Welcome back')
+      expect(window.location.pathname).toBe(SIGN_IN_PATH)
+    })
   })
 
   it('switches between signing in and creating an account without reloading', async () => {
     const fetchStub = stubApi()
+    openAt(SIGN_IN_PATH)
     await renderApp()
 
     fireEvent.click(screen.getByRole('link', { name: 'Create an account' }))
@@ -128,7 +162,7 @@ describe('App', () => {
   })
 
   it.each([
-    ['signed out', signedOut, SIGN_IN_PATH],
+    ['signed out', signedOut, '/'],
     ['signed in', async () => json(ACCOUNT, 200), '/'],
   ])('sends an unknown address home, which while %s is %s', async (_, me, path) => {
     stubApi({ me })
@@ -224,14 +258,14 @@ describe('App', () => {
       return fetchStub
     }
 
-    it('asks the API to sign out, then shows sign-in', async () => {
+    it('asks the API to sign out, then shows the landing page', async () => {
       const fetchStub = await openAccountMenu(async () => new Response(null, { status: 204 }))
       fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
 
-      await vi.waitFor(() => expect(heading()).toBe('Welcome back'))
+      await vi.waitFor(() => expect(heading()).toBe(LANDING_HEADING))
       const call = fetchStub.mock.calls.find(([path]) => path === '/api/auth/sign-out')
       expect(call[1].method).toBe('POST')
-      expect(window.location.pathname).toBe(SIGN_IN_PATH)
+      expect(window.location.pathname).toBe('/')
     })
 
     it('doesn’t remember the page, since the next person to sign in may not be the same', async () => {
@@ -240,8 +274,10 @@ describe('App', () => {
         path === '/api/auth/sign-in' ? json(ACCOUNT, 200) : new Response(null, { status: 204 }),
       )
       fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
-      await vi.waitFor(() => expect(heading()).toBe('Welcome back'))
+      await vi.waitFor(() => expect(heading()).toBe(LANDING_HEADING))
+      expect(window.location.search).toBe('')
 
+      fireEvent.click(screen.getByRole('link', { name: 'Sign in' }))
       type('Email', 'reader@example.com')
       type('Password', 'tides and statues')
       fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
@@ -262,6 +298,7 @@ describe('App', () => {
 
   it('stays on the form, showing the answer, when the API says no', async () => {
     stubApi({ auth: async () => json({ status: 401, error: 'wrongPassword' }, 401) })
+    openAt(SIGN_IN_PATH)
     await renderApp()
 
     type('Email', 'reader@example.com')

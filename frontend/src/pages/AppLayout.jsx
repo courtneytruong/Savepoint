@@ -5,23 +5,20 @@ import {
   AccountMenu,
   GlowFrame,
   Header,
-  Heading,
-  Hero,
   Link,
   Sidebar,
   SidebarGroup,
   SidebarLayout,
   SidebarLink,
-  Text,
   useToast,
 } from '../components/index.js'
 import { BookIcon, GameIcon, LibraryIcon } from '../components/icons.js'
-import { LIBRARY_PATH, libraryPath, SIGN_IN_PATH } from '../paths.js'
+import { LIBRARY_PATH, libraryPath } from '../paths.js'
 import styles from './AppLayout.module.css'
 
 /**
- * The frame around every signed-in page, as in the /components gallery: the
- * header, the intro, and a glowing panel with the sidebar beside the page. The
+ * The frame around every signed-in page: the header, then a glowing panel with
+ * the sidebar beside the page. The intro text lives on the landing page. The
  * header and sidebar list only pages that exist; more join as they're built.
  *
  * counts: how many items the library has, and how many are a Book or a Game,
@@ -46,13 +43,13 @@ export function AppLayout({ account, onSignedOut, counts = {}, medium = null, ch
       })
       return
     }
-    // Straight to sign-in, without remembering this page: whoever signs in next
-    // may not be the same person. One transition for both, because React Router
-    // makes every navigation a transition, which waits behind ordinary updates.
-    // Alone, signing out would show first, still at this page, and the redirect
-    // for signed-out people would remember it.
+    // Straight to the landing page, without remembering this page: whoever signs
+    // in next may not be the same person. One transition for both, because React
+    // Router makes every navigation a transition, which waits behind ordinary
+    // updates. Alone, signing out would show first, still at this page, and the
+    // redirect for signed-out people would remember it.
     startTransition(() => {
-      navigate(SIGN_IN_PATH, { replace: true })
+      navigate(LIBRARY_PATH, { replace: true })
       onSignedOut()
     })
   }
@@ -68,52 +65,43 @@ export function AppLayout({ account, onSignedOut, counts = {}, medium = null, ch
         </Link>
       </Header>
 
-      <main>
-        <Hero
-          panel={
-            <GlowFrame flush>
-              <SidebarLayout
-                sidebar={
-                  <Sidebar>
-                    <SidebarGroup>
-                      <SidebarLink href={LIBRARY_PATH} icon={<LibraryIcon />} count={counts.library} active={!medium}>
-                        Library
-                      </SidebarLink>
-                    </SidebarGroup>
-                    {/* Shortcuts to the library's type filter. */}
-                    <SidebarGroup title="Browse">
-                      <SidebarLink
-                        href={libraryPath({ medium: 'Book' })}
-                        icon={<BookIcon />}
-                        count={counts.Book}
-                        active={medium === 'Book'}
-                      >
-                        Books
-                      </SidebarLink>
-                      <SidebarLink
-                        href={libraryPath({ medium: 'Game' })}
-                        icon={<GameIcon />}
-                        count={counts.Game}
-                        active={medium === 'Game'}
-                      >
-                        Games
-                      </SidebarLink>
-                    </SidebarGroup>
-                  </Sidebar>
-                }
-              >
-                {children}
-              </SidebarLayout>
-            </GlowFrame>
-          }
-        >
-          <Heading as="h1" size="display">
-            Every thought, in order
-          </Heading>
-          <Text size="subheading" className={styles.lead}>
-            A journal for the books you read and the games you play, and how your thinking changes along the way.
-          </Text>
-        </Hero>
+      <main className={styles.main}>
+        <div className={styles.inner}>
+          <GlowFrame flush>
+            <SidebarLayout
+              sidebar={
+                <Sidebar>
+                  <SidebarGroup>
+                    <SidebarLink href={LIBRARY_PATH} icon={<LibraryIcon />} count={counts.library} active={!medium}>
+                      Library
+                    </SidebarLink>
+                  </SidebarGroup>
+                  {/* Shortcuts to the library's type filter. */}
+                  <SidebarGroup title="Browse">
+                    <SidebarLink
+                      href={libraryPath({ medium: 'Book' })}
+                      icon={<BookIcon />}
+                      count={counts.Book}
+                      active={medium === 'Book'}
+                    >
+                      Books
+                    </SidebarLink>
+                    <SidebarLink
+                      href={libraryPath({ medium: 'Game' })}
+                      icon={<GameIcon />}
+                      count={counts.Game}
+                      active={medium === 'Game'}
+                    >
+                      Games
+                    </SidebarLink>
+                  </SidebarGroup>
+                </Sidebar>
+              }
+            >
+              {children}
+            </SidebarLayout>
+          </GlowFrame>
+        </div>
       </main>
     </>
   )

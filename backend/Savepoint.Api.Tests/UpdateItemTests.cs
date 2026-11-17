@@ -143,4 +143,82 @@ public sealed class UpdateItemTests(PostgresFixture postgres) : IAsyncDisposable
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    // Logs a session for the item, with or without a page count.
+    private async Task LogSession(HttpClient client, JsonElement item, int? pagesRead)
+    {
+        var response = await client.PostAsJsonAsync(
+            $"/api/items/{item.GetProperty("id")}/sessions",
+            new
+            {
+                date = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+                durationMinutes = 40,
+                pagesRead,
+                reflection = new { mood = "Curious", notes = "The house has its own tides." },
+            },
+            cancellationToken);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refuses_turning_a_book_with_pages_logged_into_a_game_and_changes_nothing()
+    {
+        var (client, _) = await factory.SignedInClientAsync(cancellationToken);
+        using var _ = client;
+        var created = await Create(client);
+        await LogSession(client, created, pagesRead: null);
+        await LogSession(client, created, pagesRead: 24);
+
+        var response = await Update(client, created, new { medium = "Game", title = "Piranesi" });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("pagesLogged", (await ReadJson(response)).GetProperty("error").GetString());
+        var item = await ReadJson(await client.GetAsync($"/api/items/{created.GetProperty("id")}", cancellationToken));
+        Assert.Equal("Book", item.GetProperty("medium").GetString());
+        Assert.Equal("Susanna Clarke", item.GetProperty("creator").GetString());
+    }
+
+    [Fact]
+    public async Task Turns_a_book_into_a_game_when_none_of_its_sessions_has_pages()
+    {
+        var (client, _) = await factory.SignedInClientAsync(cancellationToken);
+        using var _ = client;
+        var created = await Create(client);
+        await LogSession(client, created, pagesRead: null);
+
+        var response = await Update(client, created, new { medium = "Game", title = "Piranesi" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Game", (await ReadJson(response)).GetProperty("medium").GetString());
+    }
+
+    [Fact]
+    public async Task Still_edits_the_rest_of_a_book_with_pages_logged()
+    {
+        var (client, _) = await factory.SignedInClientAsync(cancellationToken);
+        using var _ = client;
+        var created = await Create(client);
+        await LogSession(client, created, pagesRead: 24);
+
+        var response = await Update(client, created, new { medium = "Book", title = "Piranesi (2020)" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Piranesi (2020)", (await ReadJson(response)).GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task Answers_404_not_409_for_someone_elses_book_with_pages_logged()
+    {
+        var (owner, _) = await factory.SignedInClientAsync(cancellationToken);
+        using var _ = owner;
+        var created = await Create(owner);
+        await LogSession(owner, created, pagesRead: 24);
+        var (stranger, _) = await factory.SignedInClientAsync(cancellationToken);
+        using var __ = stranger;
+
+        var response = await Update(stranger, created, new { medium = "Game", title = "Piranesi" });
+
+        // A 409 would say the item exists.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }

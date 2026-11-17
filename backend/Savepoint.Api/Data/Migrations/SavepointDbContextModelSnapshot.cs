@@ -250,6 +250,86 @@ namespace Savepoint.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Savepoint.Api.Sessions.Reflection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Mood")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("SessionId", "ItemId")
+                        .IsUnique();
+
+                    b.ToTable("Reflections", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Reflections_Mood", "\"Mood\" IN ('Hooked', 'Delighted', 'Moved', 'Curious', 'Frustrated', 'Bored')");
+
+                            t.HasCheckConstraint("CK_Reflections_Notes_Length", "char_length(\"Notes\") BETWEEN 20 AND 10000");
+                        });
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Sessions.Session", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("PagesRead")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId", "Date");
+
+                    b.ToTable("Sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Sessions_DurationMinutes", "\"DurationMinutes\" BETWEEN 1 AND 1440");
+
+                            t.HasCheckConstraint("CK_Sessions_PagesRead", "\"PagesRead\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.HasOne("Savepoint.Api.Accounts.User", null)
@@ -295,9 +375,38 @@ namespace Savepoint.Api.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Savepoint.Api.Sessions.Reflection", b =>
+                {
+                    b.HasOne("Savepoint.Api.Library.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Savepoint.Api.Sessions.Session", null)
+                        .WithOne("Reflection")
+                        .HasForeignKey("Savepoint.Api.Sessions.Reflection", "SessionId", "ItemId")
+                        .HasPrincipalKey("Savepoint.Api.Sessions.Session", "Id", "ItemId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Sessions.Session", b =>
+                {
+                    b.HasOne("Savepoint.Api.Library.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Savepoint.Api.Library.Item", b =>
                 {
                     b.Navigation("StatusChanges");
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Sessions.Session", b =>
+                {
+                    b.Navigation("Reflection");
                 });
 #pragma warning restore 612, 618
         }

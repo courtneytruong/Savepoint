@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
+using Savepoint.Api.Data;
 
 namespace Savepoint.Api.Library;
 
@@ -12,7 +13,7 @@ public static class LibraryModel
         {
             item.ToTable("Items", table =>
             {
-                table.HasCheckConstraint("CK_Items_Medium", OneOf<Medium>("Medium"));
+                table.HasCheckConstraint("CK_Items_Medium", Checks.OneOf<Medium>("Medium"));
                 // The API trims before saving, so these check the trimmed length.
                 table.HasCheckConstraint(
                     "CK_Items_Title_Length",
@@ -42,7 +43,7 @@ public static class LibraryModel
         builder.Entity<StatusChange>(change =>
         {
             change.ToTable("StatusChanges", table =>
-                table.HasCheckConstraint("CK_StatusChanges_Status", OneOf<ItemStatus>("Status")));
+                table.HasCheckConstraint("CK_StatusChanges_Status", Checks.OneOf<ItemStatus>("Status")));
 
             change.Property(s => s.Status).HasConversion<string>();
             change.Property(s => s.ChangedAt).HasDefaultValueSql("now()");
@@ -52,10 +53,4 @@ public static class LibraryModel
             change.HasIndex(s => new { s.ItemId, s.ChangedAt });
         });
     }
-
-    // A check that a column holds one of an enum's names, built from the enum so
-    // the two can't drift apart: a new value changes the model, and so the next
-    // migration.
-    private static string OneOf<TEnum>(string column) where TEnum : struct, Enum =>
-        $"\"{column}\" IN ({string.Join(", ", Enum.GetNames<TEnum>().Select(name => $"'{name}'"))})";
 }
