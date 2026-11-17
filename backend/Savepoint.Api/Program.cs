@@ -4,6 +4,7 @@ using Savepoint.Api.Accounts;
 using Savepoint.Api.Data;
 using Savepoint.Api.Health;
 using Savepoint.Api.Library;
+using Savepoint.Api.Sessions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,5 +55,6 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapItemEndpoints();
+app.MapSessionEndpoints();
 
 app.Run();
