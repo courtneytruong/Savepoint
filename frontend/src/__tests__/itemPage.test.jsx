@@ -617,5 +617,67 @@ describe('ItemPage', () => {
         expect(screen.queryByRole('dialog')).toBeNull()
       })
     })
+
+    describe('deleting one', () => {
+      const day = (key) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(`${key}T00:00`))
+      const deleteButton = (key) => screen.getByRole('button', { name: `Delete the session from ${day(key)}` })
+      const dialog = () => screen.getByRole('dialog', { name: 'Delete this session?' })
+      const confirm = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Delete' }))
+
+      const NEWER = session('s2', '2026-11-14', 'The quantum moon finally made sense.')
+      const OLDER = session('s1', '2026-11-12', 'Burned to death by the sun, twice.')
+
+      async function asking(target, ...answers) {
+        const fetchStub = await loaded([NEWER, OLDER])
+        await within(region()).findAllByRole('article')
+        for (const answer of answers) fetchStub.mockImplementationOnce(answer)
+        fireEvent.click(deleteButton(target.date))
+        return fetchStub
+      }
+
+      it('asks first, naming the session, and keeping it sends nothing', async () => {
+        const fetchStub = await asking(OLDER)
+        expect(within(dialog()).getByText(`The session from ${day('2026-11-12')} and its reflection. This can't be undone.`)).toBeTruthy()
+
+        fireEvent.click(within(dialog()).getByRole('button', { name: 'Keep it' }))
+
+        expect(screen.queryByRole('dialog')).toBeNull()
+        expect(fetchStub).toHaveBeenCalledTimes(1)
+        expect(within(region()).getAllByRole('article')).toHaveLength(2)
+      })
+
+      it('deletes it, takes it off the list and says so', async () => {
+        const fetchStub = await asking(OLDER, async () => new Response(null, { status: 204 }))
+        confirm()
+
+        expect(await screen.findByText('Session deleted')).toBeTruthy()
+        const [url, options] = fetchStub.mock.calls[1]
+        expect(url).toBe('/api/items/abc/sessions/s1')
+        expect(options.method).toBe('DELETE')
+        const cards = within(region()).getAllByRole('article')
+        expect(cards).toHaveLength(1)
+        expect(cards[0].textContent).toMatch('The quantum moon finally made sense.')
+        await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      })
+
+      it('says there are none left after deleting the last one', async () => {
+        stubSessions(async () => json([OLDER]))
+        const fetchStub = stubFetch(async () => json(ITEM), async () => new Response(null, { status: 204 }))
+        renderPage()
+        fireEvent.click(await screen.findByRole('button', { name: `Delete the session from ${day('2026-11-12')}` }))
+        confirm()
+
+        expect(await within(region()).findByText('No sessions yet. Each one you log shows here, with its reflection.')).toBeTruthy()
+        expect(fetchStub).toHaveBeenCalledTimes(2)
+      })
+
+      it('keeps it, and says so in the modal, when deleting fails', async () => {
+        await asking(OLDER, async () => new Response(null, { status: 500 }))
+        confirm()
+
+        await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
+        expect(within(region()).getAllByRole('article')).toHaveLength(2)
+      })
+    })
   })
 })

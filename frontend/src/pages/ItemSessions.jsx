@@ -1,8 +1,9 @@
 import { useEffect, useEffectEvent, useId, useState } from 'react'
-import { editSession, getSessions, logSession } from '../api/sessions.js'
+import { deleteSession, editSession, getSessions, logSession } from '../api/sessions.js'
 import {
   Alert,
   Button,
+  DeleteModal,
   EditSessionModal,
   Heading,
   LogSessionModal,
@@ -13,7 +14,7 @@ import {
   useToast,
   VisuallyHidden,
 } from '../components/index.js'
-import { EditIcon, ReflectionIcon } from '../components/icons.js'
+import { DeleteIcon, EditIcon, ReflectionIcon } from '../components/icons.js'
 import { newestFirst, wasLoggedLate } from '../rules/sessionList.js'
 import { parseDateKey } from '../utils/calendarDates.js'
 import styles from './ItemPage.module.css'
@@ -41,6 +42,8 @@ export function ItemSessions({ item, onItemMissing }) {
   const [logging, setLogging] = useState(false)
   // The session being edited, if any.
   const [editing, setEditing] = useState(null)
+  // The session being deleted, if any.
+  const [deleting, setDeleting] = useState(null)
   const toast = useToast()
   // Always the page's latest callback, without it being a reason to load again:
   // the page passes a new function each render.
@@ -105,6 +108,17 @@ export function ItemSessions({ item, onItemMissing }) {
     return result
   }
 
+  async function confirmDelete() {
+    const result = await deleteSession(item.id, deleting.id)
+    if (result.deleted) {
+      const gone = deleting.id
+      setDeleting(null)
+      setLoaded((current) => ({ ...current, sessions: current.sessions.filter((s) => s.id !== gone) }))
+      toast.show({ title: 'Session deleted' })
+    }
+    return result
+  }
+
   let content
   if (loaded.state === 'loading') {
     content = (
@@ -137,11 +151,18 @@ export function ItemSessions({ item, onItemMissing }) {
               date={session.date}
               loggedOn={wasLoggedLate(session) ? session.createdAt : undefined}
               actions={
-                <Button variant="text" onClick={() => setEditing(session)}>
-                  <EditIcon />
-                  Edit
-                  <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
-                </Button>
+                <>
+                  <Button variant="text" onClick={() => setEditing(session)}>
+                    <EditIcon />
+                    Edit
+                    <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
+                  </Button>
+                  <Button variant="text" onClick={() => setDeleting(session)}>
+                    <DeleteIcon />
+                    Delete
+                    <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
+                  </Button>
+                </>
               }
             />
           </li>
@@ -169,6 +190,15 @@ export function ItemSessions({ item, onItemMissing }) {
         session={editing}
         onClose={() => setEditing(null)}
         onSubmit={saveEdit}
+      />
+      <DeleteModal
+        open={deleting !== null}
+        title="Delete this session?"
+        description={
+          deleting && `The session from ${sessionDay(deleting)} and its reflection. This can't be undone.`
+        }
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
       />
     </section>
   )

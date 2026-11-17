@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { editSession, getSessions, logSession } from '../api/sessions.js'
+import { deleteSession, editSession, getSessions, logSession } from '../api/sessions.js'
 
 function stubFetch(answer) {
   const fetchStub = vi.fn(answer)
@@ -138,5 +138,26 @@ describe('editSession', () => {
   it.each([400, 500])('counts a %s as failed', async (status) => {
     stubFetch(async () => json({ status }, status))
     expect(await editSession('abc', 's1', FROM_FORM)).toEqual({ error: 'failed' })
+  })
+})
+
+describe('deleteSession', () => {
+  it('deletes the session at its own address', async () => {
+    const fetchStub = stubFetch(async () => new Response(null, { status: 204 }))
+
+    expect(await deleteSession('abc', 's1')).toEqual({ deleted: true })
+    const [url, options] = fetchStub.mock.calls[0]
+    expect(url).toBe('/api/items/abc/sessions/s1')
+    expect(options.method).toBe('DELETE')
+  })
+
+  it('counts one that was already gone as deleted', async () => {
+    stubFetch(async () => new Response(null, { status: 404 }))
+    expect(await deleteSession('abc', 's1')).toEqual({ deleted: true })
+  })
+
+  it('counts any other answer as failed', async () => {
+    stubFetch(async () => new Response(null, { status: 500 }))
+    expect(await deleteSession('abc', 's1')).toEqual({ error: 'failed' })
   })
 })

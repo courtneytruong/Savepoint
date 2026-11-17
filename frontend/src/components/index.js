@@ -1,6 +1,7 @@
 export { AccountMenu } from './auth/AccountMenu.jsx'
 export { AddItemModal, DeleteItemModal, EditItemModal } from './library/ItemModal.jsx'
 export { Alert } from './feedback/Alert.jsx'
+export { DeleteModal } from './feedback/DeleteModal.jsx'
 export { AuthLayout } from './layout/AuthLayout.jsx'
 export {
   CREATE_ACCOUNT_ERRORS,

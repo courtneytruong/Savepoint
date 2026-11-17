@@ -65,3 +65,14 @@ export async function editSession(itemId, sessionId, values) {
   if (!response.ok) return { error: 'failed' }
   return { session: await response.json() }
 }
+
+/**
+ * Deletes a session and its reflection. Resolves with { deleted: true }, also
+ * when it was already gone (a 404), since either way it's no longer there, or
+ * { error: 'failed' } for any other answer. Throws if the server can't be reached.
+ */
+export async function deleteSession(itemId, sessionId) {
+  const response = await fetch(`${sessionsPath(itemId)}/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })
+  if (response.status === 204 || response.status === 404) return { deleted: true }
+  return { error: 'failed' }
+}
