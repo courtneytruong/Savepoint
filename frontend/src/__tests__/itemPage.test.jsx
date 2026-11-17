@@ -466,7 +466,7 @@ describe('ItemPage', () => {
       expect(cards[0].textContent).toMatch('The quantum moon finally made sense.')
       expect(cards[0].textContent).toMatch('Played for 1h 30m')
       expect(cards[0].textContent).toMatch('Moved')
-      expect(within(cards[0]).getByText(/Nov/).getAttribute('dateTime')).toBe('2026-11-14')
+      expect(cards[0].querySelector('time').getAttribute('dateTime')).toBe('2026-11-14')
       expect(cards[1].textContent).toMatch('Burned to death by the sun, twice.')
     })
 
@@ -531,6 +531,91 @@ describe('ItemPage', () => {
       expect(cards[1]).toMatch('Logged now, about two days ago.')
       expect(cards[2]).toMatch('The oldest of the ones already logged.')
       expect(fetchStub.sessions).toHaveBeenCalledTimes(1)
+    })
+
+    describe('editing one', () => {
+      const day = (key) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(`${key}T00:00`))
+      const editButton = (key) => screen.getByRole('button', { name: `Edit the session from ${day(key)}` })
+      const dialog = () => screen.getByRole('dialog', { name: 'Edit session' })
+      const set = (label, value) => fireEvent.change(within(dialog()).getByLabelText(label), { target: { value } })
+      const save = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Save changes' }))
+
+      const NEWER = session('s2', '2026-11-14', 'The quantum moon finally made sense.', { mood: 'Moved' })
+      const OLDER = session('s1', '2026-11-12', 'Burned to death by the sun, twice.', { mood: 'Frustrated' })
+
+      async function editing(target, ...answers) {
+        const fetchStub = await loaded([NEWER, OLDER])
+        await within(region()).findAllByRole('article')
+        for (const answer of answers) fetchStub.mockImplementationOnce(answer)
+        fireEvent.click(editButton(target.date))
+        return fetchStub
+      }
+
+      it('gives each session its own Edit button, named by its day', async () => {
+        await loaded([NEWER, OLDER])
+        await within(region()).findAllByRole('article')
+        expect(editButton('2026-11-14')).toBeTruthy()
+        expect(editButton('2026-11-12')).toBeTruthy()
+      })
+
+      it('opens the form filled in with the session as it is', async () => {
+        await editing(OLDER)
+        expect(within(dialog()).getByText('Outer Wilds: change when, how long, or what you thought.')).toBeTruthy()
+        expect(within(dialog()).getByLabelText('Date').value).toBe('2026-11-12')
+        expect(within(dialog()).getByLabelText('Hours').value).toBe('1')
+        expect(within(dialog()).getByLabelText('Minutes').value).toBe('30')
+        expect(within(dialog()).getByRole('radio', { name: 'Frustrated' }).checked).toBe(true)
+        expect(within(dialog()).getByLabelText('Notes').value).toBe('Burned to death by the sun, twice.')
+        expect(within(dialog()).queryByLabelText('Tags')).toBeNull()
+      })
+
+      it('saves the changes and shows them, moving the session if its day changed', async () => {
+        const edited = {
+          ...OLDER,
+          date: '2026-11-15',
+          reflection: { ...OLDER.reflection, notes: 'Third try, and I finally escaped.' },
+        }
+        const fetchStub = await editing(OLDER, async () => json(edited))
+        set('Date', '2026-11-15')
+        set('Notes', 'Third try, and I finally escaped.')
+        save()
+
+        expect(await screen.findByText('Changes saved')).toBeTruthy()
+        const [url, options] = fetchStub.mock.calls[1]
+        expect(url).toBe('/api/items/abc/sessions/s1')
+        expect(options.method).toBe('PUT')
+        expect(JSON.parse(options.body)).toEqual({
+          date: '2026-11-15',
+          durationMinutes: 90,
+          pagesRead: null,
+          reflection: { mood: 'Frustrated', notes: 'Third try, and I finally escaped.' },
+        })
+        const cards = within(region()).getAllByRole('article').map((card) => card.textContent)
+        expect(cards[0]).toMatch('Third try, and I finally escaped.')
+        expect(cards[1]).toMatch('The quantum moon finally made sense.')
+        await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      })
+
+      it('stays open with the changes when saving fails', async () => {
+        await editing(OLDER, async () => json({ status: 500 }, 500))
+        set('Notes', 'A change that will not save yet.')
+        save()
+
+        await vi.waitFor(() =>
+          expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't save your changes"),
+        )
+        expect(within(dialog()).getByLabelText('Notes').value).toBe('A change that will not save yet.')
+      })
+
+      it('loads the sessions afresh when the session was deleted meanwhile', async () => {
+        const fetchStub = await editing(OLDER, async () => new Response(null, { status: 404 }))
+        stubSessions(async () => json([NEWER]))
+        save()
+
+        await vi.waitFor(() => expect(within(region()).getAllByRole('article')).toHaveLength(1))
+        expect(fetchStub.sessions).toHaveBeenCalledTimes(2)
+        expect(screen.queryByRole('dialog')).toBeNull()
+      })
     })
   })
 })

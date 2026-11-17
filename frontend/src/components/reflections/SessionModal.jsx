@@ -8,6 +8,23 @@ import { SessionForm } from './SessionForm.jsx'
 
 const FAILED_BODY = "Something went wrong on Savepoint's server. Try again."
 
+const LOGGING = {
+  title: 'Log a session',
+  description: (item) => `${item.title}: how long, and what you thought.`,
+  submit: 'Log session',
+  saving: 'Logging…',
+  failed: "Couldn't log the session",
+  icon: <ReflectionIcon />,
+}
+
+const EDITING = {
+  title: 'Edit session',
+  description: (item) => `${item.title}: change when, how long, or what you thought.`,
+  submit: 'Save changes',
+  saving: 'Saving…',
+  failed: "Couldn't save your changes",
+}
+
 /**
  * Logging a session of one book or game, with its reflection, from that item's
  * page. The item is fixed, so there's no picker, and there are no tags until the
@@ -23,10 +40,33 @@ const FAILED_BODY = "Something went wrong on Savepoint's server. Try again."
  */
 export function LogSessionModal({ open, item, onClose, onSubmit }) {
   const opening = useOpening(open)
-  return <LogSessionDialog key={opening} open={open} item={item} onClose={onClose} onSubmit={onSubmit} />
+  return <SessionDialog key={opening} open={open} item={item} onClose={onClose} onSubmit={onSubmit} text={LOGGING} />
 }
 
-function LogSessionDialog({ open, item, onClose, onSubmit }) {
+/**
+ * Changing a session and its reflection, with the same form and checks as logging
+ * one, and answering in the same way.
+ *
+ * session: the session as it is now, in the API's shape, which the form starts
+ * from each time it opens. Leave it out while closed.
+ */
+export function EditSessionModal({ open, item, session, onClose, onSubmit }) {
+  const opening = useOpening(open)
+  return (
+    <SessionDialog
+      key={opening}
+      open={open}
+      item={item}
+      start={session}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      text={EDITING}
+    />
+  )
+}
+
+// The dialog both share. start: a session to start from, or none for a new one.
+function SessionDialog({ open, item, start, onClose, onSubmit, text }) {
   const formId = useId()
   const alertRef = useRef(null)
   // editing, saving or failed.
@@ -57,22 +97,22 @@ function LogSessionDialog({ open, item, onClose, onSubmit }) {
       open={open}
       onClose={onClose}
       dismissible={false}
-      title="Log a session"
-      description={`${item.title}: how long, and what you thought.`}
+      title={text.title}
+      description={text.description(item)}
       actions={
         <>
           <Button variant="text" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" form={formId} loading={saving}>
-            <ReflectionIcon />
-            {saving ? 'Logging…' : 'Log session'}
+            {text.icon}
+            {saving ? text.saving : text.submit}
           </Button>
         </>
       }
     >
       {state === 'failed' && (
-        <Alert ref={alertRef} tabIndex={-1} tone="error" title="Couldn't log the session">
+        <Alert ref={alertRef} tabIndex={-1} tone="error" title={text.failed}>
           {FAILED_BODY}
         </Alert>
       )}
@@ -80,6 +120,7 @@ function LogSessionDialog({ open, item, onClose, onSubmit }) {
         id={formId}
         items={[item]}
         defaultItemId={item.id}
+        defaultValue={start}
         itemLocked
         withTags={false}
         onSubmit={send}

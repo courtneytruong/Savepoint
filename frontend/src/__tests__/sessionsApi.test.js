@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getSessions, logSession } from '../api/sessions.js'
+import { editSession, getSessions, logSession } from '../api/sessions.js'
 
 function stubFetch(answer) {
   const fetchStub = vi.fn(answer)
@@ -111,5 +111,32 @@ describe('logSession', () => {
       throw new TypeError('Failed to fetch')
     })
     await expect(logSession('abc', FROM_FORM)).rejects.toThrow('Failed to fetch')
+  })
+})
+
+describe('editSession', () => {
+  it('puts the whole session at its own address, without the item id or tags', async () => {
+    const fetchStub = stubFetch(async () => json(SESSION, 200))
+
+    expect(await editSession('abc', 's1', FROM_FORM)).toEqual({ session: SESSION })
+    const [url, options] = fetchStub.mock.calls[0]
+    expect(url).toBe('/api/items/abc/sessions/s1')
+    expect(options.method).toBe('PUT')
+    expect(JSON.parse(options.body)).toEqual({
+      date: '2026-11-14',
+      durationMinutes: 45,
+      pagesRead: 30,
+      reflection: { mood: 'Moved', notes: 'The crossing of the ice stayed with me.' },
+    })
+  })
+
+  it('says when the item or session is no longer there', async () => {
+    stubFetch(async () => new Response(null, { status: 404 }))
+    expect(await editSession('abc', 's1', FROM_FORM)).toEqual({ error: 'missing' })
+  })
+
+  it.each([400, 500])('counts a %s as failed', async (status) => {
+    stubFetch(async () => json({ status }, status))
+    expect(await editSession('abc', 's1', FROM_FORM)).toEqual({ error: 'failed' })
   })
 })

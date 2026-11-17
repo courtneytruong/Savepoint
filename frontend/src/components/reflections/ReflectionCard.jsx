@@ -42,6 +42,7 @@ function Kind({ session, medium }) {
  * items, such as the Reflections page. On an item's own timeline, leave it out.
  * date: 'YYYY-MM-DD', for lists without their own dates.
  * loggedOn: when a session was logged, if later than it happened.
+ * actions: buttons for the reflection, such as Edit, at the bottom of the card.
  */
 export function ReflectionCard({
   mood,
@@ -52,6 +53,7 @@ export function ReflectionCard({
   item,
   date,
   loggedOn,
+  actions,
   headingAs: ItemHeading = 'h3',
   className,
 }) {
@@ -89,6 +91,7 @@ export function ReflectionCard({
       <p className={session ? styles.notes : styles.thought}>{notes}</p>
       <ReflectionTags tags={tags} />
       {loggedOn && <p className={styles.logged}>Logged on {dayFormat.format(new Date(loggedOn))}</p>}
+      {actions && <div className={styles.actions}>{actions}</div>}
     </article>
   )
 }

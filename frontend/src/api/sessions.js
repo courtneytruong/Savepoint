@@ -3,6 +3,15 @@
 
 const sessionsPath = (itemId) => `/api/items/${encodeURIComponent(itemId)}/sessions`
 
+// The body the API takes, from what SessionForm gives: without its itemId, which
+// is in the address, or the reflection's tags, which wait for the tags feature.
+const toRequest = ({ date, durationMinutes, pagesRead, reflection }) => ({
+  date,
+  durationMinutes,
+  pagesRead,
+  reflection: { mood: reflection.mood, notes: reflection.notes },
+})
+
 /**
  * Every session for an item, newest day first, each as { id, itemId, date,
  * durationMinutes, pagesRead, createdAt, reflection: { id, mood, notes, createdAt,
@@ -28,18 +37,31 @@ export async function getSessions(itemId, { signal } = {}) {
  * answer: the form checks the same rules first, so a 400 means they've drifted
  * apart. If the server can't be reached, fetch throws, which counts as failed too.
  */
-export async function logSession(itemId, { date, durationMinutes, pagesRead, reflection }) {
+export async function logSession(itemId, values) {
   const response = await fetch(sessionsPath(itemId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      date,
-      durationMinutes,
-      pagesRead,
-      reflection: { mood: reflection.mood, notes: reflection.notes },
-    }),
+    body: JSON.stringify(toRequest(values)),
   })
   if (response.status === 404) return { error: 'missing' }
   if (response.status !== 201) return { error: 'failed' }
+  return { session: await response.json() }
+}
+
+/**
+ * Replaces a session's date, duration and pages, and its reflection's mood and
+ * notes, all of them each time, so a null pagesRead clears it. Takes what
+ * SessionForm gives, as logSession does. Answers as logSession does too: { session },
+ * { error: 'missing' } when the item or the session is no longer there, or
+ * { error: 'failed' }, and throws if the server can't be reached.
+ */
+export async function editSession(itemId, sessionId, values) {
+  const response = await fetch(`${sessionsPath(itemId)}/${encodeURIComponent(sessionId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(toRequest(values)),
+  })
+  if (response.status === 404) return { error: 'missing' }
+  if (!response.ok) return { error: 'failed' }
   return { session: await response.json() }
 }

@@ -1,8 +1,9 @@
 import { useEffect, useEffectEvent, useId, useState } from 'react'
-import { getSessions, logSession } from '../api/sessions.js'
+import { editSession, getSessions, logSession } from '../api/sessions.js'
 import {
   Alert,
   Button,
+  EditSessionModal,
   Heading,
   LogSessionModal,
   ReflectionCard,
@@ -10,12 +11,18 @@ import {
   SkeletonText,
   Text,
   useToast,
+  VisuallyHidden,
 } from '../components/index.js'
-import { ReflectionIcon } from '../components/icons.js'
+import { EditIcon, ReflectionIcon } from '../components/icons.js'
 import { newestFirst, wasLoggedLate } from '../rules/sessionList.js'
+import { parseDateKey } from '../utils/calendarDates.js'
 import styles from './ItemPage.module.css'
 
 const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
+
+// For telling apart each card's buttons, as in "Edit the session from 14 Nov 2026".
+const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+const sessionDay = (session) => dayFormat.format(parseDateKey(session.date))
 
 /**
  * The Sessions part of an item's page: every session with its reflection, newest
@@ -32,6 +39,8 @@ export function ItemSessions({ item, onItemMissing }) {
   // Counting tries makes Try again load afresh, through the same effect.
   const [tries, setTries] = useState(0)
   const [logging, setLogging] = useState(false)
+  // The session being edited, if any.
+  const [editing, setEditing] = useState(null)
   const toast = useToast()
   // Always the page's latest callback, without it being a reason to load again:
   // the page passes a new function each render.
@@ -76,6 +85,26 @@ export function ItemSessions({ item, onItemMissing }) {
     return result
   }
 
+  async function saveEdit(values) {
+    const result = await editSession(item.id, editing.id, values)
+    if (result.session) {
+      setEditing(null)
+      // Its date may have changed, so it may move.
+      setLoaded((current) => ({
+        ...current,
+        sessions: newestFirst(current.sessions.map((s) => (s.id === result.session.id ? result.session : s))),
+      }))
+      toast.show({ title: 'Changes saved' })
+    } else if (result.error === 'missing') {
+      // The session, or the whole item, was deleted meanwhile. Loading afresh
+      // shows which: the list without it, or the item as not found.
+      setEditing(null)
+      tryAgain()
+      return {}
+    }
+    return result
+  }
+
   let content
   if (loaded.state === 'loading') {
     content = (
@@ -107,6 +136,13 @@ export function ItemSessions({ item, onItemMissing }) {
               medium={item.medium}
               date={session.date}
               loggedOn={wasLoggedLate(session) ? session.createdAt : undefined}
+              actions={
+                <Button variant="text" onClick={() => setEditing(session)}>
+                  <EditIcon />
+                  Edit
+                  <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
+                </Button>
+              }
             />
           </li>
         ))}
@@ -127,6 +163,13 @@ export function ItemSessions({ item, onItemMissing }) {
       </header>
       {content}
       <LogSessionModal open={logging} item={item} onClose={() => setLogging(false)} onSubmit={saveSession} />
+      <EditSessionModal
+        open={editing !== null}
+        item={item}
+        session={editing}
+        onClose={() => setEditing(null)}
+        onSubmit={saveEdit}
+      />
     </section>
   )
 }
