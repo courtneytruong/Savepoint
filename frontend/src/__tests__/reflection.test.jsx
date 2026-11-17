@@ -32,6 +32,21 @@ describe('validateReflection', () => {
   it('counts spaces inside the notes', () => {
     expect(notesLength('a b')).toBe(3)
   })
+
+  // As the API and the database count, or notes could pass here and fail there.
+  it('counts an emoji as one character', () => {
+    expect(notesLength('🌊')).toBe(1)
+    expect(validateReflection({ mood: 'Moved', notes: `${'a'.repeat(19)}🌊` })).toEqual({})
+    expect(validateReflection({ mood: 'Moved', notes: `${'a'.repeat(18)}🌊` }).notes).toMatch('1 more character to go')
+  })
+
+  it('accepts notes up to 10,000 characters, and says how far over they are', () => {
+    expect(validateReflection({ mood: 'Moved', notes: 'a'.repeat(10_000) })).toEqual({})
+    expect(validateReflection({ mood: 'Moved', notes: 'a'.repeat(10_001) }).notes).toBe(
+      'Keep it to 10,000 characters: 1 character over.',
+    )
+    expect(validateReflection({ mood: 'Moved', notes: 'a'.repeat(10_250) }).notes).toMatch('250 characters over')
+  })
 })
 
 function renderForm(onSubmit = vi.fn()) {
@@ -59,6 +74,12 @@ describe('ReflectionForm', () => {
     renderForm()
     type(TWENTY)
     expect(screen.getByText('20 characters')).toBeTruthy()
+  })
+
+  it('counts against the maximum, without the tick, once past it', () => {
+    renderForm()
+    type('a'.repeat(10_012))
+    expect(screen.getByText('10,012 / 10,000 characters')).toBeTruthy()
   })
 
   it('shows no errors before the first save', () => {

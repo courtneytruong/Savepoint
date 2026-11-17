@@ -2,13 +2,17 @@
 // these only exist to tell the user sooner.
 
 export const MIN_NOTES_LENGTH = 20
+export const MAX_NOTES_LENGTH = 10_000
 
 /**
- * How much of the notes counts toward the minimum: spaces at either end don't.
- * Uses string length (UTF-16 units) because .NET's string.Length counts the same
- * way, so the form and the API agree on every note, emoji included.
+ * How much of the notes counts toward the limits: spaces at either end don't.
+ * Counts characters as the API and the database do, by code point, so an emoji
+ * is one character. String length would count it as two, and let through notes
+ * the API then refuses as too short.
  */
-export const notesLength = (notes = '') => notes.trim().length
+export const notesLength = (notes = '') => [...notes.trim()].length
+
+const plural = (count, word) => `${count.toLocaleString()} ${count === 1 ? word : `${word}s`}`
 
 /** Returns a message for each field that breaks a rule, or an empty object. */
 export function validateReflection({ mood, notes }) {
@@ -18,8 +22,9 @@ export function validateReflection({ mood, notes }) {
   const length = notesLength(notes)
   if (length === 0) errors.notes = 'Write a sentence or two about it.'
   else if (length < MIN_NOTES_LENGTH) {
-    const short = MIN_NOTES_LENGTH - length
-    errors.notes = `Write a little more: ${short} more ${short === 1 ? 'character' : 'characters'} to go.`
+    errors.notes = `Write a little more: ${plural(MIN_NOTES_LENGTH - length, 'more character')} to go.`
+  } else if (length > MAX_NOTES_LENGTH) {
+    errors.notes = `Keep it to ${MAX_NOTES_LENGTH.toLocaleString()} characters: ${plural(length - MAX_NOTES_LENGTH, 'character')} over.`
   }
 
   return errors

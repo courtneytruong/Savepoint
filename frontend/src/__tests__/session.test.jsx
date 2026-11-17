@@ -99,6 +99,15 @@ describe('SessionForm', () => {
     expect(date.getAttribute('max')).toBe('2026-11-06')
   })
 
+  it('asks for tags unless told to leave them out', () => {
+    renderForm()
+    expect(screen.getByLabelText('Tags')).toBeTruthy()
+    cleanup()
+
+    renderForm({ withTags: false })
+    expect(screen.queryByLabelText('Tags')).toBeNull()
+  })
+
   it('can start with an item chosen', () => {
     renderForm({ defaultItemId: 2 })
     expect(itemField().value).toBe('Hades')

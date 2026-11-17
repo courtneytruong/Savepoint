@@ -21,6 +21,8 @@ import { sessionMinutes, validateSession } from '../../rules/sessionRules.js'
  * { itemId, date, durationMinutes, pagesRead, reflection: { mood, notes, tags } },
  * only once everything is valid. pagesRead is null if not given, and always for games.
  *
+ * withTags: false leaves the reflection's tags field out, until the app saves tags.
+ *
  * As with ReflectionForm, the submit button can sit outside, given form={id}.
  */
 export function SessionForm({
@@ -28,6 +30,7 @@ export function SessionForm({
   items,
   defaultItemId = null,
   tagSuggestions,
+  withTags = true,
   onSubmit,
   today: fixedToday,
   className,
@@ -164,6 +167,7 @@ export function SessionForm({
           onChange={setReflection}
           errors={errors}
           tagSuggestions={tagSuggestions}
+          withTags={withTags}
         />
       </div>
       {children}
