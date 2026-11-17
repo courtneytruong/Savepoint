@@ -60,6 +60,8 @@ export async function changeItemStatus(id, status) {
  * Replaces an item's medium, title and creator, all three each time, so a null
  * creator clears it. Answers as changeItemStatus does: { item }, { error:
  * 'missing' } or { error: 'failed' }, and throws if the server can't be reached.
+ * It also answers { error: 'pagesLogged' } when a book can't become a game,
+ * because some of its sessions have pages logged.
  */
 export async function editItem(id, { medium, title, creator }) {
   const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
@@ -68,8 +70,18 @@ export async function editItem(id, { medium, title, creator }) {
     body: JSON.stringify({ medium, title, creator }),
   })
   if (response.status === 404) return { error: 'missing' }
+  if (response.status === 409 && (await errorCode(response)) === 'pagesLogged') return { error: 'pagesLogged' }
   if (!response.ok) return { error: 'failed' }
   return { item: await response.json() }
+}
+
+// The "error" code in a Problem Details answer, or null when there's none to read.
+async function errorCode(response) {
+  try {
+    return (await response.json()).error ?? null
+  } catch {
+    return null
+  }
 }
 
 /**

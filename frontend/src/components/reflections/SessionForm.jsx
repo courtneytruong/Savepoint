@@ -11,15 +11,28 @@ import { validateReflection } from '../../rules/reflectionRules.js'
 import styles from './SessionForm.module.css'
 import { sessionMinutes, validateSession } from '../../rules/sessionRules.js'
 
+// The hours and minutes fields for a number of minutes, empty for none, as when typed.
+function toDurationFields(total) {
+  if (!total) return { hours: '', minutes: '' }
+  const hours = Math.floor(total / 60)
+  const minutes = total % 60
+  return { hours: hours ? String(hours) : '', minutes: minutes ? String(minutes) : '' }
+}
+
 /**
  * Logging a session: what, when, for how long, and the reflection that every
  * session needs. It's one form because the API saves both together, so neither
  * can be saved without the other.
  *
  * items: { id, title, creator, medium }. defaultItemId picks one to start with,
- * such as when logging from an item's own page. onSubmit receives
+ * such as when logging from an item's own page, and itemLocked leaves out the
+ * picker, for when the form is only ever about that one. onSubmit receives
  * { itemId, date, durationMinutes, pagesRead, reflection: { mood, notes, tags } },
  * only once everything is valid. pagesRead is null if not given, and always for games.
+ *
+ * withTags: false leaves the reflection's tags field out, until the app saves tags.
+ * defaultValue: a session to start from when editing one, in the API's shape:
+ * { date, durationMinutes, pagesRead, reflection: { mood, notes } }.
  *
  * As with ReflectionForm, the submit button can sit outside, given form={id}.
  */
@@ -27,7 +40,10 @@ export function SessionForm({
   id,
   items,
   defaultItemId = null,
+  itemLocked = false,
   tagSuggestions,
+  withTags = true,
+  defaultValue,
   onSubmit,
   today: fixedToday,
   className,
@@ -39,14 +55,17 @@ export function SessionForm({
   const [today] = useState(() => fixedToday ?? new Date())
   const todayKey = toDateKey(today)
 
-  const [session, setSession] = useState({
+  const [session, setSession] = useState(() => ({
     itemId: defaultItemId,
-    date: todayKey,
-    hours: '',
-    minutes: '',
-    pagesRead: '',
+    date: defaultValue?.date ?? todayKey,
+    ...toDurationFields(defaultValue?.durationMinutes),
+    pagesRead: defaultValue?.pagesRead == null ? '' : String(defaultValue.pagesRead),
+  }))
+  const [reflection, setReflection] = useState({
+    mood: defaultValue?.reflection?.mood ?? null,
+    notes: defaultValue?.reflection?.notes ?? '',
+    tags: [],
   })
-  const [reflection, setReflection] = useState({ mood: null, notes: '', tags: [] })
   const [triedToSave, setTriedToSave] = useState(false)
 
   const item = items.find((candidate) => candidate.id === session.itemId)
@@ -87,14 +106,16 @@ export function SessionForm({
   return (
     // noValidate, so the browser's own popups don't replace these messages.
     <form id={id} ref={formRef} noValidate onSubmit={handleSubmit} className={classNames(styles.form, className)}>
-      <Combobox
-        label="Book or game"
-        placeholder="Search your library"
-        options={itemOptions}
-        value={session.itemId}
-        onChange={(itemId) => setSession({ ...session, itemId })}
-        error={errors.itemId}
-      />
+      {!itemLocked && (
+        <Combobox
+          label="Book or game"
+          placeholder="Search your library"
+          options={itemOptions}
+          value={session.itemId}
+          onChange={(itemId) => setSession({ ...session, itemId })}
+          error={errors.itemId}
+        />
+      )}
 
       <div className={styles.when}>
         <Input
@@ -164,6 +185,7 @@ export function SessionForm({
           onChange={setReflection}
           errors={errors}
           tagSuggestions={tagSuggestions}
+          withTags={withTags}
         />
       </div>
       {children}

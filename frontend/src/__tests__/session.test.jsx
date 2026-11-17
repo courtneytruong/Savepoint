@@ -99,6 +99,43 @@ describe('SessionForm', () => {
     expect(date.getAttribute('max')).toBe('2026-11-06')
   })
 
+  it('asks for tags unless told to leave them out', () => {
+    renderForm()
+    expect(screen.getByLabelText('Tags')).toBeTruthy()
+    cleanup()
+
+    renderForm({ withTags: false })
+    expect(screen.queryByLabelText('Tags')).toBeNull()
+  })
+
+  it('can start from a session, to edit it', () => {
+    renderForm({
+      defaultItemId: 1,
+      defaultValue: {
+        date: '2026-11-02',
+        durationMinutes: 75,
+        pagesRead: 40,
+        reflection: { mood: 'Moved', notes: 'The ending.' },
+      },
+    })
+    expect(screen.getByLabelText('Date').value).toBe('2026-11-02')
+    expect(screen.getByLabelText('Hours').value).toBe('1')
+    expect(screen.getByLabelText('Minutes').value).toBe('15')
+    expect(screen.getByLabelText('Pages read').value).toBe('40')
+    expect(screen.getByRole('radio', { name: 'Moved' }).checked).toBe(true)
+    expect(screen.getByLabelText('Notes').value).toBe('The ending.')
+  })
+
+  it('leaves empty what a session does not have, such as hours for a short one', () => {
+    renderForm({
+      defaultItemId: 1,
+      defaultValue: { date: '2026-11-02', durationMinutes: 45, pagesRead: null, reflection: { mood: 'Moved', notes: 'x' } },
+    })
+    expect(screen.getByLabelText('Hours').value).toBe('')
+    expect(screen.getByLabelText('Minutes').value).toBe('45')
+    expect(screen.getByLabelText('Pages read').value).toBe('')
+  })
+
   it('can start with an item chosen', () => {
     renderForm({ defaultItemId: 2 })
     expect(itemField().value).toBe('Hades')

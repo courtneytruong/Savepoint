@@ -21,6 +21,7 @@ import {
 import { DeleteIcon, EditIcon, ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { AppLayout } from './AppLayout.jsx'
+import { ItemSessions } from './ItemSessions.jsx'
 import styles from './ItemPage.module.css'
 
 const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
@@ -210,6 +211,12 @@ export function ItemPage({ account, onSignedOut }) {
             </dd>
           </div>
         </dl>
+        {/* As with saving details, an item that's gone shows as not found. */}
+        <ItemSessions
+          key={item.id}
+          item={item}
+          onItemMissing={() => stillShowing(item.id, { id: item.id, state: 'missing', item: null })}
+        />
         <EditItemModal open={editing} item={item} onClose={() => setEditing(false)} onSubmit={saveDetails} />
         <DeleteItemModal
           open={deleting}

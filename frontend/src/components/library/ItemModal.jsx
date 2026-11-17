@@ -1,11 +1,13 @@
 import { useId, useRef, useState } from 'react'
 import { Alert } from '../feedback/Alert.jsx'
+import { DeleteModal } from '../feedback/DeleteModal.jsx'
 import { Modal } from '../feedback/Modal.jsx'
 import { Input, Select } from '../forms/Field.jsx'
-import { AddIcon, DeleteIcon } from '../icons.js'
+import { AddIcon } from '../icons.js'
 import { Button } from '../ui/Button.jsx'
 import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
-import { ITEM_ERRORS, validateItem } from '../../rules/itemRules.js'
+import { useOpening } from '../../hooks/useOpening.js'
+import { ITEM_ERRORS, PAGES_LOGGED_MESSAGE, validateItem } from '../../rules/itemRules.js'
 import { STATUSES } from '../../rules/statuses.js'
 import styles from './ItemModal.module.css'
 
@@ -60,7 +62,8 @@ export function AddItemModal({ open, onClose, onSubmit }) {
  *
  * item: the item as it is now, which the form starts from each time it opens.
  * onSubmit receives { medium, title, creator }, as AddItemModal sends them, and
- * answers in the same way.
+ * answers in the same way, or with { error: 'pagesLogged' }, shown on the type
+ * field, when a book with pages logged can't become a game.
  */
 export function EditItemModal({ open, item, onClose, onSubmit }) {
   const opening = useOpening(open)
@@ -77,72 +80,19 @@ export function EditItemModal({ open, item, onClose, onSubmit }) {
 }
 
 /**
- * Asks before deleting an item, since that can't be undone.
- *
- * title: the item's title, to name it in the question. onConfirm deletes it and
- * returns a Promise of { deleted: true }, after which whoever opened this moves
- * on, or { error: 'failed' }, shown in the modal. If it throws, that counts as
- * failed. Each opening starts without the last one's error.
+ * Asks before deleting an item, since that can't be undone. title: the item's
+ * title, to name it in the question. onConfirm answers as for DeleteModal.
  */
 export function DeleteItemModal({ open, title, onClose, onConfirm }) {
-  const opening = useOpening(open)
-  return <DeleteDialog key={opening} open={open} title={title} onClose={onClose} onConfirm={onConfirm} />
-}
-
-function DeleteDialog({ open, title, onClose, onConfirm }) {
-  // asking, deleting or failed.
-  const [state, setState] = useState('asking')
-
-  async function confirm() {
-    if (state === 'deleting') return
-    setState('deleting')
-    let result
-    try {
-      result = await onConfirm()
-    } catch {
-      result = { error: 'failed' }
-    }
-    if (!result?.deleted) setState('failed')
-  }
-
   return (
-    <Modal
+    <DeleteModal
       open={open}
-      onClose={onClose}
       title={`Delete ${title}?`}
       description="This also deletes its history, and can't be undone."
-      actions={
-        <>
-          <Button variant="text" onClick={onClose}>
-            Keep it
-          </Button>
-          <Button variant="danger" loading={state === 'deleting'} onClick={confirm}>
-            <DeleteIcon />
-            {state === 'deleting' ? 'Deleting…' : 'Delete'}
-          </Button>
-        </>
-      }
-    >
-      {state === 'failed' && (
-        <Alert tone="error" title="Couldn't delete it">
-          {FAILED_BODY}
-        </Alert>
-      )}
-    </Modal>
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
   )
-}
-
-// A new number each time open turns true. As a key, it gives the form fresh
-// state for each opening: what was typed, its errors, and whether it's saving,
-// which the button in the footer shows too.
-function useOpening(open) {
-  const [wasOpen, setWasOpen] = useState(open)
-  const [opening, setOpening] = useState(0)
-  if (open !== wasOpen) {
-    setWasOpen(open)
-    if (open) setOpening((count) => count + 1)
-  }
-  return opening
 }
 
 // The form both share. A start with no status leaves out the status field.
@@ -150,7 +100,7 @@ function ItemDialog({ open, onClose, onSubmit, text, icon, start }) {
   const formId = useId()
   const titleRef = useRef(null)
   const [values, setValues] = useState(start)
-  const { errors, serverError, loading, handleSubmit, formRef, alertRef } = useAuthSubmit({
+  const { errors: checkErrors, serverError, setServerError, loading, handleSubmit, formRef, alertRef } = useAuthSubmit({
     values,
     validate: validateItem,
     send: () =>
@@ -161,10 +111,18 @@ function ItemDialog({ open, onClose, onSubmit, text, icon, start }) {
         status: values.status,
       }),
     knownErrors: ITEM_ERRORS,
-    formErrors: ITEM_ERRORS,
+    formErrors: ['failed'],
   })
 
-  const update = (field) => (event) => setValues({ ...values, [field]: event.target.value })
+  // A copy, because what a hook returns mustn't be changed.
+  const errors = { ...checkErrors }
+  if (serverError === 'pagesLogged') errors.medium = PAGES_LOGGED_MESSAGE
+
+  const update = (field) => (event) => {
+    setValues({ ...values, [field]: event.target.value })
+    // Choosing again answers the message, until the next save says otherwise.
+    if (field === 'medium' && serverError === 'pagesLogged') setServerError(null)
+  }
 
   return (
     <Modal
@@ -207,7 +165,7 @@ function ItemDialog({ open, onClose, onSubmit, text, icon, start }) {
           onChange={update('creator')}
           error={errors.creator}
         />
-        <Select label="Type" value={values.medium} onChange={update('medium')}>
+        <Select label="Type" value={values.medium} onChange={update('medium')} error={errors.medium}>
           <option value="Book">Book</option>
           <option value="Game">Game</option>
         </Select>

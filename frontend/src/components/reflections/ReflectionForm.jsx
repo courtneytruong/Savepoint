@@ -6,14 +6,15 @@ import styles from './ReflectionForm.module.css'
 import { TagInput } from '../forms/TagInput.jsx'
 import { classNames } from '../../utils/classNames.js'
 import { showErrorsAndFocus } from '../../utils/focusFirstProblem.js'
-import { MIN_NOTES_LENGTH, notesLength, validateReflection } from '../../rules/reflectionRules.js'
+import { MAX_NOTES_LENGTH, MIN_NOTES_LENGTH, notesLength, validateReflection } from '../../rules/reflectionRules.js'
 
 /**
  * The mood, notes and tags of a reflection, without a form around them, so a larger
  * form (such as logging a session) can include them. value is { mood, notes, tags },
  * and onChange receives the whole new value. tagSuggestions: every existing tag.
+ * withTags: false leaves the tags field out, until the app saves tags.
  */
-export function ReflectionFields({ value, onChange, errors = {}, tagSuggestions }) {
+export function ReflectionFields({ value, onChange, errors = {}, tagSuggestions, withTags = true }) {
   const moodName = `${useId()}-mood`
 
   return (
@@ -30,15 +31,17 @@ export function ReflectionFields({ value, onChange, errors = {}, tagSuggestions 
         placeholder="What stood out, what frustrated you, where you left off…"
         value={value.notes}
         onChange={(event) => onChange({ ...value, notes: event.target.value })}
-        hint={<LengthCounter length={notesLength(value.notes)} min={MIN_NOTES_LENGTH} />}
+        hint={<LengthCounter length={notesLength(value.notes)} min={MIN_NOTES_LENGTH} max={MAX_NOTES_LENGTH} />}
         error={errors.notes}
       />
-      <TagInput
-        value={value.tags}
-        onChange={(tags) => onChange({ ...value, tags })}
-        suggestions={tagSuggestions}
-        hint="Optional. Press Enter or a comma after each one."
-      />
+      {withTags && (
+        <TagInput
+          value={value.tags}
+          onChange={(tags) => onChange({ ...value, tags })}
+          suggestions={tagSuggestions}
+          hint="Optional. Press Enter or a comma after each one."
+        />
+      )}
     </>
   )
 }

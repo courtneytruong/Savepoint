@@ -107,6 +107,19 @@ describe('editItem', () => {
     stubFetch(async () => new Response(null, { status: 400 }))
     expect(await editItem('abc', { medium: 'Book', title: 'Piranesi', creator: null })).toEqual({ error: 'failed' })
   })
+
+  it('says when a book with pages logged can’t become a game', async () => {
+    stubFetch(async () => new Response(JSON.stringify({ status: 409, error: 'pagesLogged' }), { status: 409 }))
+    expect(await editItem('abc', { medium: 'Game', title: 'Piranesi', creator: null })).toEqual({ error: 'pagesLogged' })
+  })
+
+  it.each([
+    ['another code', JSON.stringify({ status: 409, error: 'somethingElse' })],
+    ['no body', null],
+  ])('counts a 409 with %s as failed', async (_, body) => {
+    stubFetch(async () => new Response(body, { status: 409 }))
+    expect(await editItem('abc', { medium: 'Game', title: 'Piranesi', creator: null })).toEqual({ error: 'failed' })
+  })
 })
 
 describe('deleteItem', () => {

@@ -20,5 +20,13 @@ export function validateItem({ title = '', creator = '' }) {
   return errors
 }
 
-/** What the API can say went wrong saving an item: only failed, shown above the form. */
-export const ITEM_ERRORS = ['failed']
+/**
+ * What the API can say went wrong saving an item: pagesLogged, shown on the type
+ * field, when a book with pages logged can't become a game, or failed, shown
+ * above the form.
+ */
+export const ITEM_ERRORS = ['pagesLogged', 'failed']
+
+export const PAGES_LOGGED_MESSAGE =
+  "Its sessions have pages logged, and games don't have pages. Remove the page counts from its sessions first, or keep it a book."
+

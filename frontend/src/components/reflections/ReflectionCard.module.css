@@ -107,3 +107,11 @@
   line-height: var(--leading-caption);
   list-style: none;
 }
+
+/* At the end of the card's last line, so they sit out of the way of the notes. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-8);
+}

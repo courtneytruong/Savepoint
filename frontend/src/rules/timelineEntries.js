@@ -1,4 +1,5 @@
 import { parseDateKey, toDateKey } from '../utils/calendarDates.js'
+import { wasLoggedLate } from './sessionList.js'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -44,7 +45,7 @@ export function buildTimeline({ statusChanges = [], ratingChanges = [], sessions
       ...session,
       day: session.date,
       time: sessionTime(session),
-      loggedLate: Boolean(session.createdAt) && toDateKey(new Date(session.createdAt)) > session.date,
+      loggedLate: wasLoggedLate(session),
     })),
     ...reflections.map((reflection) => ({ type: 'reflection', ...reflection, ...at(reflection.createdAt) })),
   ]
