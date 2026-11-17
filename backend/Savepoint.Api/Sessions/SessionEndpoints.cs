@@ -24,6 +24,7 @@ public static class SessionEndpoints
         sessions.MapGet("/", List);
         sessions.MapPost("/", Create);
         sessions.MapPut("/{sessionId:guid}", Update);
+        sessions.MapDelete("/{sessionId:guid}", Delete);
         return app;
     }
 
@@ -159,6 +160,26 @@ public static class SessionEndpoints
 
         var session = await mine.Include(s => s.Reflection).AsNoTracking().SingleAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(session));
+    }
+
+    /// <summary>
+    /// Deletes a session, and through the database's cascade, its reflection. 204, or
+    /// 404 as for editing, which includes deleting the same session a second time.
+    /// </summary>
+    private static async Task<Results<NoContent, NotFound>> Delete(
+        Guid itemId, Guid sessionId, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        // One DELETE, which also says whether the session was there. Matching the item
+        // and its owner keeps it to the person's own sessions.
+        var deleted = await db.Sessions
+            .Where(s => s.Id == sessionId
+                && s.ItemId == itemId
+                && db.Items.Any(i => i.Id == itemId && i.UserId == userId))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return deleted == 0 ? TypedResults.NotFound() : TypedResults.NoContent();
     }
 
     // The checked, trimmed fields shared by logging and editing a session.
