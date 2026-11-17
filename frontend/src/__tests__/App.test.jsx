@@ -59,7 +59,9 @@ describe('App', () => {
       stubApi({ me: async () => json(ACCOUNT, 200) })
       openAt(SIGN_IN_PATH)
       await renderApp()
-      showsLibrary()
+      // React Router makes the redirect a transition, which can finish a moment
+      // later than the rest, so wait for it as the other redirect tests do.
+      await vi.waitFor(showsLibrary)
       expect(window.location.pathname).toBe('/')
     })
 
