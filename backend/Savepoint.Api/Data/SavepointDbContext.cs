@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
 using Savepoint.Api.Library;
+using Savepoint.Api.Sessions;
 
 namespace Savepoint.Api.Data;
 
@@ -22,6 +23,10 @@ public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
     public DbSet<Item> Items => Set<Item>();
 
     public DbSet<StatusChange> StatusChanges => Set<StatusChange>();
+
+    public DbSet<Session> Sessions => Set<Session>();
+
+    public DbSet<Reflection> Reflections => Set<Reflection>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -50,5 +55,6 @@ public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
         });
 
         builder.ConfigureLibrary();
+        builder.ConfigureSessions();
     }
 }
