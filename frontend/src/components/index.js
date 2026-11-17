@@ -43,6 +43,7 @@ export { MAX_NOTES_LENGTH, MIN_NOTES_LENGTH, notesLength, validateReflection } f
 export { SearchField } from './forms/SearchField.jsx'
 export { Section } from './layout/Section.jsx'
 export { SessionCalendar } from './reflections/SessionCalendar.jsx'
+export { LogSessionModal } from './reflections/LogSessionModal.jsx'
 export { SessionForm } from './reflections/SessionForm.jsx'
 export { MAX_SESSION_MINUTES, sessionMinutes, validateSession } from '../rules/sessionRules.js'
 export { Sidebar, SidebarGroup, SidebarLayout, SidebarLink } from './layout/Sidebar.jsx'

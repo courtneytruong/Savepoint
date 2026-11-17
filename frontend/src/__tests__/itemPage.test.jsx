@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LinkProvider, ToastProvider } from '../components/index.js'
 import { ItemPage } from '../pages/ItemPage.jsx'
 import { ITEM_PATH } from '../paths.js'
+import { toDateKey } from '../utils/calendarDates.js'
 
 const ACCOUNT = { id: 'a1', displayName: 'Courtney', email: 'reader@example.com' }
 
@@ -268,6 +269,133 @@ describe('ItemPage', () => {
 
       await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
       expect(screen.getByRole('heading', { level: 1, name: 'Outer Wilds' })).toBeTruthy()
+    })
+  })
+
+  describe('logging a session', () => {
+    const SESSION = {
+      id: 's1',
+      itemId: 'abc',
+      date: '2026-11-14',
+      durationMinutes: 90,
+      pagesRead: null,
+      createdAt: '2026-11-14T20:00:00+00:00',
+      reflection: {
+        id: 'r1',
+        mood: 'Hooked',
+        notes: 'Couldn’t stop after the first loop.',
+        createdAt: '2026-11-14T20:00:00+00:00',
+        updatedAt: '2026-11-14T20:00:00+00:00',
+      },
+    }
+
+    async function opened(item = ITEM, ...answers) {
+      const fetchStub = stubFetch(async () => json(item), ...answers)
+      renderPage()
+      await screen.findByRole('heading', { level: 1, name: item.title })
+      fireEvent.click(screen.getByRole('button', { name: 'Log session' }))
+      return fetchStub
+    }
+
+    const dialog = () => screen.getByRole('dialog', { name: 'Log a session' })
+    const set = (label, value) => fireEvent.change(within(dialog()).getByLabelText(label), { target: { value } })
+    const submit = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Log session' }))
+
+    function fillIn() {
+      set('Hours', '1')
+      set('Minutes', '30')
+      fireEvent.click(within(dialog()).getByRole('radio', { name: 'Hooked' }))
+      set('Notes', '  Couldn’t stop after the first loop.  ')
+    }
+
+    it('opens for this item, with no item picker and no tags', async () => {
+      await opened()
+      expect(within(dialog()).getByText('Outer Wilds: how long, and what you thought.')).toBeTruthy()
+      expect(within(dialog()).queryByRole('combobox', { name: 'Book or game' })).toBeNull()
+      expect(within(dialog()).queryByLabelText('Tags')).toBeNull()
+      expect(within(dialog()).getByLabelText('Date').value).toBe(toDateKey(new Date()))
+    })
+
+    it('asks for pages only for a book', async () => {
+      await opened()
+      expect(within(dialog()).queryByLabelText('Pages read')).toBeNull()
+      cleanup()
+
+      await opened({ ...ITEM, medium: 'Book', title: 'Piranesi' })
+      expect(within(dialog()).getByLabelText('Pages read')).toBeTruthy()
+    })
+
+    it('logs it for this item, then closes and says so', async () => {
+      const fetchStub = await opened(ITEM, async () => json(SESSION, 201))
+      fillIn()
+      submit()
+
+      expect(await screen.findByText('Session logged')).toBeTruthy()
+      const [url, options] = fetchStub.mock.calls[1]
+      expect(url).toBe('/api/items/abc/sessions')
+      expect(options.method).toBe('POST')
+      expect(JSON.parse(options.body)).toEqual({
+        date: toDateKey(new Date()),
+        durationMinutes: 90,
+        pagesRead: null,
+        reflection: { mood: 'Hooked', notes: 'Couldn’t stop after the first loop.' },
+      })
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    })
+
+    it('sends nothing until the form is valid', async () => {
+      const fetchStub = await opened()
+      submit()
+
+      expect(within(dialog()).getByText('Choose the mood that fits best.')).toBeTruthy()
+      expect(fetchStub).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      ['the server fails', async () => json({ status: 500 }, 500)],
+      [
+        'the server can’t be reached',
+        async () => {
+          throw new TypeError('Failed to fetch')
+        },
+      ],
+    ])('stays open with what was written when %s, so it can be sent again', async (_, answer) => {
+      await opened(ITEM, answer)
+      fillIn()
+      submit()
+
+      await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't log the session"))
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('  Couldn’t stop after the first loop.  ')
+      expect(within(dialog()).getByRole('button', { name: 'Log session' }).disabled).toBe(false)
+    })
+
+    it('shows the item as not found when it was deleted meanwhile', async () => {
+      await opened(ITEM, async () => new Response(null, { status: 404 }))
+      fillIn()
+      submit()
+
+      expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('closes only from Cancel, so a half-written reflection isn’t lost by accident', async () => {
+      await opened()
+      set('Notes', 'Half a thought about the')
+
+      fireEvent(dialog(), new Event('cancel', { cancelable: true }))
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('Half a thought about the')
+
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('starts empty each time it opens', async () => {
+      await opened()
+      set('Notes', 'Something from before')
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Log session' }))
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('')
     })
   })
 })

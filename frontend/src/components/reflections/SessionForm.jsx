@@ -17,7 +17,8 @@ import { sessionMinutes, validateSession } from '../../rules/sessionRules.js'
  * can be saved without the other.
  *
  * items: { id, title, creator, medium }. defaultItemId picks one to start with,
- * such as when logging from an item's own page. onSubmit receives
+ * such as when logging from an item's own page, and itemLocked leaves out the
+ * picker, for when the form is only ever about that one. onSubmit receives
  * { itemId, date, durationMinutes, pagesRead, reflection: { mood, notes, tags } },
  * only once everything is valid. pagesRead is null if not given, and always for games.
  *
@@ -29,6 +30,7 @@ export function SessionForm({
   id,
   items,
   defaultItemId = null,
+  itemLocked = false,
   tagSuggestions,
   withTags = true,
   onSubmit,
@@ -90,14 +92,16 @@ export function SessionForm({
   return (
     // noValidate, so the browser's own popups don't replace these messages.
     <form id={id} ref={formRef} noValidate onSubmit={handleSubmit} className={classNames(styles.form, className)}>
-      <Combobox
-        label="Book or game"
-        placeholder="Search your library"
-        options={itemOptions}
-        value={session.itemId}
-        onChange={(itemId) => setSession({ ...session, itemId })}
-        error={errors.itemId}
-      />
+      {!itemLocked && (
+        <Combobox
+          label="Book or game"
+          placeholder="Search your library"
+          options={itemOptions}
+          value={session.itemId}
+          onChange={(itemId) => setSession({ ...session, itemId })}
+          error={errors.itemId}
+        />
+      )}
 
       <div className={styles.when}>
         <Input

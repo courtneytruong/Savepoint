@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { changeItemStatus, deleteItem, editItem, getItem } from '../api/items.js'
+import { logSession } from '../api/sessions.js'
 import {
   Button,
   DeleteItemModal,
@@ -10,6 +11,7 @@ import {
   FilterPill,
   Heading,
   Link,
+  LogSessionModal,
   MediumLabel,
   Skeleton,
   SkeletonGroup,
@@ -18,7 +20,7 @@ import {
   Text,
   useToast,
 } from '../components/index.js'
-import { DeleteIcon, EditIcon, ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
+import { DeleteIcon, EditIcon, ErrorIcon, NoResultsIcon, PreviousIcon, ReflectionIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { AppLayout } from './AppLayout.jsx'
 import styles from './ItemPage.module.css'
@@ -44,6 +46,8 @@ export function ItemPage({ account, onSignedOut }) {
   const [changing, setChanging] = useState(null)
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [logging, setLogging] = useState(false)
+  const sessionsHeadingId = useId()
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -78,6 +82,20 @@ export function ItemPage({ account, onSignedOut }) {
       toast.show({ title: 'Changes saved' })
     } else if (result.error === 'missing') {
       setEditing(false)
+      stillShowing(item.id, { id: item.id, state: 'missing', item: null })
+      return {}
+    }
+    return result
+  }
+
+  // As with saving details, an item that's gone shows as not found.
+  async function saveSession(values) {
+    const result = await logSession(item.id, values)
+    if (result.session) {
+      setLogging(false)
+      toast.show({ title: 'Session logged' })
+    } else if (result.error === 'missing') {
+      setLogging(false)
       stillShowing(item.id, { id: item.id, state: 'missing', item: null })
       return {}
     }
@@ -210,7 +228,19 @@ export function ItemPage({ account, onSignedOut }) {
             </dd>
           </div>
         </dl>
+        <section aria-labelledby={sessionsHeadingId} className={styles.sessions}>
+          <header className={styles.header}>
+            <Heading as="h2" id={sessionsHeadingId}>
+              Sessions
+            </Heading>
+            <Button onClick={() => setLogging(true)}>
+              <ReflectionIcon />
+              Log session
+            </Button>
+          </header>
+        </section>
         <EditItemModal open={editing} item={item} onClose={() => setEditing(false)} onSubmit={saveDetails} />
+        <LogSessionModal open={logging} item={item} onClose={() => setLogging(false)} onSubmit={saveSession} />
         <DeleteItemModal
           open={deleting}
           title={item.title}

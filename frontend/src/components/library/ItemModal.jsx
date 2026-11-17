@@ -5,6 +5,7 @@ import { Input, Select } from '../forms/Field.jsx'
 import { AddIcon, DeleteIcon } from '../icons.js'
 import { Button } from '../ui/Button.jsx'
 import { useAuthSubmit } from '../../hooks/useAuthSubmit.js'
+import { useOpening } from '../../hooks/useOpening.js'
 import { ITEM_ERRORS, validateItem } from '../../rules/itemRules.js'
 import { STATUSES } from '../../rules/statuses.js'
 import styles from './ItemModal.module.css'
@@ -130,19 +131,6 @@ function DeleteDialog({ open, title, onClose, onConfirm }) {
       )}
     </Modal>
   )
-}
-
-// A new number each time open turns true. As a key, it gives the form fresh
-// state for each opening: what was typed, its errors, and whether it's saving,
-// which the button in the footer shows too.
-function useOpening(open) {
-  const [wasOpen, setWasOpen] = useState(open)
-  const [opening, setOpening] = useState(0)
-  if (open !== wasOpen) {
-    setWasOpen(open)
-    if (open) setOpening((count) => count + 1)
-  }
-  return opening
 }
 
 // The form both share. A start with no status leaves out the status field.
