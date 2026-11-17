@@ -134,9 +134,10 @@ public static class ItemEndpoints
     /// Replaces an item's medium, title and creator, so all three are sent each time
     /// and a missing or empty creator clears it. Its status isn't changed here,
     /// because a change of status adds to its history. 200 with the item, 404 as for
-    /// Get, or 400 with a code per field.
+    /// Get, 400 with a code per field, or 409 pagesLogged for turning a book into a
+    /// game while any of its sessions has pages logged.
     /// </summary>
-    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem>> Update(
+    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem, ProblemHttpResult>> Update(
         Guid id, UpdateItemRequest request, ClaimsPrincipal principal, UserManager<User> users,
         SavepointDbContext db, CancellationToken cancellationToken)
     {
@@ -146,6 +147,19 @@ public static class ItemEndpoints
 
         var userId = CurrentUser.IdOf(principal, users);
         var mine = db.Items.Where(i => i.Id == id && i.UserId == userId);
+
+        // Games have no pages, so a book with pages logged can't become one. Refused
+        // rather than clearing the page counts, which would quietly lose what was
+        // logged. Only for the person's own item, so someone else's is still a 404,
+        // which doesn't say that it exists.
+        if (details.Medium == Medium.Game
+            && await db.Sessions.AnyAsync(s => s.PagesRead != null && mine.Any(i => i.Id == s.ItemId), cancellationToken))
+        {
+            return TypedResults.Problem(
+                title: "This book has pages logged in its sessions, so it can't become a game.",
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["error"] = "pagesLogged" });
+        }
         // One UPDATE, which also says whether the item was there to change.
         var changed = await mine.ExecuteUpdateAsync(
             set => set

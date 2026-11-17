@@ -120,6 +120,10 @@ A session can't be dated after today, and can't be longer than the 24 hours of t
 
 `Date` is the user's own calendar day, but the API runs in UTC, so its today can differ from the user's by up to a day either way. Until the app knows the user's time zone, the API allows dates up to one day after its own today. Rejecting a real session is worse than letting a slightly early one through.
 
+### A book with pages logged stays a book
+
+Only books count pages. Editing a book into a game while any of its sessions has `PagesRead` is refused with a clear error, rather than clearing the page counts, which would quietly lose what was logged. A book whose sessions have no page counts can still become a game.
+
 ### No reflection prompts
 
 Prompts tailored to each medium were considered and dropped. Users reflect in their own words, which keeps the model and the experience simpler.
