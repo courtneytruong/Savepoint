@@ -1,3 +1,11 @@
-.lead {
-  max-width: 640px;
+/* The panel's light reaches past the page edges, which shouldn't make it scroll sideways. */
+.main {
+  overflow-x: clip;
+}
+
+/* The same width and gutter the hero gave the panel, with room above for its glow. */
+.inner {
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  padding: clamp(var(--spacing-32), 5vw, var(--spacing-64)) var(--page-gutter) 0;
 }

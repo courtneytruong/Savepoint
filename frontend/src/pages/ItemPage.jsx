@@ -166,7 +166,7 @@ export function ItemPage({ account, onSignedOut }) {
       <article className={styles.details}>
         <header className={styles.header}>
           <div>
-            <Heading as="h2">{item.title}</Heading>
+            <Heading as="h1">{item.title}</Heading>
             {item.creator && <Text className={styles.creator}>{item.creator}</Text>}
           </div>
           <div className={styles.actions}>

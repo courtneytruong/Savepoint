@@ -61,7 +61,7 @@ describe('ItemPage', () => {
     stubFetch(async () => json(ITEM))
     renderPage()
 
-    expect(await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Outer Wilds' })).toBeTruthy()
     const details = screen.getByRole('article')
     expect(within(details).getByText('Mobius Digital')).toBeTruthy()
     expect(within(details).getByText('Game')).toBeTruthy()
@@ -73,7 +73,7 @@ describe('ItemPage', () => {
   it('leaves out a missing creator', async () => {
     stubFetch(async () => json({ ...ITEM, creator: null }))
     renderPage()
-    await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })
+    await screen.findByRole('heading', { level: 1, name: 'Outer Wilds' })
     expect(screen.queryByText('Mobius Digital')).toBeNull()
   })
 
@@ -101,7 +101,7 @@ describe('ItemPage', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
     expect(screen.getByRole('status', { name: 'Loading this item' })).toBeTruthy()
-    expect(await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Outer Wilds' })).toBeTruthy()
   })
 
   describe('changing the status', () => {
@@ -111,7 +111,7 @@ describe('ItemPage', () => {
     async function loaded(...answers) {
       const fetchStub = stubFetch(async () => json(ITEM), ...answers)
       renderPage()
-      await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })
+      await screen.findByRole('heading', { level: 1, name: 'Outer Wilds' })
       return fetchStub
     }
 
@@ -186,7 +186,7 @@ describe('ItemPage', () => {
     async function loaded(...answers) {
       const fetchStub = stubFetch(async () => json(ITEM), ...answers)
       renderPage()
-      await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })
+      await screen.findByRole('heading', { level: 1, name: 'Outer Wilds' })
       fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
       return fetchStub
     }
@@ -212,7 +212,7 @@ describe('ItemPage', () => {
         title: 'Outer Wilds: Echoes of the Eye',
         creator: 'Mobius Digital',
       })
-      expect(screen.getByRole('heading', { level: 2, name: 'Outer Wilds: Echoes of the Eye' })).toBeTruthy()
+      expect(screen.getByRole('heading', { level: 1, name: 'Outer Wilds: Echoes of the Eye' })).toBeTruthy()
       expect(screen.queryByRole('dialog')).toBeNull()
     })
 
@@ -234,7 +234,7 @@ describe('ItemPage', () => {
     async function loaded(...answers) {
       const fetchStub = stubFetch(async () => json(ITEM), ...answers)
       renderPage()
-      await screen.findByRole('heading', { level: 2, name: 'Outer Wilds' })
+      await screen.findByRole('heading', { level: 1, name: 'Outer Wilds' })
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
       return fetchStub
     }
@@ -266,7 +266,7 @@ describe('ItemPage', () => {
       confirm()
 
       await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
-      expect(screen.getByRole('heading', { level: 2, name: 'Outer Wilds' })).toBeTruthy()
+      expect(screen.getByRole('heading', { level: 1, name: 'Outer Wilds' })).toBeTruthy()
     })
   })
 })

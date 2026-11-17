@@ -1,0 +1,57 @@
+/* The brand on top, like a header, then the hero, all centred on the page haze. */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: var(--spacing-32) 0 var(--spacing-64);
+}
+
+.page > section {
+  width: 100%;
+}
+
+/* The same look as the brand on the sign-in pages. */
+.brand {
+  margin: 0;
+  color: var(--color-soft-quartz);
+  font-family: var(--font-display);
+  font-size: var(--text-subheading);
+  font-stretch: var(--font-display-width);
+  font-weight: var(--font-weight-bold);
+}
+
+.lead {
+  max-width: 640px;
+}
+
+/* Only a picture, so no pointer that suggests the cards can be opened. On a
+   narrow screen, two cards are enough to show the idea. */
+.preview {
+  user-select: none;
+}
+
+.preview li {
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .preview li:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+/* Side by side and the same width, the wider label setting it. On a narrow
+   screen they stack, still matching. */
+.actions {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: var(--spacing-16);
+}
+
+@media (max-width: 420px) {
+  .actions {
+    grid-auto-flow: row;
+  }
+}
