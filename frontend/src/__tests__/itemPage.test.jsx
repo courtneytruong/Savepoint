@@ -213,7 +213,8 @@ describe('ItemPage', () => {
         creator: 'Mobius Digital',
       })
       expect(screen.getByRole('heading', { level: 1, name: 'Outer Wilds: Echoes of the Eye' })).toBeTruthy()
-      expect(screen.queryByRole('dialog')).toBeNull()
+      // The toast can show a moment before the dialog finishes closing.
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     })
 
     it('keeps the form open when saving fails', async () => {
