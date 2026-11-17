@@ -21,6 +21,7 @@ public static class SessionEndpoints
     {
         // :guid, so an id that isn't one is a 404 like any other unknown item.
         var sessions = app.MapGroup("/api/items/{itemId:guid}/sessions").RequireAuthorization();
+        sessions.MapGet("/", List);
         sessions.MapPost("/", Create);
         return app;
     }
@@ -43,6 +44,35 @@ public static class SessionEndpoints
         ReflectionResponse Reflection);
 
     public record ReflectionResponse(Guid Id, string Mood, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+
+    /// <summary>
+    /// Every session for an item, each with its reflection, newest day first. Within
+    /// a day, the one logged last comes first. All of them at once, as for the
+    /// library: one item's sessions are few enough. 200, with an empty list for an
+    /// item with none, or 404 when the item isn't the signed-in person's.
+    /// </summary>
+    private static async Task<Results<Ok<List<SessionResponse>>, NotFound>> List(
+        Guid itemId, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        // Asked first, so someone else's item is a 404 rather than an empty list that
+        // would look the same as an item of theirs with no sessions.
+        if (!await db.Items.AnyAsync(i => i.Id == itemId && i.UserId == userId, cancellationToken))
+        {
+            return TypedResults.NotFound();
+        }
+
+        var sessions = await db.Sessions
+            .Where(s => s.ItemId == itemId)
+            .Include(s => s.Reflection)
+            // Ids are made in time order, so they break a tie between sessions saved at once.
+            .OrderByDescending(s => s.Date).ThenByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(sessions.Select(ToResponse).ToList());
+    }
 
     /// <summary>
     /// Logs a session with its reflection, in one transaction: both save, or neither
