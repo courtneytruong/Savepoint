@@ -21,10 +21,24 @@ const ITEM = {
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status })
 const neverAnswers = () => new Promise(() => {})
 
+// The page loads an item's sessions by itself once the item arrives. That request
+// gets its own answer, no sessions unless a test says otherwise, so the answers
+// given here, and the calls the returned stub records, are only the item's.
+let sessionsAnswer
+const stubSessions = (answer) => {
+  sessionsAnswer = answer
+}
+const isSessionList = (url, options) => url.endsWith('/sessions') && !options?.method
+
 function stubFetch(...answers) {
   const fetchStub = vi.fn()
   for (const answer of answers) fetchStub.mockImplementationOnce(answer)
-  vi.stubGlobal('fetch', fetchStub)
+  const sessionsStub = vi.fn((url, options) => (sessionsAnswer ?? (async () => json([])))(url, options))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url, options) => (isSessionList(url, options) ? sessionsStub(url, options) : fetchStub(url, options))),
+  )
+  fetchStub.sessions = sessionsStub
   return fetchStub
 }
 
@@ -44,7 +58,10 @@ function renderPage(path = '/items/abc') {
 }
 
 describe('ItemPage', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    sessionsAnswer = undefined
+  })
 
   it('asks the API for the item in the address', () => {
     const fetchStub = stubFetch(neverAnswers)
@@ -396,6 +413,124 @@ describe('ItemPage', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Log session' }))
       expect(within(dialog()).getByLabelText('Notes').value).toBe('')
+    })
+  })
+
+  describe('its sessions', () => {
+    // A session as the API gives it, logged on the day it happened unless told otherwise.
+    const session = (id, date, notes, { loggedAt = `${date}T20:00:00`, pagesRead = null, mood = 'Curious' } = {}) => ({
+      id,
+      itemId: 'abc',
+      date,
+      durationMinutes: 90,
+      pagesRead,
+      createdAt: loggedAt,
+      reflection: { id: `r-${id}`, mood, notes, createdAt: loggedAt, updatedAt: loggedAt },
+    })
+
+    const region = () => screen.getByRole('region', { name: 'Sessions' })
+
+    async function loaded(sessions, item = ITEM) {
+      stubSessions(async () => json(sessions))
+      const fetchStub = stubFetch(async () => json(item))
+      renderPage()
+      await screen.findByRole('heading', { level: 1, name: item.title })
+      return fetchStub
+    }
+
+    it('asks for this item’s sessions once the item has loaded', async () => {
+      const fetchStub = await loaded([])
+      expect(fetchStub.sessions.mock.calls[0][0]).toBe('/api/items/abc/sessions')
+    })
+
+    it('says it is loading the sessions until they arrive', async () => {
+      stubSessions(neverAnswers)
+      stubFetch(async () => json(ITEM))
+      renderPage()
+      expect(await screen.findByRole('status', { name: 'Loading sessions' })).toBeTruthy()
+    })
+
+    it('says when there are none yet', async () => {
+      await loaded([])
+      expect(await within(region()).findByText('No sessions yet. Each one you log shows here, with its reflection.')).toBeTruthy()
+    })
+
+    it('shows each session with its reflection, newest day first', async () => {
+      await loaded([
+        session('s2', '2026-11-14', 'The quantum moon finally made sense.', { mood: 'Moved' }),
+        session('s1', '2026-11-12', 'Burned to death by the sun, twice.', { mood: 'Frustrated' }),
+      ])
+
+      const cards = await within(region()).findAllByRole('article')
+      expect(cards).toHaveLength(2)
+      expect(cards[0].textContent).toMatch('The quantum moon finally made sense.')
+      expect(cards[0].textContent).toMatch('Played for 1h 30m')
+      expect(cards[0].textContent).toMatch('Moved')
+      expect(within(cards[0]).getByText(/Nov/).getAttribute('dateTime')).toBe('2026-11-14')
+      expect(cards[1].textContent).toMatch('Burned to death by the sun, twice.')
+    })
+
+    it('shows a book’s pages', async () => {
+      await loaded([session('s1', '2026-11-12', 'The house has its own tides.', { pagesRead: 40 })], {
+        ...ITEM,
+        medium: 'Book',
+        title: 'Piranesi',
+      })
+      expect((await within(region()).findByRole('article')).textContent).toMatch('Read for 1h 30m · 40 pages')
+    })
+
+    it('says when a session was logged on a later day than it happened', async () => {
+      await loaded([
+        session('s2', '2026-11-14', 'Logged the same evening, as it happened.'),
+        session('s1', '2026-11-10', 'Caught up on this one days afterwards.', { loggedAt: '2026-11-13T09:00:00' }),
+      ])
+      const cards = await within(region()).findAllByRole('article')
+      expect(cards[0].textContent).not.toMatch('Logged on')
+      expect(cards[1].textContent).toMatch('Logged on')
+    })
+
+    it('offers to try again when they can’t be loaded', async () => {
+      let tries = 0
+      stubSessions(async () => (++tries === 1 ? json({ status: 500 }, 500) : json([session('s1', '2026-11-12', 'Second time lucky.')])))
+      stubFetch(async () => json(ITEM))
+      renderPage()
+
+      const alert = await within(await screen.findByRole('region', { name: 'Sessions' })).findByRole('alert')
+      expect(alert.textContent).toMatch("Couldn't load the sessions")
+      fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
+
+      expect(await within(region()).findByText('Second time lucky.')).toBeTruthy()
+    })
+
+    it('shows the item as not found when the sessions say it’s gone', async () => {
+      stubSessions(async () => new Response(null, { status: 404 }))
+      stubFetch(async () => json(ITEM))
+      renderPage()
+      expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+    })
+
+    it('adds a newly logged session where it belongs by day, without reloading', async () => {
+      const fetchStub = await loaded([
+        session('s3', '2026-11-14', 'The newest of the ones already logged.'),
+        session('s1', '2026-11-10', 'The oldest of the ones already logged.'),
+      ])
+      await within(region()).findAllByRole('article')
+      fetchStub.mockImplementationOnce(async () => json(session('s2', '2026-11-12', 'Logged now, about two days ago.'), 201))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Log session' }))
+      const dialog = screen.getByRole('dialog', { name: 'Log a session' })
+      fireEvent.change(within(dialog).getByLabelText('Minutes'), { target: { value: '90' } })
+      fireEvent.click(within(dialog).getByRole('radio', { name: 'Curious' }))
+      fireEvent.change(within(dialog).getByLabelText('Notes'), { target: { value: 'Logged now, about two days ago.' } })
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Log session' }))
+
+      await screen.findByText('Session logged')
+      const cards = within(region()).getAllByRole('article').map((card) => card.textContent)
+      expect(cards).toHaveLength(3)
+      expect(cards[0]).toMatch('The newest of the ones already logged.')
+      expect(cards[1]).toMatch('Logged now, about two days ago.')
+      expect(cards[2]).toMatch('The oldest of the ones already logged.')
+      expect(fetchStub.sessions).toHaveBeenCalledTimes(1)
     })
   })
 })
