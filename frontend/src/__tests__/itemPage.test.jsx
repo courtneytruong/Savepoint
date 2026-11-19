@@ -21,24 +21,42 @@ const ITEM = {
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status })
 const neverAnswers = () => new Promise(() => {})
 
-// The page loads an item's sessions by itself once the item arrives. That request
-// gets its own answer, no sessions unless a test says otherwise, so the answers
-// given here, and the calls the returned stub records, are only the item's.
+// The item was added as it is now, so its timeline starts with that one change.
+const FIRST_CHANGE = { id: 'c1', status: 'InProgress', changedAt: ITEM.createdAt }
+
+// The page loads an item's sessions and status changes by itself once the item
+// arrives, for its timeline. Those requests get their own answers, no sessions and
+// FIRST_CHANGE unless a test says otherwise, so the answers given here, and the
+// calls the returned stub records, are only the item's.
 let sessionsAnswer
+let statusChangesAnswer
 const stubSessions = (answer) => {
   sessionsAnswer = answer
 }
-const isSessionList = (url, options) => url.endsWith('/sessions') && !options?.method
+const stubStatusChanges = (answer) => {
+  statusChangesAnswer = answer
+}
+const isList = (ending) => (url, options) => url.endsWith(ending) && !options?.method
+const isSessionList = isList('/sessions')
+const isStatusChangeList = isList('/status-changes')
 
 function stubFetch(...answers) {
   const fetchStub = vi.fn()
   for (const answer of answers) fetchStub.mockImplementationOnce(answer)
   const sessionsStub = vi.fn((url, options) => (sessionsAnswer ?? (async () => json([])))(url, options))
+  const statusChangesStub = vi.fn((url, options) =>
+    (statusChangesAnswer ?? (async () => json([FIRST_CHANGE])))(url, options),
+  )
   vi.stubGlobal(
     'fetch',
-    vi.fn((url, options) => (isSessionList(url, options) ? sessionsStub(url, options) : fetchStub(url, options))),
+    vi.fn((url, options) => {
+      if (isSessionList(url, options)) return sessionsStub(url, options)
+      if (isStatusChangeList(url, options)) return statusChangesStub(url, options)
+      return fetchStub(url, options)
+    }),
   )
   fetchStub.sessions = sessionsStub
+  fetchStub.statusChanges = statusChangesStub
   return fetchStub
 }
 
@@ -61,6 +79,7 @@ describe('ItemPage', () => {
   afterEach(() => {
     cleanup()
     sessionsAnswer = undefined
+    statusChangesAnswer = undefined
   })
 
   it('asks the API for the item in the address', () => {
@@ -83,9 +102,10 @@ describe('ItemPage', () => {
     const details = screen.getByRole('article')
     expect(within(details).getByText('Mobius Digital')).toBeTruthy()
     expect(within(details).getByText('Game')).toBeTruthy()
-    expect(within(details).getByText('In progress')).toBeTruthy()
+    expect(within(screen.getByRole('group', { name: 'Status' })).getByText('In progress')).toBeTruthy()
     expect(details.querySelector('time[datetime="2026-11-01T12:00:00+00:00"]')).toBeTruthy()
-    expect(details.querySelector('time[datetime="2026-11-11T12:00:00+00:00"]')).toBeTruthy()
+    // The timeline shows every change, so there's no "Status since" as well.
+    expect(within(details).queryByText('Status since')).toBeNull()
   })
 
   it('leaves out a missing creator', async () => {
@@ -150,7 +170,6 @@ describe('ItemPage', () => {
       expect(JSON.parse(options.body)).toEqual({ status: 'Finished' })
       expect(await screen.findByText('Outer Wilds moved to Finished')).toBeTruthy()
       expect(pill('Finished').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByRole('article').querySelector(`time[datetime="${changedAt}"]`)).toBeTruthy()
     })
 
     it('says which status it is moving to while it saves, and ignores other presses', async () => {
@@ -441,7 +460,7 @@ describe('ItemPage', () => {
     })
   })
 
-  describe('its sessions', () => {
+  describe('its timeline', () => {
     // A session as the API gives it, logged on the day it happened unless told otherwise.
     const session = (id, date, notes, { loggedAt = `${date}T20:00:00`, pagesRead = null, mood = 'Curious' } = {}) => ({
       id,
@@ -453,7 +472,7 @@ describe('ItemPage', () => {
       reflection: { id: `r-${id}`, mood, notes, createdAt: loggedAt, updatedAt: loggedAt },
     })
 
-    const region = () => screen.getByRole('region', { name: 'Sessions' })
+    const region = () => screen.getByRole('region', { name: 'Timeline' })
 
     async function loaded(sessions, item = ITEM) {
       stubSessions(async () => json(sessions))
@@ -468,16 +487,55 @@ describe('ItemPage', () => {
       expect(fetchStub.sessions.mock.calls[0][0]).toBe('/api/items/abc/sessions')
     })
 
-    it('says it is loading the sessions until they arrive', async () => {
-      stubSessions(neverAnswers)
-      stubFetch(async () => json(ITEM))
-      renderPage()
-      expect(await screen.findByRole('status', { name: 'Loading sessions' })).toBeTruthy()
+    it('asks for this item’s status changes once the item has loaded', async () => {
+      const fetchStub = await loaded([])
+      expect(fetchStub.statusChanges.mock.calls[0][0]).toBe('/api/items/abc/status-changes')
     })
 
-    it('says when there are none yet', async () => {
+    it.each([
+      ['sessions', () => stubSessions(neverAnswers)],
+      ['status changes', () => stubStatusChanges(neverAnswers)],
+    ])('says it is loading until the %s arrive', async (_, stubSlowOne) => {
+      stubSlowOne()
+      stubFetch(async () => json(ITEM))
+      renderPage()
+      expect(await screen.findByRole('status', { name: 'Loading timeline' })).toBeTruthy()
+    })
+
+    it('says when there are no sessions yet, under the status it was added with', async () => {
       await loaded([])
       expect(await within(region()).findByText('No sessions yet. Each one you log shows here, with its reflection.')).toBeTruthy()
+      expect(within(region()).getByText('Added to your library')).toBeTruthy()
+    })
+
+    it('shows each status change, worded for the item', async () => {
+      stubStatusChanges(async () =>
+        json([
+          { id: 'c1', status: 'Backlog', changedAt: '2026-11-01T12:00:00' },
+          { id: 'c2', status: 'InProgress', changedAt: '2026-11-11T12:00:00' },
+        ]),
+      )
+      await loaded([])
+      expect(await within(region()).findByText('Started playing')).toBeTruthy()
+      const entries = within(region()).getAllByRole('listitem').map((entry) => entry.textContent)
+      expect(entries[0]).toMatch('Started playing')
+      expect(entries[1]).toMatch('Added to your library')
+    })
+
+    it('puts sessions and status changes together, newest first', async () => {
+      stubStatusChanges(async () =>
+        json([
+          { id: 'c1', status: 'Backlog', changedAt: '2026-11-01T12:00:00' },
+          { id: 'c2', status: 'InProgress', changedAt: '2026-11-11T12:00:00' },
+        ]),
+      )
+      await loaded([session('s1', '2026-11-12', 'Burned to death by the sun, twice.')])
+      await within(region()).findByRole('article')
+      const entries = within(region()).getAllByRole('listitem').map((entry) => entry.textContent)
+      expect(entries).toHaveLength(3)
+      expect(entries[0]).toMatch('Burned to death by the sun, twice.')
+      expect(entries[1]).toMatch('Started playing')
+      expect(entries[2]).toMatch('Added to your library')
     })
 
     it('shows each session with its reflection, newest day first', async () => {
@@ -491,7 +549,7 @@ describe('ItemPage', () => {
       expect(cards[0].textContent).toMatch('The quantum moon finally made sense.')
       expect(cards[0].textContent).toMatch('Played for 1h 30m')
       expect(cards[0].textContent).toMatch('Moved')
-      expect(cards[0].querySelector('time').getAttribute('dateTime')).toBe('2026-11-14')
+      expect(cards[0].closest('li').querySelector('time').getAttribute('dateTime')).toBe('2026-11-14')
       expect(cards[1].textContent).toMatch('Burned to death by the sun, twice.')
     })
 
@@ -514,21 +572,36 @@ describe('ItemPage', () => {
       expect(cards[1].textContent).toMatch('Logged on')
     })
 
-    it('offers to try again when they can’t be loaded', async () => {
+    it('offers to try again when the sessions can’t be loaded', async () => {
       let tries = 0
       stubSessions(async () => (++tries === 1 ? json({ status: 500 }, 500) : json([session('s1', '2026-11-12', 'Second time lucky.')])))
       stubFetch(async () => json(ITEM))
       renderPage()
 
-      const alert = await within(await screen.findByRole('region', { name: 'Sessions' })).findByRole('alert')
-      expect(alert.textContent).toMatch("Couldn't load the sessions")
+      const alert = await within(await screen.findByRole('region', { name: 'Timeline' })).findByRole('alert')
+      expect(alert.textContent).toMatch("Couldn't load the timeline")
       fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
 
       expect(await within(region()).findByText('Second time lucky.')).toBeTruthy()
     })
 
-    it('shows the item as not found when the sessions say it’s gone', async () => {
-      stubSessions(async () => new Response(null, { status: 404 }))
+    it('offers to try again when the status changes can’t be loaded', async () => {
+      let tries = 0
+      stubStatusChanges(async () => (++tries === 1 ? json({ status: 500 }, 500) : json([FIRST_CHANGE])))
+      stubFetch(async () => json(ITEM))
+      renderPage()
+
+      const alert = await within(await screen.findByRole('region', { name: 'Timeline' })).findByRole('alert')
+      fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }))
+
+      expect(await within(region()).findByText('Added to your library')).toBeTruthy()
+    })
+
+    it.each([
+      ['sessions', () => stubSessions(async () => new Response(null, { status: 404 }))],
+      ['status changes', () => stubStatusChanges(async () => new Response(null, { status: 404 }))],
+    ])('shows the item as not found when the %s say it’s gone', async (_, stubGone) => {
+      stubGone()
       stubFetch(async () => json(ITEM))
       renderPage()
       expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()

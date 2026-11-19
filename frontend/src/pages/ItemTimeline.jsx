@@ -1,21 +1,20 @@
 import { useEffect, useEffectEvent, useId, useState } from 'react'
+import { getStatusChanges } from '../api/items.js'
 import { deleteSession, editSession, getSessions, logSession } from '../api/sessions.js'
 import {
   Alert,
   Button,
+  buildTimeline,
   DeleteModal,
   EditSessionModal,
   Heading,
   LogSessionModal,
-  ReflectionCard,
-  SkeletonGroup,
-  SkeletonText,
   Text,
+  Timeline,
   useToast,
   VisuallyHidden,
 } from '../components/index.js'
 import { DeleteIcon, EditIcon, ReflectionIcon } from '../components/icons.js'
-import { newestFirst, wasLoggedLate } from '../rules/sessionList.js'
 import { parseDateKey } from '../utils/calendarDates.js'
 import styles from './ItemPage.module.css'
 
@@ -25,18 +24,20 @@ const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
 const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const sessionDay = (session) => dayFormat.format(parseDateKey(session.date))
 
+const NOT_LOADED = { state: 'loading', sessions: [], statusChanges: [] }
+
 /**
- * The Sessions part of an item's page: every session with its reflection, newest
- * day first, and the way to log another. Give it key={item.id}, so another item
- * starts afresh.
+ * The Timeline part of an item's page: its status changes and its sessions with
+ * their reflections, newest first, and the way to log another session. Give it
+ * key={item.id}, so another item starts afresh.
  *
  * item: the item the page shows. onItemMissing: called when the API says the item
  * is no longer in this library, so the page can say so.
  */
-export function ItemSessions({ item, onItemMissing }) {
+export function ItemTimeline({ item, onItemMissing }) {
   const headingId = useId()
-  // loading, failed or ready, with the sessions once ready.
-  const [loaded, setLoaded] = useState({ state: 'loading', sessions: [] })
+  // loading, failed or ready, with what the timeline is built from once ready.
+  const [loaded, setLoaded] = useState(NOT_LOADED)
   // Counting tries makes Try again load afresh, through the same effect.
   const [tries, setTries] = useState(0)
   const [logging, setLogging] = useState(false)
@@ -51,33 +52,35 @@ export function ItemSessions({ item, onItemMissing }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    getSessions(item.id, { signal: controller.signal })
-      .then((sessions) => {
-        if (sessions) setLoaded({ state: 'ready', sessions })
+    const options = { signal: controller.signal }
+    // Both at once. Either one answering 404 means the item is gone.
+    Promise.all([getSessions(item.id, options), getStatusChanges(item.id, options)])
+      .then(([sessions, statusChanges]) => {
+        if (sessions && statusChanges) setLoaded({ state: 'ready', sessions, statusChanges })
         else reportMissing()
       })
       .catch((error) => {
         // An abort means the page cleaned up this request, not that it failed.
-        if (error.name !== 'AbortError') setLoaded({ state: 'failed', sessions: [] })
+        if (error.name !== 'AbortError') setLoaded({ ...NOT_LOADED, state: 'failed' })
       })
     return () => controller.abort()
   }, [item.id, tries])
 
   function tryAgain() {
-    setLoaded({ state: 'loading', sessions: [] })
+    setLoaded(NOT_LOADED)
     setTries((count) => count + 1)
   }
+
+  // The timeline puts sessions in order itself, so changes only add, replace or remove.
+  const updateSessions = (change) => setLoaded((current) => ({ ...current, sessions: change(current.sessions) }))
 
   async function saveSession(values) {
     const result = await logSession(item.id, values)
     if (result.session) {
       setLogging(false)
-      // Slotted in where a reload would put it, so a session from days ago doesn't
-      // jump to the top. Only into a list that has loaded, or it would show alone.
+      // Only into a timeline that has loaded, or it would show alone.
       setLoaded((current) =>
-        current.state === 'ready'
-          ? { state: 'ready', sessions: newestFirst([result.session, ...current.sessions]) }
-          : current,
+        current.state === 'ready' ? { ...current, sessions: [...current.sessions, result.session] } : current,
       )
       toast.show({ title: 'Session logged' })
     } else if (result.error === 'missing') {
@@ -92,15 +95,11 @@ export function ItemSessions({ item, onItemMissing }) {
     const result = await editSession(item.id, editing.id, values)
     if (result.session) {
       setEditing(null)
-      // Its date may have changed, so it may move.
-      setLoaded((current) => ({
-        ...current,
-        sessions: newestFirst(current.sessions.map((s) => (s.id === result.session.id ? result.session : s))),
-      }))
+      updateSessions((sessions) => sessions.map((s) => (s.id === result.session.id ? result.session : s)))
       toast.show({ title: 'Changes saved' })
     } else if (result.error === 'missing') {
       // The session, or the whole item, was deleted meanwhile. Loading afresh
-      // shows which: the list without it, or the item as not found.
+      // shows which: the timeline without it, or the item as not found.
       setEditing(null)
       tryAgain()
       return {}
@@ -113,69 +112,64 @@ export function ItemSessions({ item, onItemMissing }) {
     if (result.deleted) {
       const gone = deleting.id
       setDeleting(null)
-      setLoaded((current) => ({ ...current, sessions: current.sessions.filter((s) => s.id !== gone) }))
+      updateSessions((sessions) => sessions.filter((s) => s.id !== gone))
       toast.show({ title: 'Session deleted' })
     }
     return result
   }
 
-  let content
-  if (loaded.state === 'loading') {
-    content = (
-      <SkeletonGroup label="Loading sessions" className={styles.sessionList}>
-        <SkeletonText lines={3} />
-        <SkeletonText lines={3} />
-      </SkeletonGroup>
+  // A timeline entry carries extra fields, so the buttons hand on the session itself.
+  function sessionActions(entry) {
+    const session = loaded.sessions.find((s) => s.id === entry.id)
+    if (!session) return null
+    return (
+      <>
+        <Button variant="text" onClick={() => setEditing(session)}>
+          <EditIcon />
+          Edit
+          <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
+        </Button>
+        <Button variant="text" onClick={() => setDeleting(session)}>
+          <DeleteIcon />
+          Delete
+          <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
+        </Button>
+      </>
     )
-  } else if (loaded.state === 'failed') {
+  }
+
+  let content
+  if (loaded.state === 'failed') {
     content = (
-      <Alert tone="error" title="Couldn't load the sessions">
+      <Alert tone="error" title="Couldn't load the timeline">
         {FAILED_MESSAGE}{' '}
         <Button variant="text" onClick={tryAgain}>
           Try again
         </Button>
       </Alert>
     )
-  } else if (loaded.sessions.length === 0) {
-    content = <Text>No sessions yet. Each one you log shows here, with its reflection.</Text>
   } else {
     content = (
-      <ol className={styles.sessionList}>
-        {loaded.sessions.map((session) => (
-          <li key={session.id}>
-            <ReflectionCard
-              mood={session.reflection.mood}
-              notes={session.reflection.notes}
-              session={session}
-              medium={item.medium}
-              date={session.date}
-              loggedOn={wasLoggedLate(session) ? session.createdAt : undefined}
-              actions={
-                <>
-                  <Button variant="text" onClick={() => setEditing(session)}>
-                    <EditIcon />
-                    Edit
-                    <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
-                  </Button>
-                  <Button variant="text" onClick={() => setDeleting(session)}>
-                    <DeleteIcon />
-                    Delete
-                    <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
-                  </Button>
-                </>
-              }
-            />
-          </li>
-        ))}
-      </ol>
+      <>
+        {/* There's always the status it was added with, so this says what's still to come. */}
+        {loaded.state === 'ready' && loaded.sessions.length === 0 && (
+          <Text>No sessions yet. Each one you log shows here, with its reflection.</Text>
+        )}
+        <Timeline
+          entries={buildTimeline({ sessions: loaded.sessions, statusChanges: loaded.statusChanges })}
+          medium={item.medium}
+          actionsFor={sessionActions}
+          loading={loaded.state === 'loading'}
+        />
+      </>
     )
   }
 
   return (
-    <section aria-labelledby={headingId} className={styles.sessions}>
+    <section aria-labelledby={headingId} className={styles.timeline}>
       <header className={styles.header}>
         <Heading as="h2" id={headingId}>
-          Sessions
+          Timeline
         </Heading>
         <Button onClick={() => setLogging(true)}>
           <ReflectionIcon />

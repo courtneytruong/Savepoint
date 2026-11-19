@@ -28,7 +28,7 @@ function statusText({ status, first, previous }, medium) {
 }
 
 // What each kind of entry shows: the dot's icon and color, and its content.
-function describe(entry, medium) {
+function describe(entry, medium, actionsFor) {
   switch (entry.type) {
     case 'status': {
       const { Icon, color } = STATUSES[entry.status]
@@ -78,6 +78,7 @@ function describe(entry, medium) {
             session={entry}
             medium={medium}
             loggedOn={entry.loggedLate ? entry.createdAt : undefined}
+            actions={actionsFor?.(entry)}
           />
         ),
       }
@@ -86,7 +87,15 @@ function describe(entry, medium) {
       return {
         Icon: ReflectionIcon,
         color: moodFor(entry.mood).color,
-        content: <ReflectionCard mood={entry.mood} notes={entry.notes} tags={entry.tags} medium={medium} />,
+        content: (
+          <ReflectionCard
+            mood={entry.mood}
+            notes={entry.notes}
+            tags={entry.tags}
+            medium={medium}
+            actions={actionsFor?.(entry)}
+          />
+        ),
       }
   }
 }
@@ -119,10 +128,12 @@ function TimelineSkeleton() {
  * medium: 'Book' or 'Game', for wording like "Started reading".
  * order: newest (default) or oldest first.
  * empty: shown when there are no entries, in place of the default empty state.
+ * actionsFor: given a session or reflection entry, buttons for its card, such as Edit.
  */
 export function Timeline({
   entries = [],
   medium,
+  actionsFor,
   order = 'newest',
   loading = false,
   empty,
@@ -153,7 +164,7 @@ export function Timeline({
           </MonthHeading>
           <ol className={styles.list}>
             {monthEntries.map((entry, index) => {
-              const { Icon, color, content } = describe(entry, medium)
+              const { Icon, color, content } = describe(entry, medium, actionsFor)
               const date = parseDateKey(entry.day)
               const sameDay = monthEntries[index - 1]?.day === entry.day
               return (
