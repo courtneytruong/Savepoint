@@ -24,6 +24,19 @@ export async function getItem(id, { signal } = {}) {
 }
 
 /**
+ * Every status an item has had, oldest first, each as { id, status, changedAt },
+ * starting with the one it was added with, for its timeline. Answers null when
+ * there's no such item in this library, and throws on any other answer, as
+ * getItem does.
+ */
+export async function getStatusChanges(id, { signal } = {}) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}/status-changes`, { signal })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`Loading status changes got ${response.status}`)
+  return response.json()
+}
+
+/**
  * Adds an item to the library. Resolves with { item }, in the shape getItems
  * gives, or { error: 'failed' } for any other answer: the form checks the same
  * rules first, so a 400 means they've drifted apart. If the server can't be
