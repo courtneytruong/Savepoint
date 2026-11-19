@@ -23,6 +23,7 @@ public static class ItemEndpoints
         items.MapPost("/", Create);
         items.MapPut("/{id:guid}", Update);
         items.MapPost("/{id:guid}/status", ChangeStatus);
+        items.MapPost("/{id:guid}/rating", Rate);
         items.MapGet("/{id:guid}/status-changes", ListStatusChanges);
         items.MapDelete("/{id:guid}", Delete);
         return app;
@@ -85,6 +86,9 @@ public static class ItemEndpoints
     public record UpdateItemRequest(string? Medium, string? Title, string? Creator);
 
     public record ChangeStatusRequest(string? Status);
+
+    // Nullable, so a missing rating gets a field code, as a missing status does.
+    public record RateRequest(int? Rating);
 
     /// <summary>
     /// An item as the frontend sees it, with its current status: the newest of its
@@ -219,6 +223,39 @@ public static class ItemEndpoints
 
         return TypedResults.Ok(ToResponse(row with { Status = change }));
     }
+
+    /// <summary>
+    /// Rates an item, or changes its rating, by adding to its rating history, as a
+    /// status change does. Asking for the rating it already has adds nothing. There's
+    /// no way to remove a rating: it can only change. 200 with the item, 404 as for
+    /// Get, or 400 with required, or invalid for anything but whole stars from 1 to 5.
+    /// </summary>
+    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem>> Rate(
+        Guid id, RateRequest request, ClaimsPrincipal principal, UserManager<User> users,
+        SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        if (request.Rating is not { } rating) return RatingProblem("required");
+        if (rating is < LibraryRules.MinRating or > LibraryRules.MaxRating) return RatingProblem("invalid");
+
+        var userId = CurrentUser.IdOf(principal, users);
+        var row = await db.Items
+            .Where(i => i.Id == id && i.UserId == userId)
+            .WithCurrent()
+            .SingleOrDefaultAsync(cancellationToken);
+        if (row is null) return TypedResults.NotFound();
+        if (row.Rating?.Rating == rating) return TypedResults.Ok(ToResponse(row));
+
+        // Its own transaction, so the database's clock gives it a later time than
+        // the rating before.
+        var change = new RatingChange { ItemId = id, Rating = rating };
+        db.RatingChanges.Add(change);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return TypedResults.Ok(ToResponse(row with { Rating = change }));
+    }
+
+    private static ValidationProblem RatingProblem(string code) =>
+        TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["rating"] = [code] });
 
     /// <summary>A status change as the frontend sees it, for an item's timeline.</summary>
     public record StatusChangeResponse(Guid Id, string Status, DateTimeOffset ChangedAt);
