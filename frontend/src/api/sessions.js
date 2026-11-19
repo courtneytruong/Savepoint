@@ -14,8 +14,9 @@ const toRequest = ({ date, durationMinutes, pagesRead, reflection }) => ({
 
 /**
  * Every session for an item, newest day first, each as { id, itemId, date,
- * durationMinutes, pagesRead, createdAt, reflection: { id, mood, notes, createdAt,
- * updatedAt } }. date is a "yyyy-MM-dd" day key, and pagesRead is null when not
+ * durationMinutes, pagesRead, createdAt, updatedAt, reflection: { id, mood, notes,
+ * createdAt, updatedAt } }. Each updatedAt starts as its createdAt, and moves when
+ * its own fields are edited. date is a "yyyy-MM-dd" day key, and pagesRead is null when not
  * counted. Answers null when there's no such item in this library: the API answers
  * 404 for other people's items too. Throws on any other answer, as when the server
  * fails or can't be reached.

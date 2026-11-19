@@ -488,6 +488,7 @@ describe('ItemPage', () => {
       durationMinutes: 90,
       pagesRead,
       createdAt: loggedAt,
+      updatedAt: loggedAt,
       reflection: { id: `r-${id}`, mood, notes, createdAt: loggedAt, updatedAt: loggedAt },
     })
 
@@ -760,6 +761,36 @@ describe('ItemPage', () => {
         expect(cards[0]).toMatch('Third try, and I finally escaped.')
         expect(cards[1]).toMatch('The quantum moon finally made sense.')
         await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      })
+
+      it('marks a session as edited when only its duration changed', async () => {
+        const edited = { ...OLDER, durationMinutes: 120, updatedAt: '2026-11-15T08:30:00' }
+        await editing(OLDER, async () => json(edited))
+        set('Hours', '2')
+        set('Minutes', '0')
+        save()
+
+        await screen.findByText('Changes saved')
+        const cards = within(region()).getAllByRole('article')
+        expect(cards[0].textContent).not.toMatch('Edited')
+        expect(cards[1].textContent).toMatch('Edited')
+      })
+
+      it('marks a reflection as edited once its words changed', async () => {
+        const edited = {
+          ...OLDER,
+          reflection: { ...OLDER.reflection, notes: 'Third try, and I finally escaped.', updatedAt: '2026-11-15T08:30:00' },
+        }
+        await editing(OLDER, async () => json(edited))
+        expect(within(region()).queryByText(/Edited/)).toBeNull()
+        set('Notes', 'Third try, and I finally escaped.')
+        save()
+
+        await screen.findByText('Changes saved')
+        // Newest first, so the older session, the one edited, is second.
+        const cards = within(region()).getAllByRole('article')
+        expect(cards[0].textContent).not.toMatch('Edited')
+        expect(cards[1].textContent).toMatch('Edited')
       })
 
       it('stays open with the changes when saving fails', async () => {

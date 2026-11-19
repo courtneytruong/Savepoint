@@ -110,7 +110,7 @@ public sealed class UpdateSessionTests(PostgresFixture postgres) : IAsyncDisposa
     }
 
     [Fact]
-    public async Task Moves_updatedAt_on_when_the_reflection_changes()
+    public async Task Moves_only_the_reflections_updatedAt_when_only_the_reflection_changes()
     {
         var (client, itemId, created) = await ClientWithSession();
         using var _ = client;
@@ -120,10 +120,11 @@ public sealed class UpdateSessionTests(PostgresFixture postgres) : IAsyncDisposa
         var reflection = session.GetProperty("reflection");
         Assert.Equal(Time(created.GetProperty("reflection"), "createdAt"), Time(reflection, "createdAt"));
         Assert.True(Time(reflection, "updatedAt") > Time(reflection, "createdAt"));
+        Assert.Equal(Time(created, "updatedAt"), Time(session, "updatedAt"));
     }
 
     [Fact]
-    public async Task Keeps_updatedAt_when_only_the_session_changes()
+    public async Task Moves_only_the_sessions_updatedAt_when_only_the_session_changes()
     {
         var (client, itemId, created) = await ClientWithSession();
         using var _ = client;
@@ -134,6 +135,32 @@ public sealed class UpdateSessionTests(PostgresFixture postgres) : IAsyncDisposa
         var reflection = session.GetProperty("reflection");
         Assert.Equal(55, session.GetProperty("durationMinutes").GetInt32());
         Assert.Equal(Time(created.GetProperty("reflection"), "updatedAt"), Time(reflection, "updatedAt"));
+        Assert.Equal(Time(created, "createdAt"), Time(session, "createdAt"));
+        Assert.True(Time(session, "updatedAt") > Time(session, "createdAt"));
+    }
+
+    [Fact]
+    public async Task Moves_the_sessions_updatedAt_when_its_page_count_is_cleared()
+    {
+        var (client, itemId, created) = await ClientWithSession();
+        using var _ = client;
+
+        // Logged with 20 pages. A change to or from null is a change too.
+        var session = await ReadJson(await Update(client, itemId, created, Body(pagesRead: null)));
+
+        Assert.True(Time(session, "updatedAt") > Time(created, "updatedAt"));
+    }
+
+    [Fact]
+    public async Task Moves_neither_updatedAt_when_nothing_changes()
+    {
+        var (client, itemId, created) = await ClientWithSession();
+        using var _ = client;
+
+        var session = await ReadJson(await Update(client, itemId, created, Body()));
+
+        Assert.Equal(Time(created, "updatedAt"), Time(session, "updatedAt"));
+        Assert.Equal(Time(created.GetProperty("reflection"), "updatedAt"), Time(session.GetProperty("reflection"), "updatedAt"));
     }
 
     [Fact]

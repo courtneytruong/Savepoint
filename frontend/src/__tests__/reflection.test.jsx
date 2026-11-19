@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { notesLength, ReflectionForm, validateReflection } from '../components/index.js'
+import { wasEdited } from '../rules/reflectionRules.js'
 
 afterEach(cleanup)
 
@@ -61,6 +62,25 @@ function renderForm(onSubmit = vi.fn()) {
 const notes = () => screen.getByLabelText('Notes')
 const type = (text) => fireEvent.change(notes(), { target: { value: text } })
 const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+describe('wasEdited', () => {
+  it('is false for a reflection as it was written', () => {
+    expect(wasEdited({ createdAt: '2026-11-14T20:00:00+00:00', updatedAt: '2026-11-14T20:00:00+00:00' })).toBe(false)
+  })
+
+  it('is true once it changed afterwards', () => {
+    expect(wasEdited({ createdAt: '2026-11-14T20:00:00+00:00', updatedAt: '2026-11-15T08:30:00+00:00' })).toBe(true)
+  })
+
+  it('compares times, not text, so time zones don’t fool it', () => {
+    expect(wasEdited({ createdAt: '2026-11-14T20:00:00+00:00', updatedAt: '2026-11-14T21:00:00+01:00' })).toBe(false)
+  })
+
+  it('is false when either time is missing', () => {
+    expect(wasEdited({ createdAt: '2026-11-14T20:00:00+00:00' })).toBe(false)
+    expect(wasEdited()).toBe(false)
+  })
+})
 
 describe('ReflectionForm', () => {
   it('counts toward the minimum as you type', () => {

@@ -12,7 +12,14 @@ export const MAX_NOTES_LENGTH = 10_000
  */
 export const notesLength = (notes = '') => [...notes.trim()].length
 
-const plural = (count, word) => `${count.toLocaleString()} ${count === 1 ? word : `${word}s`}`
+/**
+ * Whether a reflection's mood or notes changed after it was written. The API sets
+ * updatedAt to createdAt at first, and moves it only for those changes.
+ */
+export const wasEdited = ({ createdAt, updatedAt } = {}) =>
+  Boolean(createdAt && updatedAt) && new Date(updatedAt) > new Date(createdAt)
+
+const plural =(count, word) => `${count.toLocaleString()} ${count === 1 ? word : `${word}s`}`
 
 /** Returns a message for each field that breaks a rule, or an empty object. */
 export function validateReflection({ mood, notes }) {

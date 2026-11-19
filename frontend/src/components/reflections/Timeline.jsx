@@ -3,6 +3,8 @@ import { classNames } from '../../utils/classNames.js'
 import { EmptyState } from '../feedback/EmptyState.jsx'
 import { RatingIcon, ReflectionIcon, TimelineIcon } from '../icons.js'
 import { moodFor } from '../../rules/moods.js'
+import { wasEdited } from '../../rules/reflectionRules.js'
+import { sessionEditedAt } from '../../rules/sessionList.js'
 import { ReflectionCard } from './ReflectionCard.jsx'
 import cardStyles from './ReflectionCard.module.css'
 import { Skeleton, SkeletonGroup, SkeletonText } from '../feedback/Skeleton.jsx'
@@ -78,6 +80,7 @@ function describe(entry, medium, actionsFor) {
             session={entry}
             medium={medium}
             loggedOn={entry.loggedLate ? entry.createdAt : undefined}
+            editedAt={sessionEditedAt(entry)}
             actions={actionsFor?.(entry)}
           />
         ),
@@ -93,6 +96,7 @@ function describe(entry, medium, actionsFor) {
             notes={entry.notes}
             tags={entry.tags}
             medium={medium}
+            editedAt={wasEdited(entry) ? entry.updatedAt : undefined}
             actions={actionsFor?.(entry)}
           />
         ),
