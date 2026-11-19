@@ -1,4 +1,4 @@
-import { Link, MediumLabel, StatusBadge } from '../components/index.js'
+import { Link, MediumLabel, Rating, StatusBadge } from '../components/index.js'
 import { itemPath } from '../paths.js'
 import styles from './LibraryPage.module.css'
 
@@ -9,8 +9,8 @@ const STATUS_ORDER = ['Backlog', 'InProgress', 'Finished', 'Dropped']
 const addedDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 
 /**
- * The library's list view. Each title links to the item's own page. Mood and
- * rating join once reflections and ratings exist.
+ * The library's list view. Each title links to the item's own page. Mood could
+ * join later, once there's a way to sum up an item's reflections in one.
  */
 export const LIBRARY_COLUMNS = [
   {
@@ -41,6 +41,15 @@ export const LIBRARY_COLUMNS = [
     render: (item) => <StatusBadge status={item.status} />,
   },
   {
+    key: 'rating',
+    header: 'Rating',
+    sortable: true,
+    // Best first is what you'd usually want. Unrated items come last either way.
+    sortFirst: 'descending',
+    render: (item) =>
+      item.rating != null ? <Rating value={item.rating} /> : <span className={styles.unrated}>Not rated</span>,
+  },
+  {
     key: 'createdAt',
     header: 'Added',
     hideOnMobile: true,
@@ -59,6 +68,8 @@ export const SORT_OPTIONS = [
   ['Title, A to Z', { key: 'title', direction: 'ascending' }],
   ['Title, Z to A', { key: 'title', direction: 'descending' }],
   ['Status', { key: 'status', direction: 'ascending' }],
+  ['Rating, highest first', { key: 'rating', direction: 'descending' }],
+  ['Rating, lowest first', { key: 'rating', direction: 'ascending' }],
 ]
 
 export const MEDIUM_FILTERS = [
