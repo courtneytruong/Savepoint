@@ -2,7 +2,8 @@
 
 /**
  * Every item in the library, newest first, each as { id, medium, title, creator,
- * status, statusChangedAt, createdAt }. Throws on any answer but a list, as when
+ * status, statusChangeId, statusChangedAt, createdAt }. statusChangeId is the id of
+ * the current status in getStatusChanges. Throws on any answer but a list, as when
  * the server fails or can't be reached.
  */
 export async function getItems({ signal } = {}) {
@@ -20,6 +21,19 @@ export async function getItem(id, { signal } = {}) {
   const response = await fetch(`/api/items/${encodeURIComponent(id)}`, { signal })
   if (response.status === 404) return null
   if (!response.ok) throw new Error(`Loading an item got ${response.status}`)
+  return response.json()
+}
+
+/**
+ * Every status an item has had, oldest first, each as { id, status, changedAt },
+ * starting with the one it was added with, for its timeline. Answers null when
+ * there's no such item in this library, and throws on any other answer, as
+ * getItem does.
+ */
+export async function getStatusChanges(id, { signal } = {}) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}/status-changes`, { signal })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`Loading status changes got ${response.status}`)
   return response.json()
 }
 

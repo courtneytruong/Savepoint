@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { changeItemStatus, deleteItem, editItem, getItem, getItems } from '../api/items.js'
+import { changeItemStatus, deleteItem, editItem, getItem, getItems, getStatusChanges } from '../api/items.js'
 import { itemPath } from '../paths.js'
 
 function stubFetch(answer) {
@@ -53,6 +53,43 @@ describe('getItem', () => {
     const fetchStub = stubFetch(async () => new Response('{}', { status: 200 }))
     const controller = new AbortController()
     await getItem('abc', { signal: controller.signal })
+    expect(fetchStub.mock.calls[0][1].signal).toBe(controller.signal)
+  })
+})
+
+describe('getStatusChanges', () => {
+  const CHANGES = [
+    { id: 'c1', status: 'Backlog', changedAt: '2026-11-01T09:00:00+00:00' },
+    { id: 'c2', status: 'InProgress', changedAt: '2026-11-03T18:30:00+00:00' },
+  ]
+
+  it('asks for the item’s status changes and answers with them', async () => {
+    const fetchStub = stubFetch(async () => new Response(JSON.stringify(CHANGES), { status: 200 }))
+
+    expect(await getStatusChanges('abc')).toEqual(CHANGES)
+    expect(fetchStub.mock.calls[0][0]).toBe('/api/items/abc/status-changes')
+  })
+
+  it('puts the item id safely into the address', async () => {
+    const fetchStub = stubFetch(async () => new Response('[]', { status: 200 }))
+    await getStatusChanges('a/b')
+    expect(fetchStub.mock.calls[0][0]).toBe('/api/items/a%2Fb/status-changes')
+  })
+
+  it('answers null when there is no such item', async () => {
+    stubFetch(async () => new Response(null, { status: 404 }))
+    expect(await getStatusChanges('abc')).toBeNull()
+  })
+
+  it('throws on any other answer', async () => {
+    stubFetch(async () => new Response(null, { status: 500 }))
+    await expect(getStatusChanges('abc')).rejects.toThrow('500')
+  })
+
+  it('passes on a signal, so the request can be cancelled', async () => {
+    const fetchStub = stubFetch(async () => new Response('[]', { status: 200 }))
+    const controller = new AbortController()
+    await getStatusChanges('abc', { signal: controller.signal })
     expect(fetchStub.mock.calls[0][1].signal).toBe(controller.signal)
   })
 })

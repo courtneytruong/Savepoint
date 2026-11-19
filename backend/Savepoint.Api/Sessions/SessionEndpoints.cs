@@ -44,6 +44,7 @@ public static class SessionEndpoints
         int DurationMinutes,
         int? PagesRead,
         DateTimeOffset CreatedAt,
+        DateTimeOffset UpdatedAt,
         ReflectionResponse Reflection);
 
     public record ReflectionResponse(Guid Id, string Mood, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
@@ -112,9 +113,10 @@ public static class SessionEndpoints
     /// <summary>
     /// Replaces a session's date, duration and pages, and its reflection's mood and
     /// notes, so everything is sent each time, as when logging it. One transaction,
-    /// so the two change together. The reflection's UpdatedAt moves only when its
-    /// mood or notes change, since fixing a session's duration isn't editing what was
-    /// thought. 200 with the session, 404 when the item isn't the signed-in person's
+    /// so the two change together. Each keeps its own UpdatedAt, which moves only when
+    /// its own fields change: the session's for its date, duration or pages, the
+    /// reflection's for its mood or notes, since fixing a duration isn't editing what
+    /// was thought. 200 with the session, 404 when the item isn't the signed-in person's
     /// or the session isn't that item's, or 400 as for logging one.
     /// </summary>
     private static async Task<Results<Ok<SessionResponse>, NotFound, ValidationProblem>> Update(
@@ -136,6 +138,14 @@ public static class SessionEndpoints
         // One UPDATE, which also says whether the session was there to change.
         var changed = await mine.ExecuteUpdateAsync(
             set => set
+                // As for the reflection below: the database's clock, only on a real change.
+                .SetProperty(
+                    s => s.UpdatedAt,
+                    s => s.Date != details.Date
+                        || s.DurationMinutes != details.DurationMinutes
+                        || s.PagesRead != details.PagesRead
+                        ? DateTimeOffset.UtcNow
+                        : s.UpdatedAt)
                 .SetProperty(s => s.Date, details.Date)
                 .SetProperty(s => s.DurationMinutes, details.DurationMinutes)
                 .SetProperty(s => s.PagesRead, details.PagesRead),
@@ -284,6 +294,7 @@ public static class SessionEndpoints
             session.DurationMinutes,
             session.PagesRead,
             session.CreatedAt,
+            session.UpdatedAt,
             new ReflectionResponse(
                 reflection.Id, reflection.Mood.ToString(), reflection.Notes, reflection.CreatedAt, reflection.UpdatedAt));
     }

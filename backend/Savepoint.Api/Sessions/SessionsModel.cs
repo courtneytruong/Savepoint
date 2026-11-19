@@ -23,6 +23,7 @@ public static class SessionsModel
             });
 
             session.Property(s => s.CreatedAt).HasDefaultValueSql("now()");
+            session.Property(s => s.UpdatedAt).HasDefaultValueSql("now()");
 
             // Deleting an item deletes its sessions.
             session.HasOne<Item>().WithMany().HasForeignKey(s => s.ItemId).OnDelete(DeleteBehavior.Cascade);

@@ -85,6 +85,9 @@ public sealed class ListSessionsTests(PostgresFixture postgres) : IAsyncDisposab
         Assert.Equal(
             session.GetProperty("createdAt").GetDateTimeOffset(),
             reflection.GetProperty("updatedAt").GetDateTimeOffset());
+        Assert.Equal(
+            session.GetProperty("createdAt").GetDateTimeOffset(),
+            session.GetProperty("updatedAt").GetDateTimeOffset());
     }
 
     [Fact]

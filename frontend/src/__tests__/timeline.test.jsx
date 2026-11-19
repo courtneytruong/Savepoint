@@ -1,6 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { buildTimeline, groupByMonth, Timeline } from '../components/index.js'
+import { sessionEditedAt } from '../rules/sessionList.js'
 
 afterEach(cleanup)
 
@@ -75,6 +76,32 @@ describe('buildTimeline', () => {
 
   it('works with any of the lists left out', () => {
     expect(buildTimeline({})).toEqual([])
+  })
+})
+
+describe('sessionEditedAt', () => {
+  const written = '2026-11-14T20:00:00'
+  const session = ({ updatedAt = written, reflectionUpdatedAt = written } = {}) => ({
+    createdAt: written,
+    updatedAt,
+    reflection: { createdAt: written, updatedAt: reflectionUpdatedAt },
+  })
+
+  it('is undefined when neither the session nor its reflection was edited', () => {
+    expect(sessionEditedAt(session())).toBeUndefined()
+  })
+
+  it('counts a change to the session alone, such as its duration', () => {
+    expect(sessionEditedAt(session({ updatedAt: '2026-11-15T08:00:00' }))).toBe('2026-11-15T08:00:00')
+  })
+
+  it('counts a change to the reflection alone', () => {
+    expect(sessionEditedAt(session({ reflectionUpdatedAt: '2026-11-15T09:00:00' }))).toBe('2026-11-15T09:00:00')
+  })
+
+  it('gives the later of the two when both changed', () => {
+    const both = { updatedAt: '2026-11-16T10:00:00', reflectionUpdatedAt: '2026-11-15T09:00:00' }
+    expect(sessionEditedAt(session(both))).toBe('2026-11-16T10:00:00')
   })
 })
 

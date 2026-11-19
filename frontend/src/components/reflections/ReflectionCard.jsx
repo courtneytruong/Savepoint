@@ -4,9 +4,22 @@ import { MediumLabel } from '../library/ItemCard.jsx'
 import { MoodBadge } from './Mood.jsx'
 import styles from './ReflectionCard.module.css'
 import { Link } from '../ui/Link.jsx'
+import { VisuallyHidden } from '../ui/VisuallyHidden.jsx'
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
 const fullDayFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+const editedFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+
+// A quiet "Edited", with when on hover. Screen readers don't reliably read a
+// title, so they get the time as hidden text instead.
+function Edited({ at }) {
+  const when = editedFormat.format(new Date(at))
+  return (
+    <time dateTime={at} title={`Edited on ${when}`}>
+      Edited<VisuallyHidden> on {when}</VisuallyHidden>
+    </time>
+  )
+}
 
 // The tags, each marked with a #.
 function ReflectionTags({ tags }) {
@@ -42,6 +55,7 @@ function Kind({ session, medium }) {
  * items, such as the Reflections page. On an item's own timeline, leave it out.
  * date: 'YYYY-MM-DD', for lists without their own dates.
  * loggedOn: when a session was logged, if later than it happened.
+ * editedAt: when the reflection was last changed, if it was after it was written.
  * actions: buttons for the reflection, such as Edit, at the bottom of the card.
  */
 export function ReflectionCard({
@@ -53,6 +67,7 @@ export function ReflectionCard({
   item,
   date,
   loggedOn,
+  editedAt,
   actions,
   headingAs: ItemHeading = 'h3',
   className,
@@ -90,7 +105,13 @@ export function ReflectionCard({
 
       <p className={session ? styles.notes : styles.thought}>{notes}</p>
       <ReflectionTags tags={tags} />
-      {loggedOn && <p className={styles.logged}>Logged on {dayFormat.format(new Date(loggedOn))}</p>}
+      {(loggedOn || editedAt) && (
+        <p className={styles.logged}>
+          {loggedOn && `Logged on ${dayFormat.format(new Date(loggedOn))}`}
+          {loggedOn && editedAt && ' · '}
+          {editedAt && <Edited at={editedAt} />}
+        </p>
+      )}
       {actions && <div className={styles.actions}>{actions}</div>}
     </article>
   )

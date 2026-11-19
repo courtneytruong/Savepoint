@@ -48,6 +48,7 @@ erDiagram
         int DurationMinutes
         int PagesRead
         timestamptz CreatedAt
+        timestamptz UpdatedAt
     }
     REFLECTIONS {
         uuid Id PK

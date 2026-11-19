@@ -21,7 +21,7 @@ import {
 import { DeleteIcon, EditIcon, ErrorIcon, NoResultsIcon, PreviousIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { AppLayout } from './AppLayout.jsx'
-import { ItemSessions } from './ItemSessions.jsx'
+import { ItemTimeline } from './ItemTimeline.jsx'
 import styles from './ItemPage.module.css'
 
 const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
@@ -204,15 +204,9 @@ export function ItemPage({ account, onSignedOut }) {
               <DateTime value={item.createdAt} />
             </dd>
           </div>
-          <div>
-            <dt>Status since</dt>
-            <dd>
-              <DateTime value={item.statusChangedAt} />
-            </dd>
-          </div>
         </dl>
         {/* As with saving details, an item that's gone shows as not found. */}
-        <ItemSessions
+        <ItemTimeline
           key={item.id}
           item={item}
           onItemMissing={() => stillShowing(item.id, { id: item.id, state: 'missing', item: null })}

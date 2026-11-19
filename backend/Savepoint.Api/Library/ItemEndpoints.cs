@@ -23,6 +23,7 @@ public static class ItemEndpoints
         items.MapPost("/", Create);
         items.MapPut("/{id:guid}", Update);
         items.MapPost("/{id:guid}/status", ChangeStatus);
+        items.MapGet("/{id:guid}/status-changes", ListStatusChanges);
         items.MapDelete("/{id:guid}", Delete);
         return app;
     }
@@ -85,7 +86,8 @@ public static class ItemEndpoints
 
     /// <summary>
     /// An item as the frontend sees it, with its current status: the newest of its
-    /// status changes, and when that happened.
+    /// status changes, which one that is, and when it happened. The change's id
+    /// matches the one in the item's status changes, so a timeline can add it.
     /// </summary>
     public record ItemResponse(
         Guid Id,
@@ -93,6 +95,7 @@ public static class ItemEndpoints
         string Title,
         string? Creator,
         string Status,
+        Guid StatusChangeId,
         DateTimeOffset StatusChangedAt,
         DateTimeOffset CreatedAt);
 
@@ -209,6 +212,30 @@ public static class ItemEndpoints
         return TypedResults.Ok(ToResponse(row.Item, change));
     }
 
+    /// <summary>A status change as the frontend sees it, for an item's timeline.</summary>
+    public record StatusChangeResponse(Guid Id, string Status, DateTimeOffset ChangedAt);
+
+    /// <summary>
+    /// Every status change of an item, oldest first, starting with the one made when
+    /// it was added. 404 as for Get.
+    /// </summary>
+    private static async Task<Results<Ok<List<StatusChangeResponse>>, NotFound>> ListStatusChanges(
+        Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        // One query, filtered by owner. Every item has at least one change, so an
+        // empty list can only mean the item isn't theirs, or doesn't exist.
+        var changes = await db.StatusChanges
+            .Where(s => s.ItemId == id && db.Items.Any(i => i.Id == id && i.UserId == userId))
+            // Ids are made in time order, so they break a tie between changes saved at once.
+            .OrderBy(s => s.ChangedAt).ThenBy(s => s.Id)
+            .Select(s => new StatusChangeResponse(s.Id, s.Status.ToString(), s.ChangedAt))
+            .ToListAsync(cancellationToken);
+
+        return changes.Count == 0 ? TypedResults.NotFound() : TypedResults.Ok(changes);
+    }
+
     /// <summary>
     /// Deletes an item, and through the database's cascade, its whole history. 204,
     /// or 404 as for Get, which includes deleting the same item a second time.
@@ -260,6 +287,7 @@ public static class ItemEndpoints
             item.Title,
             item.Creator,
             current.Status.ToString(),
+            current.Id,
             current.ChangedAt,
             item.CreatedAt);
 }

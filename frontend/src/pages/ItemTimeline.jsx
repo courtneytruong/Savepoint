@@ -1,0 +1,227 @@
+import { useEffect, useEffectEvent, useId, useState } from 'react'
+import { getStatusChanges } from '../api/items.js'
+import { deleteSession, editSession, getSessions, logSession } from '../api/sessions.js'
+import {
+  Alert,
+  Button,
+  buildTimeline,
+  DeleteModal,
+  EditSessionModal,
+  Heading,
+  IconToggle,
+  LogSessionModal,
+  Text,
+  Timeline,
+  useStoredChoice,
+  useToast,
+  VisuallyHidden,
+} from '../components/index.js'
+import { DeleteIcon, EditIcon, NewestFirstIcon, OldestFirstIcon, ReflectionIcon } from '../components/icons.js'
+import { parseDateKey } from '../utils/calendarDates.js'
+import styles from './ItemPage.module.css'
+
+const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
+
+// For telling apart each card's buttons, as in "Edit the session from 14 Nov 2026".
+const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+const sessionDay = (session) => dayFormat.format(parseDateKey(session.date))
+
+const NOT_LOADED = { state: 'loading', sessions: [], statusChanges: [] }
+
+// The ways round the timeline can be read, as Timeline's order values.
+const ORDERS = [
+  { value: 'newest', label: 'Newest first', Icon: NewestFirstIcon },
+  { value: 'oldest', label: 'Oldest first', Icon: OldestFirstIcon },
+]
+
+/**
+ * The Timeline part of an item's page: its status changes and its sessions with
+ * their reflections, newest first, and the way to log another session. Give it
+ * key={item.id}, so another item starts afresh.
+ *
+ * item: the item the page shows. onItemMissing: called when the API says the item
+ * is no longer in this library, so the page can say so.
+ */
+export function ItemTimeline({ item, onItemMissing }) {
+  const headingId = useId()
+  // loading, failed or ready, with what the timeline is built from once ready.
+  const [loaded, setLoaded] = useState(NOT_LOADED)
+  // Counting tries makes Try again load afresh, through the same effect.
+  const [tries, setTries] = useState(0)
+  const [logging, setLogging] = useState(false)
+  // The session being edited, if any.
+  const [editing, setEditing] = useState(null)
+  // The session being deleted, if any.
+  const [deleting, setDeleting] = useState(null)
+  // Remembered in this browser for every item, as the library's view is.
+  const [order, setOrder] = useStoredChoice(
+    'savepoint.timeline.order',
+    ORDERS.map(({ value }) => value),
+    'newest',
+  )
+  const toast = useToast()
+  // Always the page's latest callback, without it being a reason to load again:
+  // the page passes a new function each render.
+  const reportMissing = useEffectEvent(() => onItemMissing())
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const options = { signal: controller.signal }
+    // Both at once. Either one answering 404 means the item is gone.
+    Promise.all([getSessions(item.id, options), getStatusChanges(item.id, options)])
+      .then(([sessions, statusChanges]) => {
+        if (sessions && statusChanges) setLoaded({ state: 'ready', sessions, statusChanges })
+        else reportMissing()
+      })
+      .catch((error) => {
+        // An abort means the page cleaned up this request, not that it failed.
+        if (error.name !== 'AbortError') setLoaded({ ...NOT_LOADED, state: 'failed' })
+      })
+    return () => controller.abort()
+  }, [item.id, tries])
+
+  function tryAgain() {
+    setLoaded(NOT_LOADED)
+    setTries((count) => count + 1)
+  }
+
+  // The timeline puts sessions in order itself, so changes only add, replace or remove.
+  const updateSessions = (change) => setLoaded((current) => ({ ...current, sessions: change(current.sessions) }))
+
+  async function saveSession(values) {
+    const result = await logSession(item.id, values)
+    if (result.session) {
+      setLogging(false)
+      // Only into a timeline that has loaded, or it would show alone.
+      setLoaded((current) =>
+        current.state === 'ready' ? { ...current, sessions: [...current.sessions, result.session] } : current,
+      )
+      toast.show({ title: 'Session logged' })
+    } else if (result.error === 'missing') {
+      setLogging(false)
+      onItemMissing()
+      return {}
+    }
+    return result
+  }
+
+  async function saveEdit(values) {
+    const result = await editSession(item.id, editing.id, values)
+    if (result.session) {
+      setEditing(null)
+      updateSessions((sessions) => sessions.map((s) => (s.id === result.session.id ? result.session : s)))
+      toast.show({ title: 'Changes saved' })
+    } else if (result.error === 'missing') {
+      // The session, or the whole item, was deleted meanwhile. Loading afresh
+      // shows which: the timeline without it, or the item as not found.
+      setEditing(null)
+      tryAgain()
+      return {}
+    }
+    return result
+  }
+
+  async function confirmDelete() {
+    const result = await deleteSession(item.id, deleting.id)
+    if (result.deleted) {
+      const gone = deleting.id
+      setDeleting(null)
+      updateSessions((sessions) => sessions.filter((s) => s.id !== gone))
+      toast.show({ title: 'Session deleted' })
+    }
+    return result
+  }
+
+  // A timeline entry carries extra fields, so the buttons hand on the session itself.
+  function sessionActions(entry) {
+    const session = loaded.sessions.find((s) => s.id === entry.id)
+    if (!session) return null
+    return (
+      <>
+        <Button variant="text" onClick={() => setEditing(session)}>
+          <EditIcon />
+          Edit
+          <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
+        </Button>
+        <Button variant="text" onClick={() => setDeleting(session)}>
+          <DeleteIcon />
+          Delete
+          <VisuallyHidden> the session from {sessionDay(session)}</VisuallyHidden>
+        </Button>
+      </>
+    )
+  }
+
+  // The page changes the item's status itself, and the item then carries its newest
+  // change, so a status picked on the page shows here without loading again.
+  const current = { id: item.statusChangeId, status: item.status, changedAt: item.statusChangedAt }
+  const statusChanges =
+    loaded.state !== 'ready' || !current.id || loaded.statusChanges.some((change) => change.id === current.id)
+      ? loaded.statusChanges
+      : [...loaded.statusChanges, current]
+
+  let content
+  if (loaded.state === 'failed') {
+    content = (
+      <Alert tone="error" title="Couldn't load the timeline">
+        {FAILED_MESSAGE}{' '}
+        <Button variant="text" onClick={tryAgain}>
+          Try again
+        </Button>
+      </Alert>
+    )
+  } else {
+    content = (
+      <>
+        {/* There's always the status it was added with, so this says what's still to come. */}
+        {loaded.state === 'ready' && loaded.sessions.length === 0 && (
+          <Text>No sessions yet. Each one you log shows here, with its reflection.</Text>
+        )}
+        <Timeline
+          entries={buildTimeline({ sessions: loaded.sessions, statusChanges })}
+          medium={item.medium}
+          order={order}
+          actionsFor={sessionActions}
+          loading={loaded.state === 'loading'}
+        />
+      </>
+    )
+  }
+
+  return (
+    <section aria-labelledby={headingId} className={styles.timeline}>
+      <header className={styles.header}>
+        <Heading as="h2" id={headingId}>
+          Timeline
+        </Heading>
+        <div className={styles.actions}>
+          {loaded.state === 'ready' && (
+            <IconToggle label="Timeline order" options={ORDERS} value={order} onChange={setOrder} />
+          )}
+          <Button onClick={() => setLogging(true)}>
+            <ReflectionIcon />
+            Log session
+          </Button>
+        </div>
+      </header>
+      {content}
+      <LogSessionModal open={logging} item={item} onClose={() => setLogging(false)} onSubmit={saveSession} />
+      <EditSessionModal
+        open={editing !== null}
+        item={item}
+        session={editing}
+        onClose={() => setEditing(null)}
+        onSubmit={saveEdit}
+      />
+      <DeleteModal
+        open={deleting !== null}
+        title="Delete this session?"
+        description={
+          deleting && `The session from ${sessionDay(deleting)} and its reflection. This can't be undone.`
+        }
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+      />
+    </section>
+  )
+}

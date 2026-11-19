@@ -84,4 +84,35 @@ describe('ReflectionCard', () => {
     )
     expect(screen.getByText(/^Logged on/)).toBeTruthy()
   })
+
+  describe('once edited', () => {
+    const at = '2026-11-15T08:30:00+00:00'
+    const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(at))
+
+    it('says so quietly, with when on hover and for screen readers', () => {
+      render(<ReflectionCard session={{ durationMinutes: 30 }} editedAt={at} mood="Curious" notes={NOTES} />)
+      const edited = document.querySelector(`time[datetime="${at}"]`)
+      expect(edited.textContent).toBe(`Edited on ${when}`)
+      expect(edited.getAttribute('title')).toBe(`Edited on ${when}`)
+      expect(screen.getByText(when, { exact: false }).closest('time')).toBe(edited)
+    })
+
+    it('goes on the same line as when a late session was logged', () => {
+      render(
+        <ReflectionCard
+          session={{ durationMinutes: 30 }}
+          loggedOn="2026-11-05T09:00:00"
+          editedAt={at}
+          mood="Curious"
+          notes={NOTES}
+        />,
+      )
+      expect(screen.getByText(/^Logged on/).textContent).toMatch(/^Logged on .+ · Edited/)
+    })
+
+    it('says nothing when it wasn’t edited', () => {
+      render(<ReflectionCard session={{ durationMinutes: 30 }} mood="Curious" notes={NOTES} />)
+      expect(screen.queryByText(/Edited/)).toBeNull()
+    })
+  })
 })

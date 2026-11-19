@@ -25,6 +25,13 @@ public class Session
     /// <summary>Set by the database when the session is saved.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>
+    /// When its date, duration or pages last changed. The database sets it to
+    /// CreatedAt's time at first, and the API moves it on each edit that changes
+    /// one of them. Its reflection keeps its own UpdatedAt for the mood and notes.
+    /// </summary>
+    public DateTimeOffset UpdatedAt { get; private set; }
+
     /// <summary>What was thought. Every session the API saves has one.</summary>
     public Reflection? Reflection { get; set; }
 }
