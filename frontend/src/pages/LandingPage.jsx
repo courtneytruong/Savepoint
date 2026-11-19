@@ -10,7 +10,7 @@ const PREVIEW_ITEMS = [
     medium: 'Book',
     status: 'Finished',
     mood: 'Moved',
-    rating: 9,
+    rating: 5,
     excerpt: 'The crossing of the ice stayed with me long after the last page.',
   },
   {
@@ -19,7 +19,7 @@ const PREVIEW_ITEMS = [
     medium: 'Game',
     status: 'InProgress',
     mood: 'Hooked',
-    rating: 10,
+    rating: 5,
     excerpt: 'One more run turned into three. Every failure still moves the story along.',
   },
   {
@@ -28,7 +28,7 @@ const PREVIEW_ITEMS = [
     medium: 'Book',
     status: 'Finished',
     mood: 'Curious',
-    rating: 8,
+    rating: 4,
     excerpt: 'I had no idea what was going on at first, and that turned out to be the point.',
   },
   {
@@ -37,7 +37,7 @@ const PREVIEW_ITEMS = [
     medium: 'Game',
     status: 'Finished',
     mood: 'Moved',
-    rating: 10,
+    rating: 5,
     excerpt: 'I wish I could forget it and start again.',
   },
 ]

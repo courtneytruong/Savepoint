@@ -41,6 +41,7 @@ import {
   SkeletonGroup,
   SkeletonText,
   Spinner,
+  StarRating,
   StatGroup,
   StatTile,
   StatusBadge,
@@ -746,7 +747,7 @@ describe('ItemCard', () => {
           medium="Book"
           status="Finished"
           mood="Curious"
-          rating={8}
+          rating={4}
           excerpt="I had no idea what was going on."
         />
       </ItemGrid>,
@@ -758,13 +759,14 @@ describe('ItemCard', () => {
     expect(screen.getByText('Susanna Clarke')).toBeTruthy()
     expect(screen.getByText('Curious')).toBeTruthy()
     expect(screen.getByText('I had no idea what was going on.')).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'Rated 4 out of 5 stars' })).toBeTruthy()
   })
 
   it('works for an item with no mood, rating or reflection yet', () => {
     render(<ItemCard href="/items/2" title="Disco Elysium" medium="Game" status="Backlog" />)
 
     expect(screen.getByRole('link', { name: 'Disco Elysium' })).toBeTruthy()
-    expect(screen.queryByText('/10')).toBeNull()
+    expect(screen.queryByRole('img', { name: /^Rated/ })).toBeNull()
   })
 
   it('shows no rating when the API says it has none yet', () => {
@@ -772,13 +774,68 @@ describe('ItemCard', () => {
       <ItemCard href="/items/2" title="Disco Elysium" medium="Game" status="Backlog" rating={null} />,
     )
     expect(container.textContent).not.toMatch('null')
-    expect(screen.queryByText('/10')).toBeNull()
+    expect(screen.queryByRole('img', { name: /^Rated/ })).toBeNull()
   })
 
-  it('shows a rating out of 10', () => {
-    const { container } = render(<Rating value={9} />)
+  it('shows a rating as five stars, that many of them filled', () => {
+    render(<Rating value={3} />)
 
-    expect(container.textContent).toBe('9/10')
+    const stars = screen.getByRole('img', { name: 'Rated 3 out of 5 stars' })
+    const icons = stars.querySelectorAll('svg')
+    expect(icons).toHaveLength(5)
+    expect([...icons].map((icon) => icon.hasAttribute('data-filled'))).toEqual([true, true, true, false, false])
+  })
+})
+
+describe('StarRating', () => {
+  const star = (name) => within(screen.getByRole('group', { name: 'Rating' })).getByRole('button', { name })
+  const filled = () => screen.getByRole('group', { name: 'Rating' }).querySelectorAll('svg[data-filled]').length
+
+  it('offers a button for each of 1 to 5 stars, the current one pressed', () => {
+    render(<StarRating value={4} onChange={vi.fn()} />)
+
+    expect(star('1 star').getAttribute('aria-pressed')).toBe('false')
+    expect(star('4 stars').getAttribute('aria-pressed')).toBe('true')
+    expect(star('5 stars').getAttribute('aria-pressed')).toBe('false')
+    expect(filled()).toBe(4)
+    expect(screen.queryByText('Not rated yet')).toBeNull()
+  })
+
+  it('says when there is no rating yet, with every star empty', () => {
+    render(<StarRating value={null} onChange={vi.fn()} />)
+
+    expect(screen.getByText('Not rated yet')).toBeTruthy()
+    expect(filled()).toBe(0)
+    expect(star('3 stars').getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('reports the number of stars pressed', () => {
+    const onChange = vi.fn()
+    render(<StarRating value={null} onChange={onChange} />)
+
+    fireEvent.click(star('2 stars'))
+
+    expect(onChange).toHaveBeenCalledWith(2)
+  })
+
+  it('fills up to the star pointed at, then back to the rating', () => {
+    render(<StarRating value={2} onChange={vi.fn()} />)
+
+    fireEvent.mouseEnter(star('5 stars'))
+    expect(filled()).toBe(5)
+    fireEvent.mouseLeave(screen.getByRole('group', { name: 'Rating' }))
+    expect(filled()).toBe(2)
+  })
+
+  it('ignores presses while a rating saves', () => {
+    const onChange = vi.fn()
+    render(<StarRating value={2} onChange={onChange} busy />)
+
+    fireEvent.click(star('5 stars'))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByRole('group', { name: 'Rating' }).getAttribute('aria-busy')).toBe('true')
+    expect(star('5 stars').getAttribute('aria-disabled')).toBe('true')
   })
 })
 

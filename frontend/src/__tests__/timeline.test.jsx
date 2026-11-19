@@ -14,8 +14,8 @@ const HISTORY = {
     { id: 4, status: 'InProgress', changedAt: '2026-10-25T19:00:00' },
   ],
   ratingChanges: [
-    { id: 2, rating: 9, changedAt: '2026-10-26T21:30:00' },
-    { id: 1, rating: 7, changedAt: '2026-10-04T21:30:00' },
+    { id: 2, rating: 5, changedAt: '2026-10-26T21:30:00' },
+    { id: 1, rating: 4, changedAt: '2026-10-04T21:30:00' },
   ],
   sessions: [
     {
@@ -71,7 +71,7 @@ describe('buildTimeline', () => {
     expect(byKey['status-1']).toMatchObject({ first: true, previous: undefined })
     expect(byKey['status-4']).toMatchObject({ first: false, previous: 'Finished' })
     expect(byKey['rating-1'].previous).toBeUndefined()
-    expect(byKey['rating-2'].previous).toBe(7)
+    expect(byKey['rating-2'].previous).toBe(4)
   })
 
   it('works with any of the lists left out', () => {
@@ -147,9 +147,9 @@ describe('Timeline', () => {
     expect(text[2]).toContain('#worldbuilding')
     expect(text[3]).toMatch(/Logged on/)
     expect(text[4]).toContain('Finished reading')
-    expect(text[5]).toContain('Rated 7/10')
+    expect(text[5]).toContain('Rated 4 stars')
     expect(text[6]).toContain('Picked back up')
-    expect(text[7]).toContain('Changed rating from 7 to 9/10')
+    expect(text[7]).toContain('Changed rating from 4 to 5 stars')
     expect(text[8]).toContain('Reflection')
     expect(text[8]).toContain('Delighted')
   })

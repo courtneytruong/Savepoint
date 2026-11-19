@@ -10,7 +10,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Book',
     status: 'Finished',
     mood: 'Moved',
-    rating: 9,
+    rating: 5,
     excerpt: 'The crossing of the ice stayed with me long after the last page. I keep coming back to how trust is built.',
   },
   {
@@ -20,7 +20,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Game',
     status: 'InProgress',
     mood: 'Hooked',
-    rating: 10,
+    rating: 5,
     excerpt: 'One more run turned into three. Every failure still moves the story along, which keeps me coming back.',
   },
   {
@@ -30,7 +30,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Book',
     status: 'Finished',
     mood: 'Curious',
-    rating: 8,
+    rating: 4,
     excerpt: 'I had no idea what was going on for the first hundred pages, and that turned out to be the point.',
   },
   {
@@ -40,7 +40,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Game',
     status: 'Finished',
     mood: 'Moved',
-    rating: 10,
+    rating: 5,
     excerpt: 'Nothing else has made me feel like this about a solar system. I wish I could forget it and start again.',
   },
   {
@@ -50,7 +50,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Book',
     status: 'InProgress',
     mood: 'Curious',
-    rating: 7,
+    rating: 4,
     excerpt: 'Slow going through the politics, but the world is so complete that I keep picking it back up.',
   },
   {
@@ -67,7 +67,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Book',
     status: 'Dropped',
     mood: 'Bored',
-    rating: 4,
+    rating: 2,
     excerpt: 'I can see why people love it, but I stopped looking forward to picking it up. Maybe another year.',
   },
   {
@@ -77,7 +77,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Game',
     status: 'Finished',
     mood: 'Delighted',
-    rating: 9,
+    rating: 5,
     excerpt: 'Hard in a way that never felt unfair. The summit chapter made me put the controller down for a minute.',
   },
   {
@@ -87,7 +87,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Book',
     status: 'Finished',
     mood: 'Moved',
-    rating: 8,
+    rating: 4,
     excerpt: "Quiet the whole way through, then it hit me all at once. Klara's hope was the saddest part.",
   },
   {
@@ -97,7 +97,7 @@ export const SAMPLE_ITEMS = [
     medium: 'Game',
     status: 'Dropped',
     mood: 'Frustrated',
-    rating: 6,
+    rating: 3,
     excerpt: 'Beautiful, but I spent more time lost than exploring. I might come back when I have more patience.',
   },
   {
@@ -236,7 +236,7 @@ const HISTORY_PLAN = {
       [130, 'InProgress'],
       [110, 'Finished'],
     ],
-    ratings: [[110, 9]],
+    ratings: [[110, 5]],
     reflections: [
       [109, 'Moved', 'The crossing of the ice stayed with me long after the last page. I keep coming back to how trust is built.', ['friendship']],
     ],
@@ -247,8 +247,8 @@ const HISTORY_PLAN = {
       [34, 'InProgress'],
     ],
     ratings: [
-      [20, 8],
-      [4, 10],
+      [20, 4],
+      [4, 5],
     ],
   },
   Piranesi: {
@@ -258,8 +258,8 @@ const HISTORY_PLAN = {
       [14, 'Finished'],
     ],
     ratings: [
-      [14, 7],
-      [5, 8],
+      [14, 3],
+      [5, 4],
     ],
     reflections: [
       [14, 'Curious', 'I had no idea what was going on for the first hundred pages, and that turned out to be the point.', ['theory']],
@@ -271,7 +271,7 @@ const HISTORY_PLAN = {
       [28, 'InProgress'],
       [22, 'Finished'],
     ],
-    ratings: [[22, 10]],
+    ratings: [[22, 5]],
     reflections: [
       [21, 'Moved', 'Nothing else has made me feel like this about a solar system. I wish I could forget it and start again.', ['ending', 'space']],
     ],
@@ -281,7 +281,7 @@ const HISTORY_PLAN = {
       [90, 'Backlog'],
       [6, 'InProgress'],
     ],
-    ratings: [[1, 7]],
+    ratings: [[1, 4]],
   },
   'Disco Elysium': { statuses: [[3, 'Backlog']] },
   Middlemarch: {
@@ -289,14 +289,14 @@ const HISTORY_PLAN = {
       [45, 'InProgress'],
       [19, 'Dropped'],
     ],
-    ratings: [[19, 4]],
+    ratings: [[19, 2]],
   },
   Celeste: {
     statuses: [
       [10, 'InProgress'],
       [2, 'Finished'],
     ],
-    ratings: [[2, 9]],
+    ratings: [[2, 5]],
   },
   'Klara and the Sun': {
     statuses: [
@@ -304,7 +304,7 @@ const HISTORY_PLAN = {
       [9, 'InProgress'],
       [5, 'Finished'],
     ],
-    ratings: [[5, 8]],
+    ratings: [[5, 4]],
   },
   'Elden Ring': {
     statuses: [
@@ -313,8 +313,8 @@ const HISTORY_PLAN = {
       [12, 'Dropped'],
     ],
     ratings: [
-      [25, 8],
-      [12, 6],
+      [25, 4],
+      [12, 3],
     ],
     reflections: [
       [11, 'Frustrated', 'Beautiful, but I spent more time lost than exploring. I might come back when I have more patience.', []],
@@ -332,8 +332,8 @@ export const TIMELINE_EXAMPLE = buildTimeline({
     { id: 4, status: 'InProgress', changedAt: '2026-10-25T19:00:00' },
   ],
   ratingChanges: [
-    { id: 1, rating: 7, changedAt: '2026-10-04T21:30:00' },
-    { id: 2, rating: 9, changedAt: '2026-10-26T21:30:00' },
+    { id: 1, rating: 4, changedAt: '2026-10-04T21:30:00' },
+    { id: 2, rating: 5, changedAt: '2026-10-26T21:30:00' },
   ],
   sessions: [
     {
