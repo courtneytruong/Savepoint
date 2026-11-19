@@ -81,6 +81,7 @@ describe('ItemPage', () => {
     cleanup()
     sessionsAnswer = undefined
     statusChangesAnswer = undefined
+    window.localStorage.clear()
   })
 
   it('asks the API for the item in the address', () => {
@@ -590,6 +591,53 @@ describe('ItemPage', () => {
       const cards = await within(region()).findAllByRole('article')
       expect(cards[0].textContent).not.toMatch('Logged on')
       expect(cards[1].textContent).toMatch('Logged on')
+    })
+
+    describe('its order', () => {
+      const orderPill = (name) =>
+        within(screen.getByRole('group', { name: 'Timeline order' })).getByRole('button', { name })
+      const notes = () => within(region()).getAllByRole('article').map((card) => card.textContent)
+      const SESSIONS = [
+        session('s2', '2026-11-14', 'The quantum moon finally made sense.'),
+        session('s1', '2026-11-12', 'Burned to death by the sun, twice.'),
+      ]
+
+      it('shows the newest first unless told otherwise', async () => {
+        await loaded(SESSIONS)
+        await within(region()).findAllByRole('article')
+        expect(orderPill('Newest first').getAttribute('aria-pressed')).toBe('true')
+        expect(orderPill('Oldest first').getAttribute('aria-pressed')).toBe('false')
+        expect(notes()[0]).toMatch('The quantum moon finally made sense.')
+      })
+
+      it('turns round to show the oldest first, and remembers that', async () => {
+        await loaded(SESSIONS)
+        await within(region()).findAllByRole('article')
+
+        fireEvent.click(orderPill('Oldest first'))
+
+        expect(orderPill('Oldest first').getAttribute('aria-pressed')).toBe('true')
+        expect(notes()[0]).toMatch('Burned to death by the sun, twice.')
+        const entries = within(region()).getAllByRole('listitem')
+        expect(entries[0].textContent).toMatch('Added to your library')
+        expect(window.localStorage.getItem('savepoint.timeline.order')).toBe('oldest')
+      })
+
+      it('starts with the order chosen before', async () => {
+        window.localStorage.setItem('savepoint.timeline.order', 'oldest')
+        await loaded(SESSIONS)
+        await within(region()).findAllByRole('article')
+        expect(orderPill('Oldest first').getAttribute('aria-pressed')).toBe('true')
+        expect(notes()[0]).toMatch('Burned to death by the sun, twice.')
+      })
+
+      it('isn’t offered until the timeline has loaded', async () => {
+        stubSessions(neverAnswers)
+        stubFetch(async () => json(ITEM))
+        renderPage()
+        await screen.findByRole('status', { name: 'Loading timeline' })
+        expect(screen.queryByRole('group', { name: 'Timeline order' })).toBeNull()
+      })
     })
 
     it('offers to try again when the sessions can’t be loaded', async () => {

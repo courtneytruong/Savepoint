@@ -9,6 +9,8 @@ export {
   LuArrowDown as SortDescendingIcon,
   LuArrowRight as ArrowIcon,
   LuArrowUp as SortAscendingIcon,
+  LuCalendarArrowDown as NewestFirstIcon,
+  LuCalendarArrowUp as OldestFirstIcon,
   LuCalendarDays as CalendarIcon,
   LuChevronDown as ExpandIcon,
   LuChevronLeft as PreviousIcon,

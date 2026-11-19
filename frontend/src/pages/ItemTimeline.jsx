@@ -8,13 +8,15 @@ import {
   DeleteModal,
   EditSessionModal,
   Heading,
+  IconToggle,
   LogSessionModal,
   Text,
   Timeline,
+  useStoredChoice,
   useToast,
   VisuallyHidden,
 } from '../components/index.js'
-import { DeleteIcon, EditIcon, ReflectionIcon } from '../components/icons.js'
+import { DeleteIcon, EditIcon, NewestFirstIcon, OldestFirstIcon, ReflectionIcon } from '../components/icons.js'
 import { parseDateKey } from '../utils/calendarDates.js'
 import styles from './ItemPage.module.css'
 
@@ -25,6 +27,12 @@ const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const sessionDay = (session) => dayFormat.format(parseDateKey(session.date))
 
 const NOT_LOADED = { state: 'loading', sessions: [], statusChanges: [] }
+
+// The ways round the timeline can be read, as Timeline's order values.
+const ORDERS = [
+  { value: 'newest', label: 'Newest first', Icon: NewestFirstIcon },
+  { value: 'oldest', label: 'Oldest first', Icon: OldestFirstIcon },
+]
 
 /**
  * The Timeline part of an item's page: its status changes and its sessions with
@@ -45,6 +53,12 @@ export function ItemTimeline({ item, onItemMissing }) {
   const [editing, setEditing] = useState(null)
   // The session being deleted, if any.
   const [deleting, setDeleting] = useState(null)
+  // Remembered in this browser for every item, as the library's view is.
+  const [order, setOrder] = useStoredChoice(
+    'savepoint.timeline.order',
+    ORDERS.map(({ value }) => value),
+    'newest',
+  )
   const toast = useToast()
   // Always the page's latest callback, without it being a reason to load again:
   // the page passes a new function each render.
@@ -166,6 +180,7 @@ export function ItemTimeline({ item, onItemMissing }) {
         <Timeline
           entries={buildTimeline({ sessions: loaded.sessions, statusChanges })}
           medium={item.medium}
+          order={order}
           actionsFor={sessionActions}
           loading={loaded.state === 'loading'}
         />
@@ -179,10 +194,15 @@ export function ItemTimeline({ item, onItemMissing }) {
         <Heading as="h2" id={headingId}>
           Timeline
         </Heading>
-        <Button onClick={() => setLogging(true)}>
-          <ReflectionIcon />
-          Log session
-        </Button>
+        <div className={styles.actions}>
+          {loaded.state === 'ready' && (
+            <IconToggle label="Timeline order" options={ORDERS} value={order} onChange={setOrder} />
+          )}
+          <Button onClick={() => setLogging(true)}>
+            <ReflectionIcon />
+            Log session
+          </Button>
+        </div>
       </header>
       {content}
       <LogSessionModal open={logging} item={item} onClose={() => setLogging(false)} onSubmit={saveSession} />

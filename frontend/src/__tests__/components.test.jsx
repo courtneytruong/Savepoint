@@ -14,6 +14,7 @@ import {
   Header,
   Heading,
   Hero,
+  IconToggle,
   Input,
   ItemCard,
   ItemGrid,
@@ -770,6 +771,25 @@ describe('ItemCard', () => {
     const { container } = render(<Rating value={9} />)
 
     expect(container.textContent).toBe('9/10')
+  })
+})
+
+describe('IconToggle', () => {
+  const Icon = () => <svg />
+  const options = [
+    { value: 'newest', label: 'Newest first', Icon },
+    { value: 'oldest', label: 'Oldest first', Icon },
+  ]
+
+  it('names its group and each icon button, marks the chosen one, and reports changes', () => {
+    const onChange = vi.fn()
+    render(<IconToggle label="Timeline order" options={options} value="oldest" onChange={onChange} />)
+    const group = screen.getByRole('group', { name: 'Timeline order' })
+
+    expect(within(group).getByRole('button', { name: 'Newest first' }).getAttribute('aria-pressed')).toBe('false')
+    expect(within(group).getByRole('button', { name: 'Oldest first' }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(within(group).getByRole('button', { name: 'Newest first' }))
+    expect(onChange).toHaveBeenCalledWith('newest')
   })
 })
 
