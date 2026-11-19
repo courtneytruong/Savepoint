@@ -24,6 +24,8 @@ public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
 
     public DbSet<StatusChange> StatusChanges => Set<StatusChange>();
 
+    public DbSet<RatingChange> RatingChanges => Set<RatingChange>();
+
     public DbSet<Session> Sessions => Set<Session>();
 
     public DbSet<Reflection> Reflections => Set<Reflection>();

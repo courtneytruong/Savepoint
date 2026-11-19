@@ -53,6 +53,7 @@ import {
   MOODS,
   Pagination,
   PasswordField,
+  Rating,
   ReflectionCard,
   ReflectionForm,
   Section,
@@ -67,6 +68,7 @@ import {
   SkeletonGroup,
   SkeletonText,
   Spinner,
+  StarRating,
   StatGroup,
   StatTile,
   StatusBadge,
@@ -440,7 +442,7 @@ function GalleryPage({ page }) {
             <Tooltip content="A longer hint wraps onto more lines, so it never runs off the screen or gets too wide to read comfortably.">
               <Button variant="outline">Long text</Button>
             </Tooltip>
-            <Tooltip content="Your rating out of 10, from your latest change">
+            <Tooltip content="Your rating out of 5 stars, from your latest change">
               <button type="button" className={styles.infoButton} aria-label="About ratings">
                 <InfoIcon aria-hidden="true" />
               </button>
@@ -592,6 +594,11 @@ function GalleryPage({ page }) {
         <Section>
           <Heading size="medium">Filter pills</Heading>
           <PillDemo />
+        </Section>
+
+        <Section>
+          <Heading size="medium">Star rating</Heading>
+          <StarRatingDemo />
         </Section>
 
         <Section>
@@ -933,6 +940,28 @@ function PaginationDemo() {
         onPageChange={setPage}
       />
     </Card>
+  )
+}
+
+function StarRatingDemo() {
+  const [rated, setRated] = useState(4)
+  const [unrated, setUnrated] = useState(null)
+
+  return (
+    <>
+      <Group title="Rated: press another star to change it">
+        <StarRating value={rated} onChange={setRated} />
+      </Group>
+      <Group title="Not rated yet">
+        <StarRating value={unrated} onChange={setUnrated} />
+      </Group>
+      <Group title="Saving">
+        <StarRating value={3} onChange={() => {}} busy />
+      </Group>
+      <Group title="As shown on cards and in the library">
+        <Rating value={rated} />
+      </Group>
+    </>
   )
 }
 

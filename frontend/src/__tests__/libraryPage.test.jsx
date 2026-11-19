@@ -14,15 +14,21 @@ const item = (overrides) => ({
   creator: 'Susanna Clarke',
   status: 'Backlog',
   statusChangedAt: '2026-11-10T12:00:00+00:00',
+  rating: null,
+  ratingChangeId: null,
+  ratingChangedAt: null,
   createdAt: '2026-11-10T12:00:00+00:00',
   ...overrides,
 })
 
+// Rated as the API says it, with the id and time of the change.
+const rated = (rating) => ({ rating, ratingChangeId: crypto.randomUUID(), ratingChangedAt: '2026-11-11T12:00:00+00:00' })
+
 // Newest first, as the API sends them.
 const ITEMS = [
-  item({ medium: 'Game', title: 'Hades', creator: 'Supergiant Games', status: 'InProgress', createdAt: '2026-11-10T12:00:00+00:00' }),
+  item({ medium: 'Game', title: 'Hades', creator: 'Supergiant Games', status: 'InProgress', createdAt: '2026-11-10T12:00:00+00:00', ...rated(3) }),
   item({ title: 'Piranesi', createdAt: '2026-11-09T12:00:00+00:00' }),
-  item({ title: 'Tetris', medium: 'Game', creator: null, status: 'Finished', createdAt: '2026-11-08T12:00:00+00:00' }),
+  item({ title: 'Tetris', medium: 'Game', creator: null, status: 'Finished', createdAt: '2026-11-08T12:00:00+00:00', ...rated(5) }),
 ]
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status })
@@ -93,6 +99,8 @@ describe('LibraryPage', () => {
     expect(hades.getByText('Supergiant Games')).toBeTruthy()
     expect(hades.getByText('Game')).toBeTruthy()
     expect(hades.getByText('In progress')).toBeTruthy()
+    expect(hades.getByRole('img', { name: 'Rated 3 out of 5 stars' })).toBeTruthy()
+    expect(within(screen.getAllByRole('row')[2]).getByText('Not rated')).toBeTruthy()
   })
 
   it("links each title in the list to the item's page, which opens on a click", async () => {
@@ -264,6 +272,24 @@ describe('LibraryPage', () => {
       expect(titles()).toEqual(['Hades', 'Piranesi', 'Tetris'])
       fireEvent.click(screen.getByRole('button', { name: /Title/ }))
       expect(titles()).toEqual(['Tetris', 'Piranesi', 'Hades'])
+    })
+
+    it('sorts by rating, best first, with unrated items last either way', async () => {
+      await loaded()
+      fireEvent.click(screen.getByRole('button', { name: /Rating/ }))
+      expect(titles()).toEqual(['Tetris', 'Hades', 'Piranesi'])
+      fireEvent.click(screen.getByRole('button', { name: /Rating/ }))
+      expect(titles()).toEqual(['Hades', 'Tetris', 'Piranesi'])
+    })
+
+    it('sorts by rating from the grid view\u2019s menu, with each card showing its stars', async () => {
+      window.localStorage.setItem('savepoint.library.view', 'grid')
+      await loaded()
+      fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'rating:descending' } })
+      const cardTitles = screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
+      expect(cardTitles).toEqual(['Tetris', 'Hades', 'Piranesi'])
+      expect(screen.getByRole('img', { name: 'Rated 5 out of 5 stars' })).toBeTruthy()
+      expect(screen.getAllByRole('listitem').some((card) => card.textContent.includes('null'))).toBe(false)
     })
 
     it('sorts from a menu in the grid view, which has no headers', async () => {

@@ -76,3 +76,9 @@
   margin-top: 2px;
   color: var(--color-ash-lilac);
 }
+
+/* Quieter than a rating, so rated items stand out down the column. */
+.unrated {
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+}

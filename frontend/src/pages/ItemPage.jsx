@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { changeItemStatus, deleteItem, editItem, getItem } from '../api/items.js'
+import { changeItemStatus, deleteItem, editItem, getItem, rateItem } from '../api/items.js'
 import {
   Button,
   DeleteItemModal,
@@ -14,6 +14,8 @@ import {
   Skeleton,
   SkeletonGroup,
   SkeletonText,
+  StarRating,
+  starsLabel,
   STATUSES,
   Text,
   useToast,
@@ -43,6 +45,8 @@ export function ItemPage({ account, onSignedOut }) {
   const [tries, setTries] = useState(0)
   // The status being saved, if any, so a second press waits for the first.
   const [changing, setChanging] = useState(null)
+  // The stars being saved, if any, shown at once and kept to one save at a time.
+  const [rating, setRating] = useState(null)
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
@@ -124,6 +128,34 @@ export function ItemPage({ account, onSignedOut }) {
     }
   }
 
+  // Saves straight away, as a status does. A rating can't be removed, only changed,
+  // so a press on the wrong star is put right by pressing the right one.
+  async function rate(stars) {
+    if (rating || stars === item.rating) return
+    setRating(stars)
+    let result
+    try {
+      result = await rateItem(item.id, stars)
+    } catch {
+      result = { error: 'failed' }
+    }
+    setRating(null)
+
+    if (result.item) {
+      stillShowing(item.id, { id: item.id, state: 'ready', item: result.item })
+      toast.show({ title: `${result.item.title} rated ${starsLabel(stars)}` })
+    } else if (result.error === 'missing') {
+      stillShowing(item.id, { id: item.id, state: 'missing', item: null })
+    } else {
+      toast.show({
+        tone: 'error',
+        title: "Couldn't save the rating",
+        description: FAILED_MESSAGE,
+        action: { label: 'Try again', onClick: () => rate(stars) },
+      })
+    }
+  }
+
   let content
   if (state === 'loading') {
     content = (
@@ -197,6 +229,7 @@ export function ItemPage({ account, onSignedOut }) {
             </FilterPill>
           ))}
         </FilterGroup>
+        <StarRating value={rating ?? item.rating} onChange={rate} busy={rating !== null} />
         <dl className={styles.facts}>
           <div>
             <dt>Added</dt>

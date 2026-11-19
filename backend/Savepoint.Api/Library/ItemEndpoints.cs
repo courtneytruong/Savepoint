@@ -23,21 +23,25 @@ public static class ItemEndpoints
         items.MapPost("/", Create);
         items.MapPut("/{id:guid}", Update);
         items.MapPost("/{id:guid}/status", ChangeStatus);
+        items.MapPost("/{id:guid}/rating", Rate);
         items.MapGet("/{id:guid}/status-changes", ListStatusChanges);
+        items.MapGet("/{id:guid}/rating-changes", ListRatingChanges);
         items.MapDelete("/{id:guid}", Delete);
         return app;
     }
 
-    // An item with its newest status change. The database picks the newest, rather
-    // than every change being loaded to find it.
-    private sealed record ItemRow(Item Item, StatusChange Current);
+    // An item with its newest status change, and its newest rating change if it has
+    // been rated. The database picks the newest, rather than every change being
+    // loaded to find it.
+    private sealed record ItemRow(Item Item, StatusChange Status, RatingChange? Rating);
 
     // Filters and ordering go before this, on Items, where they can become SQL.
-    private static IQueryable<ItemRow> WithCurrentStatus(this IQueryable<Item> items) => items
+    private static IQueryable<ItemRow> WithCurrent(this IQueryable<Item> items) => items
         .Select(i => new ItemRow(
             i,
             // Ids are made in time order, so they break a tie between changes saved at once.
-            i.StatusChanges.OrderByDescending(s => s.ChangedAt).ThenByDescending(s => s.Id).First()))
+            i.StatusChanges.OrderByDescending(s => s.ChangedAt).ThenByDescending(s => s.Id).First(),
+            i.RatingChanges.OrderByDescending(r => r.ChangedAt).ThenByDescending(r => r.Id).FirstOrDefault()))
         .AsNoTracking();
 
     /// <summary>
@@ -51,10 +55,10 @@ public static class ItemEndpoints
         var userId = CurrentUser.IdOf(principal, users);
         var row = await db.Items
             .Where(i => i.Id == id && i.UserId == userId)
-            .WithCurrentStatus()
+            .WithCurrent()
             .SingleOrDefaultAsync(cancellationToken);
 
-        return row is null ? TypedResults.NotFound() : TypedResults.Ok(ToResponse(row.Item, row.Current));
+        return row is null ? TypedResults.NotFound() : TypedResults.Ok(ToResponse(row));
     }
 
     /// <summary>
@@ -70,10 +74,10 @@ public static class ItemEndpoints
             .Where(i => i.UserId == userId)
             // Ids are made in time order, so they break a tie between items made at once.
             .OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id)
-            .WithCurrentStatus()
+            .WithCurrent()
             .ToListAsync(cancellationToken);
 
-        return TypedResults.Ok(rows.Select(row => ToResponse(row.Item, row.Current)).ToList());
+        return TypedResults.Ok(rows.Select(ToResponse).ToList());
     }
 
     // Strings rather than enums, and nullable, so a missing or unknown value gets a
@@ -84,10 +88,14 @@ public static class ItemEndpoints
 
     public record ChangeStatusRequest(string? Status);
 
+    // Nullable, so a missing rating gets a field code, as a missing status does.
+    public record RateRequest(int? Rating);
+
     /// <summary>
     /// An item as the frontend sees it, with its current status: the newest of its
     /// status changes, which one that is, and when it happened. The change's id
-    /// matches the one in the item's status changes, so a timeline can add it.
+    /// matches the one in the item's status changes, so a timeline can add it. Its
+    /// rating is told the same way, with all three null until it's rated.
     /// </summary>
     public record ItemResponse(
         Guid Id,
@@ -97,6 +105,9 @@ public static class ItemEndpoints
         string Status,
         Guid StatusChangeId,
         DateTimeOffset StatusChangedAt,
+        int? Rating,
+        Guid? RatingChangeId,
+        DateTimeOffset? RatingChangedAt,
         DateTimeOffset CreatedAt);
 
     /// <summary>
@@ -130,7 +141,9 @@ public static class ItemEndpoints
         await db.SaveChangesAsync(cancellationToken);
 
         // A new item has only its first status, which is its current one.
-        return TypedResults.Created($"/api/items/{item.Id}", ToResponse(item, item.StatusChanges.Single()));
+        // A new item is never rated yet.
+        var created = new ItemRow(item, item.StatusChanges.Single(), Rating: null);
+        return TypedResults.Created($"/api/items/{item.Id}", ToResponse(created));
     }
 
     /// <summary>
@@ -172,8 +185,8 @@ public static class ItemEndpoints
             cancellationToken);
         if (changed == 0) return TypedResults.NotFound();
 
-        var row = await mine.WithCurrentStatus().SingleAsync(cancellationToken);
-        return TypedResults.Ok(ToResponse(row.Item, row.Current));
+        var row = await mine.WithCurrent().SingleAsync(cancellationToken);
+        return TypedResults.Ok(ToResponse(row));
     }
 
     /// <summary>
@@ -198,10 +211,10 @@ public static class ItemEndpoints
         var userId = CurrentUser.IdOf(principal, users);
         var row = await db.Items
             .Where(i => i.Id == id && i.UserId == userId)
-            .WithCurrentStatus()
+            .WithCurrent()
             .SingleOrDefaultAsync(cancellationToken);
         if (row is null) return TypedResults.NotFound();
-        if (row.Current.Status == status) return TypedResults.Ok(ToResponse(row.Item, row.Current));
+        if (row.Status.Status == status) return TypedResults.Ok(ToResponse(row));
 
         // Its own transaction, so the database's clock gives it a later time than
         // the change before.
@@ -209,8 +222,41 @@ public static class ItemEndpoints
         db.StatusChanges.Add(change);
         await db.SaveChangesAsync(cancellationToken);
 
-        return TypedResults.Ok(ToResponse(row.Item, change));
+        return TypedResults.Ok(ToResponse(row with { Status = change }));
     }
+
+    /// <summary>
+    /// Rates an item, or changes its rating, by adding to its rating history, as a
+    /// status change does. Asking for the rating it already has adds nothing. There's
+    /// no way to remove a rating: it can only change. 200 with the item, 404 as for
+    /// Get, or 400 with required, or invalid for anything but whole stars from 1 to 5.
+    /// </summary>
+    private static async Task<Results<Ok<ItemResponse>, NotFound, ValidationProblem>> Rate(
+        Guid id, RateRequest request, ClaimsPrincipal principal, UserManager<User> users,
+        SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        if (request.Rating is not { } rating) return RatingProblem("required");
+        if (rating is < LibraryRules.MinRating or > LibraryRules.MaxRating) return RatingProblem("invalid");
+
+        var userId = CurrentUser.IdOf(principal, users);
+        var row = await db.Items
+            .Where(i => i.Id == id && i.UserId == userId)
+            .WithCurrent()
+            .SingleOrDefaultAsync(cancellationToken);
+        if (row is null) return TypedResults.NotFound();
+        if (row.Rating?.Rating == rating) return TypedResults.Ok(ToResponse(row));
+
+        // Its own transaction, so the database's clock gives it a later time than
+        // the rating before.
+        var change = new RatingChange { ItemId = id, Rating = rating };
+        db.RatingChanges.Add(change);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return TypedResults.Ok(ToResponse(row with { Rating = change }));
+    }
+
+    private static ValidationProblem RatingProblem(string code) =>
+        TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["rating"] = [code] });
 
     /// <summary>A status change as the frontend sees it, for an item's timeline.</summary>
     public record StatusChangeResponse(Guid Id, string Status, DateTimeOffset ChangedAt);
@@ -234,6 +280,33 @@ public static class ItemEndpoints
             .ToListAsync(cancellationToken);
 
         return changes.Count == 0 ? TypedResults.NotFound() : TypedResults.Ok(changes);
+    }
+
+    /// <summary>A rating change as the frontend sees it, for an item's timeline.</summary>
+    public record RatingChangeResponse(Guid Id, int Rating, DateTimeOffset ChangedAt);
+
+    /// <summary>
+    /// Every rating of an item, oldest first: an empty list until it's rated. 404 as
+    /// for Get.
+    /// </summary>
+    private static async Task<Results<Ok<List<RatingChangeResponse>>, NotFound>> ListRatingChanges(
+        Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        // An unrated item has no changes, so unlike status changes an empty list can't
+        // mean "not yours". Asking for the item and its ratings together tells the two
+        // apart in one query: no item is a 404, an item with none is an empty list.
+        var changes = await db.Items
+            .Where(i => i.Id == id && i.UserId == userId)
+            .Select(i => i.RatingChanges
+                // Ids are made in time order, so they break a tie between changes saved at once.
+                .OrderBy(r => r.ChangedAt).ThenBy(r => r.Id)
+                .Select(r => new RatingChangeResponse(r.Id, r.Rating, r.ChangedAt))
+                .ToList())
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return changes is null ? TypedResults.NotFound() : TypedResults.Ok(changes);
     }
 
     /// <summary>
@@ -280,14 +353,17 @@ public static class ItemEndpoints
         return new ItemDetails(medium, title, creator);
     }
 
-    private static ItemResponse ToResponse(Item item, StatusChange current) =>
+    private static ItemResponse ToResponse(ItemRow row) =>
         new(
-            item.Id,
-            item.Medium.ToString(),
-            item.Title,
-            item.Creator,
-            current.Status.ToString(),
-            current.Id,
-            current.ChangedAt,
-            item.CreatedAt);
+            row.Item.Id,
+            row.Item.Medium.ToString(),
+            row.Item.Title,
+            row.Item.Creator,
+            row.Status.Status.ToString(),
+            row.Status.Id,
+            row.Status.ChangedAt,
+            row.Rating?.Rating,
+            row.Rating?.Id,
+            row.Rating?.ChangedAt,
+            row.Item.CreatedAt);
 }

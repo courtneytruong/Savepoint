@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useId, useState } from 'react'
-import { getStatusChanges } from '../api/items.js'
+import { getRatingChanges, getStatusChanges } from '../api/items.js'
 import { deleteSession, editSession, getSessions, logSession } from '../api/sessions.js'
 import {
   Alert,
@@ -26,7 +26,7 @@ const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
 const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const sessionDay = (session) => dayFormat.format(parseDateKey(session.date))
 
-const NOT_LOADED = { state: 'loading', sessions: [], statusChanges: [] }
+const NOT_LOADED = { state: 'loading', sessions: [], statusChanges: [], ratingChanges: [] }
 
 // The ways round the timeline can be read, as Timeline's order values.
 const ORDERS = [
@@ -35,8 +35,8 @@ const ORDERS = [
 ]
 
 /**
- * The Timeline part of an item's page: its status changes and its sessions with
- * their reflections, newest first, and the way to log another session. Give it
+ * The Timeline part of an item's page: its status and rating changes and its
+ * sessions with their reflections, newest first, and the way to log another session. Give it
  * key={item.id}, so another item starts afresh.
  *
  * item: the item the page shows. onItemMissing: called when the API says the item
@@ -67,11 +67,18 @@ export function ItemTimeline({ item, onItemMissing }) {
   useEffect(() => {
     const controller = new AbortController()
     const options = { signal: controller.signal }
-    // Both at once. Either one answering 404 means the item is gone.
-    Promise.all([getSessions(item.id, options), getStatusChanges(item.id, options)])
-      .then(([sessions, statusChanges]) => {
-        if (sessions && statusChanges) setLoaded({ state: 'ready', sessions, statusChanges })
-        else reportMissing()
+    // All at once. Any one answering 404 means the item is gone.
+    Promise.all([
+      getSessions(item.id, options),
+      getStatusChanges(item.id, options),
+      getRatingChanges(item.id, options),
+    ])
+      .then(([sessions, statusChanges, ratingChanges]) => {
+        if (sessions && statusChanges && ratingChanges) {
+          setLoaded({ state: 'ready', sessions, statusChanges, ratingChanges })
+        } else {
+          reportMissing()
+        }
       })
       .catch((error) => {
         // An abort means the page cleaned up this request, not that it failed.
@@ -152,13 +159,23 @@ export function ItemTimeline({ item, onItemMissing }) {
     )
   }
 
-  // The page changes the item's status itself, and the item then carries its newest
-  // change, so a status picked on the page shows here without loading again.
-  const current = { id: item.statusChangeId, status: item.status, changedAt: item.statusChangedAt }
-  const statusChanges =
-    loaded.state !== 'ready' || !current.id || loaded.statusChanges.some((change) => change.id === current.id)
-      ? loaded.statusChanges
-      : [...loaded.statusChanges, current]
+  // The page changes the item's status and rating itself, and the item then carries
+  // its newest change of each, so one picked on the page shows here without loading
+  // again. An unrated item has no rating change to add.
+  const withCurrent = (changes, current) =>
+    loaded.state !== 'ready' || !current.id || changes.some((change) => change.id === current.id)
+      ? changes
+      : [...changes, current]
+  const statusChanges = withCurrent(loaded.statusChanges, {
+    id: item.statusChangeId,
+    status: item.status,
+    changedAt: item.statusChangedAt,
+  })
+  const ratingChanges = withCurrent(loaded.ratingChanges, {
+    id: item.ratingChangeId,
+    rating: item.rating,
+    changedAt: item.ratingChangedAt,
+  })
 
   let content
   if (loaded.state === 'failed') {
@@ -178,7 +195,7 @@ export function ItemTimeline({ item, onItemMissing }) {
           <Text>No sessions yet. Each one you log shows here, with its reflection.</Text>
         )}
         <Timeline
-          entries={buildTimeline({ sessions: loaded.sessions, statusChanges })}
+          entries={buildTimeline({ sessions: loaded.sessions, statusChanges, ratingChanges })}
           medium={item.medium}
           order={order}
           actionsFor={sessionActions}

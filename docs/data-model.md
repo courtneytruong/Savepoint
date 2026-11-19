@@ -78,7 +78,7 @@ erDiagram
 | Items | `Title` | 1 to 200 characters after trimming whitespace |
 | Items | `Creator` | Optional; 1 to 200 characters after trimming, and saved as null when empty |
 | StatusChanges | `Status` | `Backlog`, `InProgress`, `Finished` or `Dropped` |
-| RatingChanges | `Rating` | Whole number from 1 to 10 |
+| RatingChanges | `Rating` | Whole stars from 1 to 5 |
 | Sessions | `Date` | Not after today |
 | Sessions | `DurationMinutes` | Greater than 0, and at most 1440 (24 hours) |
 | Sessions | `PagesRead` | Optional and greater than 0; books only (enforced by the API) |
@@ -135,6 +135,8 @@ A change of opinion is exactly what the timeline should show, so each change add
 
 - An item gets its first `StatusChanges` row when it is created.
 - An item has no `RatingChanges` rows until it is rated.
+- A rating can be changed but not removed, and an item can be rated whatever its status.
+- Ratings are whole stars from 1 to 5. Ten steps were considered and felt too fine to choose between.
 
 ### Moods are a fixed list
 

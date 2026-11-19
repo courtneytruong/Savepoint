@@ -8,6 +8,7 @@ import { sessionEditedAt } from '../../rules/sessionList.js'
 import { ReflectionCard } from './ReflectionCard.jsx'
 import cardStyles from './ReflectionCard.module.css'
 import { Skeleton, SkeletonGroup, SkeletonText } from '../feedback/Skeleton.jsx'
+import { starsLabel } from '../../rules/ratingRules.js'
 import { StatusBadge } from '../library/StatusBadge.jsx'
 import { STATUSES } from '../../rules/statuses.js'
 import { useId } from 'react'
@@ -55,12 +56,12 @@ function describe(entry, medium, actionsFor) {
             <span>
               {entry.previous === undefined ? (
                 <>
-                  Rated <strong className={styles.value}>{entry.rating}/10</strong>
+                  Rated <strong className={styles.value}>{starsLabel(entry.rating)}</strong>
                 </>
               ) : (
                 <>
                   Changed rating from <span className={styles.old}>{entry.previous}</span> to{' '}
-                  <strong className={styles.value}>{entry.rating}/10</strong>
+                  <strong className={styles.value}>{starsLabel(entry.rating)}</strong>
                 </>
               )}
             </span>

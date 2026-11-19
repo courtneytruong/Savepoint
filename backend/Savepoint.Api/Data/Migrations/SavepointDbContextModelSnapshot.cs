@@ -222,6 +222,33 @@ namespace Savepoint.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Savepoint.Api.Library.RatingChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId", "ChangedAt");
+
+                    b.ToTable("RatingChanges", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_RatingChanges_Rating", "\"Rating\" BETWEEN 1 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("Savepoint.Api.Library.StatusChange", b =>
                 {
                     b.Property<Guid>("Id")
@@ -371,6 +398,15 @@ namespace Savepoint.Api.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Savepoint.Api.Library.RatingChange", b =>
+                {
+                    b.HasOne("Savepoint.Api.Library.Item", null)
+                        .WithMany("RatingChanges")
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Savepoint.Api.Library.StatusChange", b =>
                 {
                     b.HasOne("Savepoint.Api.Library.Item", null)
@@ -406,6 +442,8 @@ namespace Savepoint.Api.Data.Migrations
 
             modelBuilder.Entity("Savepoint.Api.Library.Item", b =>
                 {
+                    b.Navigation("RatingChanges");
+
                     b.Navigation("StatusChanges");
                 });
 

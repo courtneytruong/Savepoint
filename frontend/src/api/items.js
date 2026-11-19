@@ -2,8 +2,10 @@
 
 /**
  * Every item in the library, newest first, each as { id, medium, title, creator,
- * status, statusChangeId, statusChangedAt, createdAt }. statusChangeId is the id of
- * the current status in getStatusChanges. Throws on any answer but a list, as when
+ * status, statusChangeId, statusChangedAt, rating, ratingChangeId, ratingChangedAt,
+ * createdAt }. statusChangeId is the id of the current status in getStatusChanges.
+ * rating is whole stars from 1 to 5, and it and its two fields are null until the
+ * item is rated. Throws on any answer but a list, as when
  * the server fails or can't be reached.
  */
 export async function getItems({ signal } = {}) {
@@ -38,6 +40,18 @@ export async function getStatusChanges(id, { signal } = {}) {
 }
 
 /**
+ * Every rating an item has had, oldest first, each as { id, rating, changedAt },
+ * for its timeline: an empty list until it's rated. Answers null when there's no
+ * such item in this library, and throws on any other answer, as getItem does.
+ */
+export async function getRatingChanges(id, { signal } = {}) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}/rating-changes`, { signal })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`Loading rating changes got ${response.status}`)
+  return response.json()
+}
+
+/**
  * Adds an item to the library. Resolves with { item }, in the shape getItems
  * gives, or { error: 'failed' } for any other answer: the form checks the same
  * rules first, so a 400 means they've drifted apart. If the server can't be
@@ -64,6 +78,23 @@ export async function changeItemStatus(id, status) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
+  })
+  if (response.status === 404) return { error: 'missing' }
+  if (!response.ok) return { error: 'failed' }
+  return { item: await response.json() }
+}
+
+/**
+ * Rates an item, or changes its rating, in whole stars from 1 to 5. Answers as
+ * changeItemStatus does: { item }, with its new rating, { error: 'missing' } or
+ * { error: 'failed' }, and throws if the server can't be reached. A 400 counts as
+ * failed, since the star picker only offers ratings the API takes.
+ */
+export async function rateItem(id, rating) {
+  const response = await fetch(`/api/items/${encodeURIComponent(id)}/rating`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating }),
   })
   if (response.status === 404) return { error: 'missing' }
   if (!response.ok) return { error: 'failed' }

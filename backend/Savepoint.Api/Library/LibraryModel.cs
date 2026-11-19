@@ -38,6 +38,25 @@ public static class LibraryModel
                 .WithOne()
                 .HasForeignKey(s => s.ItemId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            item.HasMany(i => i.RatingChanges)
+                .WithOne()
+                .HasForeignKey(r => r.ItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RatingChange>(change =>
+        {
+            change.ToTable("RatingChanges", table =>
+                table.HasCheckConstraint(
+                    "CK_RatingChanges_Rating",
+                    $"\"Rating\" BETWEEN {LibraryRules.MinRating} AND {LibraryRules.MaxRating}"));
+
+            change.Property(r => r.ChangedAt).HasDefaultValueSql("now()");
+
+            // As for status: finding the newest rating reads by time, and this also
+            // serves as the index for the foreign key.
+            change.HasIndex(r => new { r.ItemId, r.ChangedAt });
         });
 
         builder.Entity<StatusChange>(change =>

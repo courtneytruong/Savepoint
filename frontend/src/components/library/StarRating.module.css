@@ -1,0 +1,56 @@
+/* Lucide's star is an outline, so filling it is what marks a star as given. */
+.star {
+  color: var(--color-ash-lilac);
+  fill: transparent;
+  transition:
+    color 150ms ease,
+    fill 150ms ease;
+}
+
+.filled {
+  color: var(--color-mood-delighted);
+  fill: var(--color-mood-delighted);
+}
+
+/* The display: small, sitting in a line of text. */
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--text-caption);
+}
+
+/* The picker: big enough to hit, and set apart from its hint. */
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8) var(--spacing-12);
+}
+
+.buttons {
+  display: inline-flex;
+}
+
+.button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-buttons);
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.buttons[aria-busy='true'] .button {
+  cursor: progress;
+}
+
+.hint {
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-caption);
+}

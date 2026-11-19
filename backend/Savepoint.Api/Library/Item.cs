@@ -25,4 +25,7 @@ public class Item
 
     /// <summary>Every status it has had. It gets its first when it's created.</summary>
     public List<StatusChange> StatusChanges { get; } = [];
+
+    /// <summary>Every rating it has had, none until it's rated. The newest is its rating.</summary>
+    public List<RatingChange> RatingChanges { get; } = [];
 }
