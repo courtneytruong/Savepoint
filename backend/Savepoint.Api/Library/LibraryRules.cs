@@ -9,4 +9,8 @@ public static class LibraryRules
     // Room for long subtitles and several authors, while turning away pasted junk.
     public const int MaxTitleLength = 200;
     public const int MaxCreatorLength = 200;
+
+    // Whole stars: five steps are enough to say how much something was liked.
+    public const int MinRating = 1;
+    public const int MaxRating = 5;
 }

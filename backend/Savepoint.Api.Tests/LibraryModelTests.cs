@@ -115,6 +115,83 @@ public class LibraryModelTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Saves_ratings_as_a_history_with_the_databases_clock()
+    {
+        await using var db = NewContext();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var item = NewItem(await CreateUserAsync(db));
+        db.Items.Add(item);
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Separate saves, as separate changes of heart would be.
+        item.RatingChanges.Add(new RatingChange { Rating = 3 });
+        await db.SaveChangesAsync(cancellationToken);
+        item.RatingChanges.Add(new RatingChange { Rating = 5 });
+        await db.SaveChangesAsync(cancellationToken);
+
+        await using var fresh = NewContext();
+        var ratings = await fresh.RatingChanges
+            .Where(r => r.ItemId == item.Id)
+            .OrderBy(r => r.ChangedAt).ThenBy(r => r.Id)
+            .ToListAsync(cancellationToken);
+        Assert.Equal([3, 5], ratings.Select(r => r.Rating));
+        Assert.All(ratings, r => Assert.NotEqual(default, r.ChangedAt));
+        Assert.True(ratings[1].ChangedAt > ratings[0].ChangedAt);
+    }
+
+    [Fact]
+    public async Task A_new_item_has_no_rating()
+    {
+        await using var db = NewContext();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var item = NewItem(await CreateUserAsync(db));
+        db.Items.Add(item);
+        await db.SaveChangesAsync(cancellationToken);
+
+        Assert.False(await db.RatingChanges.AnyAsync(r => r.ItemId == item.Id, cancellationToken));
+    }
+
+    [Theory]
+    [InlineData(LibraryRules.MinRating)]
+    [InlineData(LibraryRules.MaxRating)]
+    public async Task Allows_a_rating_of_1_to_5_stars(int rating)
+    {
+        await using var db = NewContext();
+        var item = NewItem(await CreateUserAsync(db));
+        item.RatingChanges.Add(new RatingChange { Rating = rating });
+        db.Items.Add(item);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Theory]
+    [InlineData(LibraryRules.MinRating - 1)]
+    [InlineData(LibraryRules.MaxRating + 1)]
+    [InlineData(-3)]
+    public async Task Refuses_a_rating_outside_1_to_5_stars(int rating)
+    {
+        await using var db = NewContext();
+        var item = NewItem(await CreateUserAsync(db));
+        item.RatingChanges.Add(new RatingChange { Rating = rating });
+        db.Items.Add(item);
+        await AssertRefusedByAsync(db, "CK_RatingChanges_Rating");
+    }
+
+    [Fact]
+    public async Task Deleting_an_item_deletes_its_ratings()
+    {
+        await using var db = NewContext();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var item = NewItem(await CreateUserAsync(db));
+        item.RatingChanges.Add(new RatingChange { Rating = 4 });
+        db.Items.Add(item);
+        await db.SaveChangesAsync(cancellationToken);
+
+        await db.Items.Where(i => i.Id == item.Id).ExecuteDeleteAsync(cancellationToken);
+
+        Assert.False(await db.RatingChanges.AnyAsync(r => r.ItemId == item.Id, cancellationToken));
+    }
+
+    [Fact]
     public async Task Deleting_an_account_deletes_its_library()
     {
         await using var db = NewContext();
