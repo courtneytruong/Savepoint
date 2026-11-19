@@ -767,6 +767,14 @@ describe('ItemCard', () => {
     expect(screen.queryByText('/10')).toBeNull()
   })
 
+  it('shows no rating when the API says it has none yet', () => {
+    const { container } = render(
+      <ItemCard href="/items/2" title="Disco Elysium" medium="Game" status="Backlog" rating={null} />,
+    )
+    expect(container.textContent).not.toMatch('null')
+    expect(screen.queryByText('/10')).toBeNull()
+  })
+
   it('shows a rating out of 10', () => {
     const { container } = render(<Rating value={9} />)
 

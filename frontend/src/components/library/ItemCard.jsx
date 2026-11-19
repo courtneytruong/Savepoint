@@ -55,7 +55,8 @@ export function ItemCard({ title, creator, medium, status, mood, rating, excerpt
           <Icon />
         </span>
         <MediumLabel medium={medium} />
-        {rating !== undefined && <Rating value={rating} />}
+        {/* The API sends null for an item that isn't rated yet. */}
+        {rating != null && <Rating value={rating} />}
       </div>
       <div>
         <Title className={styles.title}>

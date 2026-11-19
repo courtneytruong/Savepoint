@@ -2,8 +2,10 @@
 
 /**
  * Every item in the library, newest first, each as { id, medium, title, creator,
- * status, statusChangeId, statusChangedAt, createdAt }. statusChangeId is the id of
- * the current status in getStatusChanges. Throws on any answer but a list, as when
+ * status, statusChangeId, statusChangedAt, rating, ratingChangeId, ratingChangedAt,
+ * createdAt }. statusChangeId is the id of the current status in getStatusChanges.
+ * rating is whole stars from 1 to 5, and it and its two fields are null until the
+ * item is rated. Throws on any answer but a list, as when
  * the server fails or can't be reached.
  */
 export async function getItems({ signal } = {}) {
