@@ -138,6 +138,14 @@ export function ItemTimeline({ item, onItemMissing }) {
     )
   }
 
+  // The page changes the item's status itself, and the item then carries its newest
+  // change, so a status picked on the page shows here without loading again.
+  const current = { id: item.statusChangeId, status: item.status, changedAt: item.statusChangedAt }
+  const statusChanges =
+    loaded.state !== 'ready' || !current.id || loaded.statusChanges.some((change) => change.id === current.id)
+      ? loaded.statusChanges
+      : [...loaded.statusChanges, current]
+
   let content
   if (loaded.state === 'failed') {
     content = (
@@ -156,7 +164,7 @@ export function ItemTimeline({ item, onItemMissing }) {
           <Text>No sessions yet. Each one you log shows here, with its reflection.</Text>
         )}
         <Timeline
-          entries={buildTimeline({ sessions: loaded.sessions, statusChanges: loaded.statusChanges })}
+          entries={buildTimeline({ sessions: loaded.sessions, statusChanges })}
           medium={item.medium}
           actionsFor={sessionActions}
           loading={loaded.state === 'loading'}

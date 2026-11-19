@@ -63,7 +63,7 @@ public sealed class ListItemsTests(PostgresFixture postgres) : IAsyncDisposable
         Assert.Equal("Game", hades.GetProperty("medium").GetString());
         Assert.Equal("InProgress", hades.GetProperty("status").GetString());
         Assert.Equal(
-            ["id", "medium", "title", "creator", "status", "statusChangedAt", "createdAt"],
+            ["id", "medium", "title", "creator", "status", "statusChangeId", "statusChangedAt", "createdAt"],
             hades.EnumerateObject().Select(p => p.Name));
     }
 

@@ -2,7 +2,8 @@
 
 /**
  * Every item in the library, newest first, each as { id, medium, title, creator,
- * status, statusChangedAt, createdAt }. Throws on any answer but a list, as when
+ * status, statusChangeId, statusChangedAt, createdAt }. statusChangeId is the id of
+ * the current status in getStatusChanges. Throws on any answer but a list, as when
  * the server fails or can't be reached.
  */
 export async function getItems({ signal } = {}) {

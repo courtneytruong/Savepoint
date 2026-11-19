@@ -59,7 +59,7 @@ public sealed class ListStatusChangesTests(PostgresFixture postgres) : IAsyncDis
 
         var change = Assert.Single(await ListOk(client, item));
 
-        Assert.NotEqual(Guid.Empty, change.GetProperty("id").GetGuid());
+        Assert.Equal(item.GetProperty("statusChangeId").GetGuid(), change.GetProperty("id").GetGuid());
         Assert.Equal("InProgress", change.GetProperty("status").GetString());
         Assert.Equal(
             item.GetProperty("statusChangedAt").GetDateTimeOffset(),

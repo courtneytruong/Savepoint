@@ -43,6 +43,19 @@ public sealed class ChangeStatusTests(PostgresFixture postgres) : IAsyncDisposab
             .ToArrayAsync(cancellationToken);
     }
 
+    // The id of the item's newest status change, straight from the database.
+    private async Task<Guid> NewestChangeId(JsonElement item)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SavepointDbContext>();
+        var id = item.GetProperty("id").GetGuid();
+        return await db.StatusChanges
+            .Where(s => s.ItemId == id)
+            .OrderByDescending(s => s.ChangedAt).ThenByDescending(s => s.Id)
+            .Select(s => s.Id)
+            .FirstAsync(cancellationToken);
+    }
+
     [Fact]
     public async Task Adds_the_new_status_to_the_history_and_answers_with_the_item()
     {
@@ -58,6 +71,7 @@ public sealed class ChangeStatusTests(PostgresFixture postgres) : IAsyncDisposab
         Assert.True(item.GetProperty("statusChangedAt").GetDateTimeOffset() > created.GetProperty("statusChangedAt").GetDateTimeOffset());
         Assert.Equal(created.GetProperty("title").GetString(), item.GetProperty("title").GetString());
         Assert.Equal([ItemStatus.Backlog, ItemStatus.InProgress], await History(created));
+        Assert.Equal(await NewestChangeId(created), item.GetProperty("statusChangeId").GetGuid());
     }
 
     [Fact]

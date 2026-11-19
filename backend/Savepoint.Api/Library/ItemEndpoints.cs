@@ -86,7 +86,8 @@ public static class ItemEndpoints
 
     /// <summary>
     /// An item as the frontend sees it, with its current status: the newest of its
-    /// status changes, and when that happened.
+    /// status changes, which one that is, and when it happened. The change's id
+    /// matches the one in the item's status changes, so a timeline can add it.
     /// </summary>
     public record ItemResponse(
         Guid Id,
@@ -94,6 +95,7 @@ public static class ItemEndpoints
         string Title,
         string? Creator,
         string Status,
+        Guid StatusChangeId,
         DateTimeOffset StatusChangedAt,
         DateTimeOffset CreatedAt);
 
@@ -285,6 +287,7 @@ public static class ItemEndpoints
             item.Title,
             item.Creator,
             current.Status.ToString(),
+            current.Id,
             current.ChangedAt,
             item.CreatedAt);
 }

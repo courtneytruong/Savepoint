@@ -14,6 +14,7 @@ const ITEM = {
   title: 'Outer Wilds',
   creator: 'Mobius Digital',
   status: 'InProgress',
+  statusChangeId: 'c1',
   statusChangedAt: '2026-11-11T12:00:00+00:00',
   createdAt: '2026-11-01T12:00:00+00:00',
 }
@@ -170,6 +171,23 @@ describe('ItemPage', () => {
       expect(JSON.parse(options.body)).toEqual({ status: 'Finished' })
       expect(await screen.findByText('Outer Wilds moved to Finished')).toBeTruthy()
       expect(pill('Finished').getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it('adds the new status to the timeline, without loading it again', async () => {
+      const fetchStub = await loaded(async () =>
+        json({ ...ITEM, status: 'Finished', statusChangeId: 'c2', statusChangedAt: '2026-11-12T09:00:00' }),
+      )
+      const timeline = screen.getByRole('region', { name: 'Timeline' })
+      await within(timeline).findByText('Added to your library')
+
+      fireEvent.click(pill('Finished'))
+
+      expect(await within(timeline).findByText('Finished playing')).toBeTruthy()
+      const entries = within(timeline).getAllByRole('listitem')
+      expect(entries).toHaveLength(2)
+      expect(entries[0].textContent).toMatch('Finished playing')
+      expect(entries[0].querySelector('time').getAttribute('dateTime')).toBe('2026-11-12')
+      expect(fetchStub.statusChanges).toHaveBeenCalledTimes(1)
     })
 
     it('says which status it is moving to while it saves, and ignores other presses', async () => {
@@ -515,9 +533,11 @@ describe('ItemPage', () => {
           { id: 'c2', status: 'InProgress', changedAt: '2026-11-11T12:00:00' },
         ]),
       )
-      await loaded([])
+      // The item's current status is the newest change, already in the list, so it isn't added twice.
+      await loaded([], { ...ITEM, statusChangeId: 'c2' })
       expect(await within(region()).findByText('Started playing')).toBeTruthy()
       const entries = within(region()).getAllByRole('listitem').map((entry) => entry.textContent)
+      expect(entries).toHaveLength(2)
       expect(entries[0]).toMatch('Started playing')
       expect(entries[1]).toMatch('Added to your library')
     })
