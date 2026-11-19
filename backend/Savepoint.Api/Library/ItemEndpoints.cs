@@ -25,6 +25,7 @@ public static class ItemEndpoints
         items.MapPost("/{id:guid}/status", ChangeStatus);
         items.MapPost("/{id:guid}/rating", Rate);
         items.MapGet("/{id:guid}/status-changes", ListStatusChanges);
+        items.MapGet("/{id:guid}/rating-changes", ListRatingChanges);
         items.MapDelete("/{id:guid}", Delete);
         return app;
     }
@@ -279,6 +280,33 @@ public static class ItemEndpoints
             .ToListAsync(cancellationToken);
 
         return changes.Count == 0 ? TypedResults.NotFound() : TypedResults.Ok(changes);
+    }
+
+    /// <summary>A rating change as the frontend sees it, for an item's timeline.</summary>
+    public record RatingChangeResponse(Guid Id, int Rating, DateTimeOffset ChangedAt);
+
+    /// <summary>
+    /// Every rating of an item, oldest first: an empty list until it's rated. 404 as
+    /// for Get.
+    /// </summary>
+    private static async Task<Results<Ok<List<RatingChangeResponse>>, NotFound>> ListRatingChanges(
+        Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        // An unrated item has no changes, so unlike status changes an empty list can't
+        // mean "not yours". Asking for the item and its ratings together tells the two
+        // apart in one query: no item is a 404, an item with none is an empty list.
+        var changes = await db.Items
+            .Where(i => i.Id == id && i.UserId == userId)
+            .Select(i => i.RatingChanges
+                // Ids are made in time order, so they break a tie between changes saved at once.
+                .OrderBy(r => r.ChangedAt).ThenBy(r => r.Id)
+                .Select(r => new RatingChangeResponse(r.Id, r.Rating, r.ChangedAt))
+                .ToList())
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return changes is null ? TypedResults.NotFound() : TypedResults.Ok(changes);
     }
 
     /// <summary>
