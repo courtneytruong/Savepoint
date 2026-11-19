@@ -16,8 +16,14 @@ const ITEM = {
   status: 'InProgress',
   statusChangeId: 'c1',
   statusChangedAt: '2026-11-11T12:00:00+00:00',
+  rating: null,
+  ratingChangeId: null,
+  ratingChangedAt: null,
   createdAt: '2026-11-01T12:00:00+00:00',
 }
+
+// The same item once rated, as the API answers it.
+const RATED = { ...ITEM, rating: 4, ratingChangeId: 'r1', ratingChangedAt: '2026-11-12T09:00:00' }
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status })
 const neverAnswers = () => new Promise(() => {})
@@ -25,21 +31,26 @@ const neverAnswers = () => new Promise(() => {})
 // The item was added as it is now, so its timeline starts with that one change.
 const FIRST_CHANGE = { id: 'c1', status: 'InProgress', changedAt: ITEM.createdAt }
 
-// The page loads an item's sessions and status changes by itself once the item
-// arrives, for its timeline. Those requests get their own answers, no sessions and
-// FIRST_CHANGE unless a test says otherwise, so the answers given here, and the
-// calls the returned stub records, are only the item's.
+// The page loads an item's sessions, status changes and rating changes by itself
+// once the item arrives, for its timeline. Those requests get their own answers, no
+// sessions, FIRST_CHANGE and no ratings unless a test says otherwise, so the answers
+// given here, and the calls the returned stub records, are only the item's.
 let sessionsAnswer
 let statusChangesAnswer
+let ratingChangesAnswer
 const stubSessions = (answer) => {
   sessionsAnswer = answer
 }
 const stubStatusChanges = (answer) => {
   statusChangesAnswer = answer
 }
+const stubRatingChanges = (answer) => {
+  ratingChangesAnswer = answer
+}
 const isList = (ending) => (url, options) => url.endsWith(ending) && !options?.method
 const isSessionList = isList('/sessions')
 const isStatusChangeList = isList('/status-changes')
+const isRatingChangeList = isList('/rating-changes')
 
 function stubFetch(...answers) {
   const fetchStub = vi.fn()
@@ -48,16 +59,19 @@ function stubFetch(...answers) {
   const statusChangesStub = vi.fn((url, options) =>
     (statusChangesAnswer ?? (async () => json([FIRST_CHANGE])))(url, options),
   )
+  const ratingChangesStub = vi.fn((url, options) => (ratingChangesAnswer ?? (async () => json([])))(url, options))
   vi.stubGlobal(
     'fetch',
     vi.fn((url, options) => {
       if (isSessionList(url, options)) return sessionsStub(url, options)
       if (isStatusChangeList(url, options)) return statusChangesStub(url, options)
+      if (isRatingChangeList(url, options)) return ratingChangesStub(url, options)
       return fetchStub(url, options)
     }),
   )
   fetchStub.sessions = sessionsStub
   fetchStub.statusChanges = statusChangesStub
+  fetchStub.ratingChanges = ratingChangesStub
   return fetchStub
 }
 
@@ -81,6 +95,7 @@ describe('ItemPage', () => {
     cleanup()
     sessionsAnswer = undefined
     statusChangesAnswer = undefined
+    ratingChangesAnswer = undefined
     window.localStorage.clear()
   })
 
@@ -235,6 +250,97 @@ describe('ItemPage', () => {
       await loaded(async () => new Response(null, { status: 404 }))
       fireEvent.click(pill('Finished'))
       expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+    })
+  })
+
+  describe('rating it', () => {
+    const stars = () => screen.getByRole('group', { name: 'Rating' })
+    const star = (name) => within(stars()).getByRole('button', { name })
+
+    async function loaded(item, ...answers) {
+      const fetchStub = stubFetch(async () => json(item), ...answers)
+      renderPage()
+      await screen.findByRole('heading', { level: 1, name: 'Outer Wilds' })
+      return fetchStub
+    }
+
+    it('says when it isn’t rated yet', async () => {
+      await loaded(ITEM)
+      expect(within(screen.getByRole('article')).getByText('Not rated yet')).toBeTruthy()
+      expect(within(stars()).queryAllByRole('button', { pressed: true })).toHaveLength(0)
+    })
+
+    it('shows its rating as the pressed star', async () => {
+      await loaded(RATED)
+      expect(star('4 stars').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.queryByText('Not rated yet')).toBeNull()
+    })
+
+    it('saves the rating pressed and says so', async () => {
+      const fetchStub = await loaded(ITEM, async () => json(RATED))
+
+      fireEvent.click(star('4 stars'))
+
+      expect(await screen.findByText('Outer Wilds rated 4 stars')).toBeTruthy()
+      const [url, options] = fetchStub.mock.calls[1]
+      expect(url).toBe('/api/items/abc/rating')
+      expect(options.method).toBe('POST')
+      expect(JSON.parse(options.body)).toEqual({ rating: 4 })
+      expect(star('4 stars').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.queryByText('Not rated yet')).toBeNull()
+    })
+
+    it('shows the stars pressed while they save, and ignores other presses', async () => {
+      const fetchStub = await loaded(ITEM, neverAnswers)
+
+      fireEvent.click(star('2 stars'))
+      fireEvent.click(star('5 stars'))
+
+      expect(star('2 stars').getAttribute('aria-pressed')).toBe('true')
+      expect(stars().getAttribute('aria-busy')).toBe('true')
+      expect(fetchStub).toHaveBeenCalledTimes(2)
+    })
+
+    it('sends nothing for the rating it already has', async () => {
+      const fetchStub = await loaded(RATED)
+      fireEvent.click(star('4 stars'))
+      expect(fetchStub).toHaveBeenCalledTimes(1)
+    })
+
+    it('goes back to the old rating when saving fails, and offers to try again', async () => {
+      const fetchStub = await loaded(
+        RATED,
+        async () => new Response(null, { status: 500 }),
+        async () => json({ ...RATED, rating: 2, ratingChangeId: 'r2' }),
+      )
+
+      fireEvent.click(star('2 stars'))
+      await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toMatch("Couldn't save the rating"))
+      expect(star('4 stars').getAttribute('aria-pressed')).toBe('true')
+
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Try again' }))
+      expect(await screen.findByText('Outer Wilds rated 2 stars')).toBeTruthy()
+      expect(JSON.parse(fetchStub.mock.calls[2][1].body)).toEqual({ rating: 2 })
+    })
+
+    it('says the item is gone if it was deleted meanwhile', async () => {
+      await loaded(ITEM, async () => new Response(null, { status: 404 }))
+      fireEvent.click(star('3 stars'))
+      expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+    })
+
+    it('adds the rating to the timeline, without loading it again', async () => {
+      const fetchStub = await loaded(ITEM, async () => json(RATED))
+      const timeline = screen.getByRole('region', { name: 'Timeline' })
+      await within(timeline).findByText('Added to your library')
+
+      fireEvent.click(star('4 stars'))
+
+      expect(await within(timeline).findByText('4 stars')).toBeTruthy()
+      const entries = within(timeline).getAllByRole('listitem')
+      expect(entries).toHaveLength(2)
+      expect(entries[0].textContent).toMatch('Rated 4 stars')
+      expect(fetchStub.ratingChanges).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -512,9 +618,31 @@ describe('ItemPage', () => {
       expect(fetchStub.statusChanges.mock.calls[0][0]).toBe('/api/items/abc/status-changes')
     })
 
+    it('asks for this item’s rating changes once the item has loaded', async () => {
+      const fetchStub = await loaded([])
+      expect(fetchStub.ratingChanges.mock.calls[0][0]).toBe('/api/items/abc/rating-changes')
+    })
+
+    it('shows each change of rating, after the status it was added with', async () => {
+      stubRatingChanges(async () =>
+        json([
+          { id: 'r1', rating: 3, changedAt: '2026-11-05T09:00:00' },
+          { id: 'r2', rating: 5, changedAt: '2026-11-09T09:00:00' },
+        ]),
+      )
+      await loaded([], { ...ITEM, rating: 5, ratingChangeId: 'r2', ratingChangedAt: '2026-11-09T09:00:00' })
+      expect(await within(region()).findByText('5 stars')).toBeTruthy()
+      const entries = within(region()).getAllByRole('listitem').map((entry) => entry.textContent)
+      expect(entries).toHaveLength(3)
+      expect(entries[0]).toMatch('Changed rating from 3 to 5 stars')
+      expect(entries[1]).toMatch('Rated 3 stars')
+      expect(entries[2]).toMatch('Added to your library')
+    })
+
     it.each([
       ['sessions', () => stubSessions(neverAnswers)],
       ['status changes', () => stubStatusChanges(neverAnswers)],
+      ['rating changes', () => stubRatingChanges(neverAnswers)],
     ])('says it is loading until the %s arrive', async (_, stubSlowOne) => {
       stubSlowOne()
       stubFetch(async () => json(ITEM))
@@ -669,6 +797,7 @@ describe('ItemPage', () => {
     it.each([
       ['sessions', () => stubSessions(async () => new Response(null, { status: 404 }))],
       ['status changes', () => stubStatusChanges(async () => new Response(null, { status: 404 }))],
+      ['rating changes', () => stubRatingChanges(async () => new Response(null, { status: 404 }))],
     ])('shows the item as not found when the %s say it’s gone', async (_, stubGone) => {
       stubGone()
       stubFetch(async () => json(ITEM))
