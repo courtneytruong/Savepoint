@@ -151,7 +151,8 @@ A user's tag is one row shared by every reflection it's on, so the same label is
 - A name is cleaned before saving: its ends are trimmed and runs of spaces made single. It can then be 1 to 40 characters.
 - Two names are the same tag when they differ only in case or accents, so "Cozy", "cozy" and "Cózy" are one tag. `NormalizedName` holds the name without either and is unique per user. The tag keeps the spelling it was first given.
 - A reflection can have at most 10 tags.
-- When a save leaves a tag on no reflection, the same save deletes it, so old typos stop being suggested.
+- When a save leaves a tag on no reflection, the same save deletes it, so old typos stop being suggested. That includes editing or deleting a session, and deleting an item.
+- Changing a reflection's tags counts as editing it, like its mood or notes, so its `UpdatedAt` moves.
 - Renaming and merging tags are left for later.
 
 ### Timeline order

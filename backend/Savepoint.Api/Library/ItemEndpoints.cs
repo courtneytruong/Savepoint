@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
 using Savepoint.Api.Data;
+using Savepoint.Api.Tags;
 
 namespace Savepoint.Api.Library;
 
@@ -310,20 +311,26 @@ public static class ItemEndpoints
     }
 
     /// <summary>
-    /// Deletes an item, and through the database's cascade, its whole history. 204,
-    /// or 404 as for Get, which includes deleting the same item a second time.
+    /// Deletes an item, and through the database's cascade, its whole history, along
+    /// with any tag that leaves on no reflection. 204, or 404 as for Get, which
+    /// includes deleting the same item a second time.
     /// </summary>
     private static async Task<Results<NoContent, NotFound>> Delete(
         Guid id, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
         CancellationToken cancellationToken)
     {
         var userId = CurrentUser.IdOf(principal, users);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         // One DELETE, which also says whether the item was there.
         var deleted = await db.Items
             .Where(i => i.Id == id && i.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
+        if (deleted == 0) return TypedResults.NotFound();
 
-        return deleted == 0 ? TypedResults.NotFound() : TypedResults.NoContent();
+        await TagStore.DeleteUnusedAsync(db, userId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return TypedResults.NoContent();
     }
 
     // The checked, trimmed fields shared by creating and editing.
