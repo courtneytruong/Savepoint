@@ -1,6 +1,7 @@
 import { parseDateKey, toDateKey } from '../../utils/calendarDates.js'
 import { classNames } from '../../utils/classNames.js'
 import { EmptyState } from '../feedback/EmptyState.jsx'
+import { Link } from '../ui/Link.jsx'
 import { RatingIcon, ReflectionIcon, TimelineIcon } from '../icons.js'
 import { moodFor } from '../../rules/moods.js'
 import { wasEdited } from '../../rules/reflectionRules.js'
@@ -19,19 +20,54 @@ const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'n
 const dayFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
 const fullDayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-// The words say what happened, and the badge beside them shows the new status.
-function statusText({ status, first, previous }, medium) {
-  const verb = medium === 'Game' ? 'playing' : 'reading'
-  if (first) return 'Added to your library'
-  if (status === 'Backlog') return 'Moved back to your backlog'
-  if (status === 'InProgress') {
-    return previous === 'Finished' || previous === 'Dropped' ? 'Picked back up' : `Started ${verb}`
-  }
-  return status === 'Finished' ? `Finished ${verb}` : `Stopped ${verb}`
+// The item's title, linked to its page, for timelines that mix items.
+function ItemName({ item }) {
+  return item.href ? (
+    <Link href={item.href} className={styles.itemName}>
+      {item.title}
+    </Link>
+  ) : (
+    <span className={styles.itemName}>{item.title}</span>
+  )
 }
 
-// What each kind of entry shows: the dot's icon and color, and its content.
-function describe(entry, medium, actionsFor) {
+// Words before and after where the item's name goes, as in "Moved" Piranesi "back to
+// your backlog". Without an item, the two simply join.
+function withItem([before, after], item) {
+  if (!item) return before + after
+  return (
+    <>
+      {before} <ItemName item={item} />
+      {after}
+    </>
+  )
+}
+
+// The words say what happened, and the badge beside them shows the new status.
+function statusText({ status, first, previous }, medium, item) {
+  const verb = medium === 'Game' ? 'playing' : 'reading'
+  if (first) return withItem(['Added', ' to your library'], item)
+  if (status === 'Backlog') return withItem(['Moved', ' back to your backlog'], item)
+  if (status === 'InProgress') {
+    return previous === 'Finished' || previous === 'Dropped'
+      ? withItem(['Picked', ' back up'], item)
+      : withItem([`Started ${verb}`, ''], item)
+  }
+  return withItem([status === 'Finished' ? `Finished ${verb}` : `Stopped ${verb}`, ''], item)
+}
+
+// The heading level below another, so a card's item title sits under its month.
+const LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+function levelBelow(heading) {
+  const level = LEVELS.indexOf(heading)
+  return level === -1 ? 'h4' : LEVELS[Math.min(level + 1, LEVELS.length - 1)]
+}
+
+// What each kind of entry shows: the dot's icon and color, and its content. An entry
+// with an item, on a timeline that mixes items, is worded for and names that item.
+function describe(entry, timelineMedium, actionsFor, cardHeading) {
+  const { item } = entry
+  const medium = item?.medium ?? timelineMedium
   switch (entry.type) {
     case 'status': {
       const { Icon, color } = STATUSES[entry.status]
@@ -40,7 +76,7 @@ function describe(entry, medium, actionsFor) {
         color,
         content: (
           <div className={styles.change}>
-            <span>{statusText(entry, medium)}</span>
+            <span>{statusText(entry, medium, item)}</span>
             <StatusBadge status={entry.status} />
           </div>
         ),
@@ -56,11 +92,12 @@ function describe(entry, medium, actionsFor) {
             <span>
               {entry.previous === undefined ? (
                 <>
-                  Rated <strong className={styles.value}>{starsLabel(entry.rating)}</strong>
+                  {withItem(['Rated', ''], item)} <strong className={styles.value}>{starsLabel(entry.rating)}</strong>
                 </>
               ) : (
                 <>
-                  Changed rating from <span className={styles.old}>{entry.previous}</span> to{' '}
+                  {item ? withItem(['Changed rating of', ''], item) : 'Changed rating'} from{' '}
+                  <span className={styles.old}>{entry.previous}</span> to{' '}
                   <strong className={styles.value}>{starsLabel(entry.rating)}</strong>
                 </>
               )}
@@ -80,6 +117,8 @@ function describe(entry, medium, actionsFor) {
             tags={tags}
             session={entry}
             medium={medium}
+            item={item}
+            headingAs={cardHeading}
             loggedOn={entry.loggedLate ? entry.createdAt : undefined}
             editedAt={sessionEditedAt(entry)}
             actions={actionsFor?.(entry)}
@@ -97,6 +136,8 @@ function describe(entry, medium, actionsFor) {
             notes={entry.notes}
             tags={entry.tags}
             medium={medium}
+            item={item}
+            headingAs={cardHeading}
             editedAt={wasEdited(entry) ? entry.updatedAt : undefined}
             actions={actionsFor?.(entry)}
           />
@@ -126,11 +167,13 @@ function TimelineSkeleton() {
 }
 
 /**
- * An item's history: status and rating changes, sessions and their reflections,
- * and standalone reflections, grouped by month along a line.
+ * An item's history, or the whole library's: status and rating changes, sessions
+ * and their reflections, and standalone reflections, grouped by month along a line.
  *
- * entries: from buildTimeline, oldest first.
- * medium: 'Book' or 'Game', for wording like "Started reading".
+ * entries: from buildTimeline, oldest first. An entry with an item ({ title, medium,
+ * href? }), as from buildActivityTimeline, names it, as in "Started reading
+ * Piranesi", and its card shows the item's title, linked, as a heading below the month's.
+ * medium: 'Book' or 'Game', for wording like "Started reading" on one item's timeline.
  * order: newest (default) or oldest first.
  * empty: shown when there are no entries, in place of the default empty state.
  * actionsFor: given a session or reflection entry, buttons for its card, such as Edit.
@@ -169,7 +212,7 @@ export function Timeline({
           </MonthHeading>
           <ol className={styles.list}>
             {monthEntries.map((entry, index) => {
-              const { Icon, color, content } = describe(entry, medium, actionsFor)
+              const { Icon, color, content } = describe(entry, medium, actionsFor, levelBelow(MonthHeading))
               const date = parseDateKey(entry.day)
               const sameDay = monthEntries[index - 1]?.day === entry.day
               return (
