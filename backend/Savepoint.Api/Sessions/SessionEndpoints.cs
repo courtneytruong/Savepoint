@@ -261,8 +261,8 @@ public static class SessionEndpoints
         return minutes ?? 0;
     }
 
-    // The reflection is always there for sessions the API saved.
-    private static SessionResponse ToResponse(Session session)
+    // The reflection is always there for sessions the API saved, which must be loaded with its tags.
+    internal static SessionResponse ToResponse(Session session)
     {
         var reflection = session.Reflection
             ?? throw new InvalidOperationException($"Session {session.Id} has no reflection.");

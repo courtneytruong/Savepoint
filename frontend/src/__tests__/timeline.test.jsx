@@ -1,6 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { buildTimeline, groupByMonth, Timeline } from '../components/index.js'
+import { buildActivityTimeline } from '../rules/activityTimeline.js'
 import { sessionEditedAt } from '../rules/sessionList.js'
 
 afterEach(cleanup)
@@ -180,5 +181,81 @@ describe('Timeline', () => {
     render(<Timeline loading />)
 
     expect(screen.getByRole('status', { name: 'Loading timeline' })).toBeTruthy()
+  })
+})
+
+describe('Timeline across items', () => {
+  const BOOK = { id: 'b1', title: 'Piranesi', medium: 'Book' }
+  const GAME = { id: 'g1', title: 'Outer Wilds', medium: 'Game' }
+
+  // Times without a zone are the reader's own, so the days hold wherever tests run.
+  const entries = buildActivityTimeline({
+    statusChanges: [
+      { id: 'c1', status: 'Backlog', changedAt: '2026-11-01T12:00:00', item: BOOK },
+      { id: 'c2', status: 'InProgress', changedAt: '2026-11-02T12:00:00', item: GAME },
+      { id: 'c3', status: 'InProgress', changedAt: '2026-11-03T12:00:00', item: BOOK },
+      { id: 'c4', status: 'Backlog', changedAt: '2026-11-04T12:00:00', item: GAME },
+      { id: 'c5', status: 'Finished', changedAt: '2026-11-05T12:00:00', item: BOOK },
+    ],
+    ratingChanges: [
+      { id: 'r1', rating: 3, changedAt: '2026-11-06T12:00:00', item: BOOK },
+      { id: 'r2', rating: 5, changedAt: '2026-11-07T12:00:00', item: BOOK },
+    ],
+    sessions: [
+      {
+        id: 's1',
+        itemId: 'g1',
+        date: '2026-11-08',
+        durationMinutes: 90,
+        pagesRead: null,
+        createdAt: '2026-11-08T20:00:00',
+        updatedAt: '2026-11-08T20:00:00',
+        reflection: { id: 'sr1', mood: 'Curious', notes: 'The quantum moon keeps slipping away.', tags: [] },
+        item: GAME,
+      },
+    ],
+    reflections: [
+      {
+        id: 'x1',
+        mood: 'Moved',
+        notes: 'The house has its own tides.',
+        createdAt: '2026-11-09T12:00:00',
+        updatedAt: '2026-11-09T12:00:00',
+        tags: [],
+        item: BOOK,
+      },
+    ],
+  })
+  const items = () => screen.getAllByRole('listitem').filter((item) => item.querySelector('time'))
+
+  it('names each change’s item, worded for its own medium', () => {
+    render(<Timeline entries={entries} order="oldest" />)
+    const text = items().map((item) => item.textContent)
+
+    expect(text[0]).toContain('Added Piranesi to your library')
+    expect(text[1]).toContain('Added Outer Wilds to your library')
+    expect(text[2]).toContain('Started reading Piranesi')
+    expect(text[3]).toContain('Moved Outer Wilds back to your backlog')
+    expect(text[4]).toContain('Finished reading Piranesi')
+    expect(text[5]).toContain('Rated Piranesi 3 stars')
+    expect(text[6]).toContain('Changed rating of Piranesi from 3 to 5 stars')
+  })
+
+  it('links each item’s name to its page', () => {
+    render(<Timeline entries={entries} order="oldest" />)
+
+    const [added] = items()
+    expect(within(added).getByRole('link', { name: 'Piranesi' }).getAttribute('href')).toBe('/items/b1')
+  })
+
+  it('gives cards their item’s title as a heading below the month’s, and words them for it', () => {
+    render(<Timeline entries={entries} order="oldest" headingAs="h2" />)
+    const cards = screen.getAllByRole('article')
+
+    const session = within(cards[0]).getByRole('heading', { level: 3, name: 'Outer Wilds' })
+    expect(within(session).getByRole('link').getAttribute('href')).toBe('/items/g1')
+    expect(cards[0].textContent).toContain('Played for 1h 30m')
+    expect(within(cards[1]).getByRole('heading', { level: 3, name: 'Piranesi' })).toBeTruthy()
+    expect(cards[1].textContent).toContain('Reflection')
   })
 })

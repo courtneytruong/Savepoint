@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
 using Savepoint.Api.Data;
+using Savepoint.Api.Library;
 using Savepoint.Api.Tags;
 
 namespace Savepoint.Api.Sessions;
@@ -38,10 +39,8 @@ public static class ReflectionEndpoints
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt,
         List<string> Tags,
-        ReflectionItem Item,
+        ItemSummary Item,
         ReflectionSession? Session);
-
-    public record ReflectionItem(Guid Id, string Title, string Medium);
 
     /// <summary>The session a reflection is about. Date is "yyyy-MM-dd", the day it happened.</summary>
     public record ReflectionSession(
@@ -92,7 +91,7 @@ public static class ReflectionEndpoints
                 r.CreatedAt,
                 r.UpdatedAt,
                 ReflectionWriting.TagNamesInOrder(r.Tags),
-                new ReflectionItem(r.Item.Id, r.Item.Title, r.Item.Medium.ToString()),
+                new ItemSummary(r.Item.Id, r.Item.Title, r.Item.Medium.ToString()),
                 r.Session)),
         ];
     }

@@ -107,6 +107,18 @@
   letter-spacing: var(--tracking-caption);
 }
 
+/* An item's name in a change, as in "Started reading Piranesi": brighter than the
+   words around it, and underlined on hover, as the library's titles are. */
+.itemName {
+  color: var(--color-soft-quartz);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+a.itemName:hover {
+  text-decoration: underline;
+}
+
 .value {
   color: var(--color-soft-quartz);
   font-weight: var(--font-weight-medium);

@@ -5,9 +5,10 @@ import { AuthLayout, CreateAccountForm, LinkProvider, SignInForm, Spinner } from
 import styles from './App.module.css'
 import { ItemPage } from './pages/ItemPage.jsx'
 import { ReflectionsPage } from './pages/ReflectionsPage.jsx'
+import { TimelinePage } from './pages/TimelinePage.jsx'
 import { LandingPage } from './pages/LandingPage.jsx'
 import { LibraryPage } from './pages/LibraryPage.jsx'
-import { CREATE_ACCOUNT_PATH, ITEM_PATH, LIBRARY_PATH, REFLECTIONS_PATH, SIGN_IN_PATH } from './paths.js'
+import { CREATE_ACCOUNT_PATH, ITEM_PATH, LIBRARY_PATH, REFLECTIONS_PATH, SIGN_IN_PATH, TIMELINE_PATH } from './paths.js'
 
 // Every link in the components goes through React Router, so moving around the
 // app doesn't reload the page. nginx and Vite answer any path with the app.
@@ -65,6 +66,10 @@ function Session() {
         <Route
           path={REFLECTIONS_PATH}
           element={<ReflectionsPage account={account} onSignedOut={() => setAccount(null)} />}
+        />
+        <Route
+          path={TIMELINE_PATH}
+          element={<TimelinePage account={account} onSignedOut={() => setAccount(null)} />}
         />
       </Route>
       {/* Any other address goes home. */}

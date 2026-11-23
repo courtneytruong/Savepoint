@@ -12,8 +12,8 @@ import {
   SidebarLink,
   useToast,
 } from '../components/index.js'
-import { BookIcon, GameIcon, LibraryIcon, ReflectionIcon } from '../components/icons.js'
-import { LIBRARY_PATH, libraryPath, REFLECTIONS_PATH } from '../paths.js'
+import { BookIcon, GameIcon, LibraryIcon, ReflectionIcon, TimelineIcon } from '../components/icons.js'
+import { LIBRARY_PATH, libraryPath, REFLECTIONS_PATH, TIMELINE_PATH } from '../paths.js'
 import styles from './AppLayout.module.css'
 
 /**
@@ -21,8 +21,8 @@ import styles from './AppLayout.module.css'
  * the sidebar beside the page. The intro text lives on the landing page. The
  * header and sidebar list only pages that exist; more join as they're built.
  *
- * current: the page you're on, library (the default, for item pages too) or
- * reflections, marked in the header and the sidebar. counts: how many items the
+ * current: the page you're on, library (the default, for item pages too),
+ * reflections or timeline, marked in the header and the sidebar. counts: how many items the
  * library has, how many are a Book or a Game, and how many reflections there are,
  * each shown in the sidebar once known. medium: the library's type filter, if any,
  * which marks its shortcut in the sidebar as the page you're on.
@@ -30,6 +30,7 @@ import styles from './AppLayout.module.css'
 export function AppLayout({ account, onSignedOut, current = 'library', counts = {}, medium = null, children }) {
   const onLibrary = current === 'library'
   const onReflections = current === 'reflections'
+  const onTimeline = current === 'timeline'
 
   const toast = useToast()
   const navigate = useNavigate()
@@ -71,6 +72,9 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
         <Link href={REFLECTIONS_PATH} aria-current={onReflections ? 'page' : undefined}>
           Reflections
         </Link>
+        <Link href={TIMELINE_PATH} aria-current={onTimeline ? 'page' : undefined}>
+          Timeline
+        </Link>
       </Header>
 
       <main className={styles.main}>
@@ -95,6 +99,9 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
                       active={onReflections}
                     >
                       Reflections
+                    </SidebarLink>
+                    <SidebarLink href={TIMELINE_PATH} icon={<TimelineIcon />} active={onTimeline}>
+                      Timeline
                     </SidebarLink>
                   </SidebarGroup>
                   {/* Shortcuts to the library's type filter. */}
