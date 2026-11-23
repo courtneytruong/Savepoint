@@ -26,11 +26,10 @@ const EDITING = {
 }
 
 /**
- * Logging a session of one book or game, with its reflection, from that item's
- * page. The item is fixed, so there's no picker, and there are no tags until the
- * app saves them.
+ * Logging a session of one book or game, with its reflection and tags, from that
+ * item's page. The item is fixed, so there's no picker.
  *
- * item: { id, title, medium }. onSubmit receives what SessionForm gives, only once
+ * item: { id, title, medium }. tagSuggestions: the person's tag names. onSubmit receives what SessionForm gives, only once
  * it's valid, and returns a Promise. It resolves with { session } once logged,
  * which is when to close the modal, nothing when the page has dealt with it, or
  * { error: 'failed' }, shown above the form. If it throws, that counts as failed.
@@ -38,9 +37,19 @@ const EDITING = {
  * A half-written reflection is easy to lose, so only Cancel closes it: not Esc,
  * the X or a click outside. Each opening starts empty.
  */
-export function LogSessionModal({ open, item, onClose, onSubmit }) {
+export function LogSessionModal({ open, item, tagSuggestions, onClose, onSubmit }) {
   const opening = useOpening(open)
-  return <SessionDialog key={opening} open={open} item={item} onClose={onClose} onSubmit={onSubmit} text={LOGGING} />
+  return (
+    <SessionDialog
+      key={opening}
+      open={open}
+      item={item}
+      tagSuggestions={tagSuggestions}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      text={LOGGING}
+    />
+  )
 }
 
 /**
@@ -50,7 +59,7 @@ export function LogSessionModal({ open, item, onClose, onSubmit }) {
  * session: the session as it is now, in the API's shape, which the form starts
  * from each time it opens. Leave it out while closed.
  */
-export function EditSessionModal({ open, item, session, onClose, onSubmit }) {
+export function EditSessionModal({ open, item, session, tagSuggestions, onClose, onSubmit }) {
   const opening = useOpening(open)
   return (
     <SessionDialog
@@ -58,6 +67,7 @@ export function EditSessionModal({ open, item, session, onClose, onSubmit }) {
       open={open}
       item={item}
       start={session}
+      tagSuggestions={tagSuggestions}
       onClose={onClose}
       onSubmit={onSubmit}
       text={EDITING}
@@ -66,7 +76,7 @@ export function EditSessionModal({ open, item, session, onClose, onSubmit }) {
 }
 
 // The dialog both share. start: a session to start from, or none for a new one.
-function SessionDialog({ open, item, start, onClose, onSubmit, text }) {
+function SessionDialog({ open, item, start, tagSuggestions, onClose, onSubmit, text }) {
   const formId = useId()
   const alertRef = useRef(null)
   // editing, saving or failed.
@@ -122,7 +132,7 @@ function SessionDialog({ open, item, start, onClose, onSubmit, text }) {
         defaultItemId={item.id}
         defaultValue={start}
         itemLocked
-        withTags={false}
+        tagSuggestions={tagSuggestions}
         onSubmit={send}
       />
     </Modal>

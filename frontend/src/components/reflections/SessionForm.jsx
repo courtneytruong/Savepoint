@@ -30,9 +30,9 @@ function toDurationFields(total) {
  * { itemId, date, durationMinutes, pagesRead, reflection: { mood, notes, tags } },
  * only once everything is valid. pagesRead is null if not given, and always for games.
  *
- * withTags: false leaves the reflection's tags field out, until the app saves tags.
- * defaultValue: a session to start from when editing one, in the API's shape:
- * { date, durationMinutes, pagesRead, reflection: { mood, notes } }.
+ * tagSuggestions: the person's tag names. defaultValue: a session to start from
+ * when editing one, in the API's shape:
+ * { date, durationMinutes, pagesRead, reflection: { mood, notes, tags } }.
  *
  * As with ReflectionForm, the submit button can sit outside, given form={id}.
  */
@@ -42,7 +42,6 @@ export function SessionForm({
   defaultItemId = null,
   itemLocked = false,
   tagSuggestions,
-  withTags = true,
   defaultValue,
   onSubmit,
   today: fixedToday,
@@ -64,7 +63,7 @@ export function SessionForm({
   const [reflection, setReflection] = useState({
     mood: defaultValue?.reflection?.mood ?? null,
     notes: defaultValue?.reflection?.notes ?? '',
-    tags: [],
+    tags: defaultValue?.reflection?.tags ?? [],
   })
   const [triedToSave, setTriedToSave] = useState(false)
 
@@ -185,7 +184,6 @@ export function SessionForm({
           onChange={setReflection}
           errors={errors}
           tagSuggestions={tagSuggestions}
-          withTags={withTags}
         />
       </div>
       {children}

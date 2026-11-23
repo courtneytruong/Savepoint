@@ -99,13 +99,9 @@ describe('SessionForm', () => {
     expect(date.getAttribute('max')).toBe('2026-11-06')
   })
 
-  it('asks for tags unless told to leave them out', () => {
+  it('asks for tags', () => {
     renderForm()
     expect(screen.getByLabelText('Tags')).toBeTruthy()
-    cleanup()
-
-    renderForm({ withTags: false })
-    expect(screen.queryByLabelText('Tags')).toBeNull()
   })
 
   it('can start from a session, to edit it', () => {
