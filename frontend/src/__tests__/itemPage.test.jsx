@@ -31,16 +31,21 @@ const neverAnswers = () => new Promise(() => {})
 // The item was added as it is now, so its timeline starts with that one change.
 const FIRST_CHANGE = { id: 'c1', status: 'InProgress', changedAt: ITEM.createdAt }
 
-// The page loads an item's sessions, status changes and rating changes by itself
-// once the item arrives, for its timeline. Those requests get their own answers, no
-// sessions, FIRST_CHANGE and no ratings unless a test says otherwise, so the answers
-// given here, and the calls the returned stub records, are only the item's.
+// The page loads an item's sessions, standalone reflections, status changes and
+// rating changes by itself once the item arrives, for its timeline. Those requests
+// get their own answers, no sessions or reflections, FIRST_CHANGE and no ratings
+// unless a test says otherwise, so the answers given here, and the calls the
+// returned stub records, are only the item's.
 let sessionsAnswer
+let reflectionsAnswer
 let statusChangesAnswer
 let ratingChangesAnswer
 let tagsAnswer
 const stubSessions = (answer) => {
   sessionsAnswer = answer
+}
+const stubReflections = (answer) => {
+  reflectionsAnswer = answer
 }
 const stubStatusChanges = (answer) => {
   statusChangesAnswer = answer
@@ -54,6 +59,7 @@ const stubTags = (answer) => {
 }
 const isList = (ending) => (url, options) => url.endsWith(ending) && !options?.method
 const isSessionList = isList('/sessions')
+const isReflectionList = isList('/reflections')
 const isStatusChangeList = isList('/status-changes')
 const isRatingChangeList = isList('/rating-changes')
 
@@ -61,6 +67,7 @@ function stubFetch(...answers) {
   const fetchStub = vi.fn()
   for (const answer of answers) fetchStub.mockImplementationOnce(answer)
   const sessionsStub = vi.fn((url, options) => (sessionsAnswer ?? (async () => json([])))(url, options))
+  const reflectionsStub = vi.fn((url, options) => (reflectionsAnswer ?? (async () => json([])))(url, options))
   const statusChangesStub = vi.fn((url, options) =>
     (statusChangesAnswer ?? (async () => json([FIRST_CHANGE])))(url, options),
   )
@@ -70,6 +77,7 @@ function stubFetch(...answers) {
     'fetch',
     vi.fn((url, options) => {
       if (isSessionList(url, options)) return sessionsStub(url, options)
+      if (isReflectionList(url, options)) return reflectionsStub(url, options)
       if (isStatusChangeList(url, options)) return statusChangesStub(url, options)
       if (isRatingChangeList(url, options)) return ratingChangesStub(url, options)
       if (url === '/api/tags') return tagsStub(url, options)
@@ -77,6 +85,7 @@ function stubFetch(...answers) {
     }),
   )
   fetchStub.sessions = sessionsStub
+  fetchStub.reflections = reflectionsStub
   fetchStub.statusChanges = statusChangesStub
   fetchStub.ratingChanges = ratingChangesStub
   fetchStub.tags = tagsStub
@@ -102,6 +111,7 @@ describe('ItemPage', () => {
   afterEach(() => {
     cleanup()
     sessionsAnswer = undefined
+    reflectionsAnswer = undefined
     statusChangesAnswer = undefined
     ratingChangesAnswer = undefined
     tagsAnswer = undefined
@@ -676,6 +686,58 @@ describe('ItemPage', () => {
       expect(fetchStub.sessions.mock.calls[0][0]).toBe('/api/items/abc/sessions')
     })
 
+    it('asks for this item’s standalone reflections once the item has loaded', async () => {
+      const fetchStub = await loaded([])
+      expect(fetchStub.reflections.mock.calls[0][0]).toBe('/api/items/abc/reflections')
+    })
+
+    it('shows a standalone reflection among the sessions, by when it was written', async () => {
+      stubReflections(async () =>
+        json([
+          {
+            id: 'r9',
+            mood: 'Delighted',
+            notes: 'Nothing else has made me feel this small.',
+            createdAt: '2026-11-13T12:00:00',
+            updatedAt: '2026-11-13T12:00:00',
+            tags: ['awe'],
+          },
+        ]),
+      )
+      await loaded([
+        session('s2', '2026-11-14', 'The quantum moon finally made sense.'),
+        session('s1', '2026-11-12', 'Burned to death by the sun, twice.'),
+      ])
+
+      const cards = (await within(region()).findAllByRole('article')).map((card) => card.textContent)
+      expect(cards).toHaveLength(3)
+      expect(cards[0]).toMatch('The quantum moon finally made sense.')
+      expect(cards[1]).toMatch('Nothing else has made me feel this small.')
+      expect(cards[1]).toMatch('#awe')
+      expect(cards[2]).toMatch('Burned to death by the sun, twice.')
+      expect(within(region()).queryByText(/No sessions yet/)).toBeNull()
+    })
+
+    it('gives a standalone reflection no session buttons', async () => {
+      stubReflections(async () =>
+        json([
+          {
+            id: 's1',
+            mood: 'Moved',
+            notes: 'Its id matches a session’s, which must not matter.',
+            createdAt: '2026-11-13T12:00:00',
+            updatedAt: '2026-11-13T12:00:00',
+            tags: [],
+          },
+        ]),
+      )
+      await loaded([session('s1', '2026-11-12', 'Burned to death by the sun, twice.')])
+
+      const cards = await within(region()).findAllByRole('article')
+      const reflectionCard = cards.find((card) => card.textContent.includes('must not matter'))
+      expect(within(reflectionCard).queryByRole('button')).toBeNull()
+    })
+
     it('asks for this item’s status changes once the item has loaded', async () => {
       const fetchStub = await loaded([])
       expect(fetchStub.statusChanges.mock.calls[0][0]).toBe('/api/items/abc/status-changes')
@@ -716,6 +778,7 @@ describe('ItemPage', () => {
 
     it.each([
       ['sessions', () => stubSessions(neverAnswers)],
+      ['reflections', () => stubReflections(neverAnswers)],
       ['status changes', () => stubStatusChanges(neverAnswers)],
       ['rating changes', () => stubRatingChanges(neverAnswers)],
     ])('says it is loading until the %s arrive', async (_, stubSlowOne) => {
@@ -871,6 +934,7 @@ describe('ItemPage', () => {
 
     it.each([
       ['sessions', () => stubSessions(async () => new Response(null, { status: 404 }))],
+      ['reflections', () => stubReflections(async () => new Response(null, { status: 404 }))],
       ['status changes', () => stubStatusChanges(async () => new Response(null, { status: 404 }))],
       ['rating changes', () => stubRatingChanges(async () => new Response(null, { status: 404 }))],
     ])('shows the item as not found when the %s say it’s gone', async (_, stubGone) => {

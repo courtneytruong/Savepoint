@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useId, useState } from 'react'
 import { getRatingChanges, getStatusChanges } from '../api/items.js'
+import { getReflections } from '../api/reflections.js'
 import { deleteSession, editSession, getSessions, logSession } from '../api/sessions.js'
 import {
   Alert,
@@ -27,7 +28,7 @@ const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
 const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const sessionDay = (session) => dayFormat.format(parseDateKey(session.date))
 
-const NOT_LOADED = { state: 'loading', sessions: [], statusChanges: [], ratingChanges: [] }
+const NOT_LOADED = { state: 'loading', sessions: [], reflections: [], statusChanges: [], ratingChanges: [] }
 
 // The ways round the timeline can be read, as Timeline's order values.
 const ORDERS = [
@@ -36,9 +37,9 @@ const ORDERS = [
 ]
 
 /**
- * The Timeline part of an item's page: its status and rating changes and its
- * sessions with their reflections, newest first, and the way to log another session. Give it
- * key={item.id}, so another item starts afresh.
+ * The Timeline part of an item's page: its status and rating changes, its sessions
+ * with their reflections, and its standalone reflections, newest first, and the way
+ * to log another session. Give it key={item.id}, so another item starts afresh.
  *
  * item: the item the page shows. onItemMissing: called when the API says the item
  * is no longer in this library, so the page can say so.
@@ -72,12 +73,13 @@ export function ItemTimeline({ item, onItemMissing }) {
     // All at once. Any one answering 404 means the item is gone.
     Promise.all([
       getSessions(item.id, options),
+      getReflections(item.id, options),
       getStatusChanges(item.id, options),
       getRatingChanges(item.id, options),
     ])
-      .then(([sessions, statusChanges, ratingChanges]) => {
-        if (sessions && statusChanges && ratingChanges) {
-          setLoaded({ state: 'ready', sessions, statusChanges, ratingChanges })
+      .then(([sessions, reflections, statusChanges, ratingChanges]) => {
+        if (sessions && reflections && statusChanges && ratingChanges) {
+          setLoaded({ state: 'ready', sessions, reflections, statusChanges, ratingChanges })
         } else {
           reportMissing()
         }
@@ -143,6 +145,7 @@ export function ItemTimeline({ item, onItemMissing }) {
 
   // A timeline entry carries extra fields, so the buttons hand on the session itself.
   function sessionActions(entry) {
+    if (entry.type !== 'session') return null
     const session = loaded.sessions.find((s) => s.id === entry.id)
     if (!session) return null
     return (
@@ -193,11 +196,16 @@ export function ItemTimeline({ item, onItemMissing }) {
     content = (
       <>
         {/* There's always the status it was added with, so this says what's still to come. */}
-        {loaded.state === 'ready' && loaded.sessions.length === 0 && (
+        {loaded.state === 'ready' && loaded.sessions.length === 0 && loaded.reflections.length === 0 && (
           <Text>No sessions yet. Each one you log shows here, with its reflection.</Text>
         )}
         <Timeline
-          entries={buildTimeline({ sessions: loaded.sessions, statusChanges, ratingChanges })}
+          entries={buildTimeline({
+            sessions: loaded.sessions,
+            reflections: loaded.reflections,
+            statusChanges,
+            ratingChanges,
+          })}
           medium={item.medium}
           order={order}
           actionsFor={sessionActions}
