@@ -23,6 +23,8 @@ public static class ReflectionEndpoints
         var reflections = app.MapGroup("/api/items/{itemId:guid}/reflections").RequireAuthorization();
         reflections.MapGet("/", List);
         reflections.MapPost("/", Create);
+        reflections.MapPut("/{reflectionId:guid}", Update);
+        reflections.MapDelete("/{reflectionId:guid}", Delete);
         return app;
     }
 
@@ -81,6 +83,65 @@ public static class ReflectionEndpoints
         return TypedResults.Created(
             $"/api/items/{itemId}/reflections/{reflection.Id}", ReflectionWriting.ToResponse(reflection));
     }
+
+    /// <summary>
+    /// Replaces a standalone reflection's mood, notes and tags, all of them each time,
+    /// as when writing it. Its UpdatedAt moves only when one really changes, and a tag
+    /// left on no reflection is deleted, in one transaction. 200 with the reflection,
+    /// 404 when the item isn't the signed-in person's, the reflection isn't that item's,
+    /// or it's a session's, which is edited with its session, or 400 as for writing one.
+    /// </summary>
+    private static async Task<Results<Ok<ReflectionResponse>, NotFound, ValidationProblem>> Update(
+        Guid itemId, Guid reflectionId, ReflectionRequest request, ClaimsPrincipal principal,
+        UserManager<User> users, SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+        var details = ReflectionWriting.Check(request, "", errors);
+        if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
+
+        var userId = CurrentUser.IdOf(principal, users);
+        var mine = OwnStandalone(itemId, reflectionId, userId, db);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var reflection = await mine.Include(r => r.Tags).SingleOrDefaultAsync(cancellationToken);
+        if (reflection is null) return TypedResults.NotFound();
+
+        await ReflectionWriting.UpdateAsync(db, userId, reflection, details, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        // Read afresh, since the update went straight to the database.
+        var saved = await mine.Include(r => r.Tags).AsNoTracking().SingleAsync(cancellationToken);
+        return TypedResults.Ok(ReflectionWriting.ToResponse(saved));
+    }
+
+    /// <summary>
+    /// Deletes a standalone reflection, along with any tag that leaves on no
+    /// reflection. 204, or 404 as for editing, which includes deleting the same one a
+    /// second time.
+    /// </summary>
+    private static async Task<Results<NoContent, NotFound>> Delete(
+        Guid itemId, Guid reflectionId, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // One DELETE, which also says whether it was there.
+        var deleted = await OwnStandalone(itemId, reflectionId, userId, db).ExecuteDeleteAsync(cancellationToken);
+        if (deleted == 0) return TypedResults.NotFound();
+
+        await TagStore.DeleteUnusedAsync(db, userId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    // The reflection, when it stands alone and is about this item of the person's.
+    private static IQueryable<Reflection> OwnStandalone(
+        Guid itemId, Guid reflectionId, Guid userId, SavepointDbContext db) =>
+        db.Reflections.Where(r => r.Id == reflectionId
+            && r.ItemId == itemId
+            && r.SessionId == null
+            && db.Items.Any(i => i.Id == itemId && i.UserId == userId));
 
     // Whether the item is the signed-in person's; anything else is a 404.
     private static Task<bool> IsOwnItem(
