@@ -31,16 +31,21 @@ const neverAnswers = () => new Promise(() => {})
 // The item was added as it is now, so its timeline starts with that one change.
 const FIRST_CHANGE = { id: 'c1', status: 'InProgress', changedAt: ITEM.createdAt }
 
-// The page loads an item's sessions, status changes and rating changes by itself
-// once the item arrives, for its timeline. Those requests get their own answers, no
-// sessions, FIRST_CHANGE and no ratings unless a test says otherwise, so the answers
-// given here, and the calls the returned stub records, are only the item's.
+// The page loads an item's sessions, standalone reflections, status changes and
+// rating changes by itself once the item arrives, for its timeline. Those requests
+// get their own answers, no sessions or reflections, FIRST_CHANGE and no ratings
+// unless a test says otherwise, so the answers given here, and the calls the
+// returned stub records, are only the item's.
 let sessionsAnswer
+let reflectionsAnswer
 let statusChangesAnswer
 let ratingChangesAnswer
 let tagsAnswer
 const stubSessions = (answer) => {
   sessionsAnswer = answer
+}
+const stubReflections = (answer) => {
+  reflectionsAnswer = answer
 }
 const stubStatusChanges = (answer) => {
   statusChangesAnswer = answer
@@ -54,6 +59,7 @@ const stubTags = (answer) => {
 }
 const isList = (ending) => (url, options) => url.endsWith(ending) && !options?.method
 const isSessionList = isList('/sessions')
+const isReflectionList = isList('/reflections')
 const isStatusChangeList = isList('/status-changes')
 const isRatingChangeList = isList('/rating-changes')
 
@@ -61,6 +67,7 @@ function stubFetch(...answers) {
   const fetchStub = vi.fn()
   for (const answer of answers) fetchStub.mockImplementationOnce(answer)
   const sessionsStub = vi.fn((url, options) => (sessionsAnswer ?? (async () => json([])))(url, options))
+  const reflectionsStub = vi.fn((url, options) => (reflectionsAnswer ?? (async () => json([])))(url, options))
   const statusChangesStub = vi.fn((url, options) =>
     (statusChangesAnswer ?? (async () => json([FIRST_CHANGE])))(url, options),
   )
@@ -70,6 +77,7 @@ function stubFetch(...answers) {
     'fetch',
     vi.fn((url, options) => {
       if (isSessionList(url, options)) return sessionsStub(url, options)
+      if (isReflectionList(url, options)) return reflectionsStub(url, options)
       if (isStatusChangeList(url, options)) return statusChangesStub(url, options)
       if (isRatingChangeList(url, options)) return ratingChangesStub(url, options)
       if (url === '/api/tags') return tagsStub(url, options)
@@ -77,6 +85,7 @@ function stubFetch(...answers) {
     }),
   )
   fetchStub.sessions = sessionsStub
+  fetchStub.reflections = reflectionsStub
   fetchStub.statusChanges = statusChangesStub
   fetchStub.ratingChanges = ratingChangesStub
   fetchStub.tags = tagsStub
@@ -102,6 +111,7 @@ describe('ItemPage', () => {
   afterEach(() => {
     cleanup()
     sessionsAnswer = undefined
+    reflectionsAnswer = undefined
     statusChangesAnswer = undefined
     ratingChangesAnswer = undefined
     tagsAnswer = undefined
@@ -648,6 +658,118 @@ describe('ItemPage', () => {
     })
   })
 
+  describe('writing a reflection', () => {
+    const REFLECTION = {
+      id: 'r9',
+      mood: 'Delighted',
+      notes: 'Nothing else has made me feel this small.',
+      createdAt: '2026-11-15T20:00:00+00:00',
+      updatedAt: '2026-11-15T20:00:00+00:00',
+      tags: ['awe'],
+    }
+
+    async function opened(...answers) {
+      const fetchStub = stubFetch(async () => json(ITEM), ...answers)
+      renderPage()
+      await screen.findByRole('heading', { level: 1, name: ITEM.title })
+      fireEvent.click(screen.getByRole('button', { name: 'Write a reflection' }))
+      return fetchStub
+    }
+
+    const dialog = () => screen.getByRole('dialog', { name: 'Write a reflection' })
+    const submit = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Save reflection' }))
+    const region = () => screen.getByRole('region', { name: 'Timeline' })
+
+    function fillIn() {
+      fireEvent.click(within(dialog()).getByRole('radio', { name: 'Delighted' }))
+      fireEvent.change(within(dialog()).getByLabelText('Notes'), {
+        target: { value: '  Nothing else has made me feel this small.  ' },
+      })
+      const tags = within(dialog()).getByRole('combobox', { name: 'Tags' })
+      fireEvent.change(tags, { target: { value: 'awe' } })
+      fireEvent.keyDown(tags, { key: 'Enter' })
+    }
+
+    it('opens for this item with a mood, notes and tags, but no date or time', async () => {
+      await opened()
+      expect(within(dialog()).getByText('Outer Wilds: a thought about it as a whole, not about one session.')).toBeTruthy()
+      expect(within(dialog()).getByRole('radio', { name: 'Delighted' })).toBeTruthy()
+      expect(within(dialog()).getByLabelText('Notes')).toBeTruthy()
+      expect(within(dialog()).getByRole('combobox', { name: 'Tags' })).toBeTruthy()
+      expect(within(dialog()).queryByLabelText('Date')).toBeNull()
+      expect(within(dialog()).queryByLabelText('Hours')).toBeNull()
+    })
+
+    it('saves it for this item, closes, says so and shows it on the timeline', async () => {
+      const fetchStub = await opened(async () => json(REFLECTION, 201))
+      await within(region()).findByText('Added to your library')
+      fillIn()
+      submit()
+
+      expect(await screen.findByText('Reflection saved')).toBeTruthy()
+      const [url, options] = fetchStub.mock.calls[1]
+      expect(url).toBe('/api/items/abc/reflections')
+      expect(options.method).toBe('POST')
+      expect(JSON.parse(options.body)).toEqual({
+        mood: 'Delighted',
+        notes: 'Nothing else has made me feel this small.',
+        tags: ['awe'],
+      })
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      const card = within(region()).getByRole('article')
+      expect(card.textContent).toMatch('Nothing else has made me feel this small.')
+      expect(card.textContent).toMatch('#awe')
+      expect(within(region()).queryByText(/No sessions yet/)).toBeNull()
+    })
+
+    it('sends nothing until the form is valid', async () => {
+      const fetchStub = await opened()
+      submit()
+
+      expect(within(dialog()).getByText('Choose the mood that fits best.')).toBeTruthy()
+      expect(fetchStub).toHaveBeenCalledTimes(1)
+    })
+
+    it('loads the tag suggestions when it opens', async () => {
+      const fetchStub = await opened()
+      await vi.waitFor(() => expect(fetchStub.tags).toHaveBeenCalledTimes(1))
+    })
+
+    it('stays open with what was written when saving fails, so it can be sent again', async () => {
+      await opened(async () => json({ status: 500 }, 500))
+      fillIn()
+      submit()
+
+      await vi.waitFor(() =>
+        expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't save the reflection"),
+      )
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('  Nothing else has made me feel this small.  ')
+      expect(within(dialog()).getByRole('button', { name: 'Save reflection' }).disabled).toBe(false)
+    })
+
+    it('shows the item as not found when it was deleted meanwhile', async () => {
+      await opened(async () => new Response(null, { status: 404 }))
+      fillIn()
+      submit()
+
+      expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('closes only from Cancel, and starts empty each time it opens', async () => {
+      await opened()
+      fireEvent.change(within(dialog()).getByLabelText('Notes'), { target: { value: 'Half a thought about the' } })
+
+      fireEvent(dialog(), new Event('cancel', { cancelable: true }))
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('Half a thought about the')
+
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Write a reflection' }))
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('')
+    })
+  })
+
   describe('its timeline', () => {
     // A session as the API gives it, logged on the day it happened unless told otherwise.
     const session = (id, date, notes, { loggedAt = `${date}T20:00:00`, pagesRead = null, mood = 'Curious', tags = [] } = {}) => ({
@@ -674,6 +796,60 @@ describe('ItemPage', () => {
     it('asks for this item’s sessions once the item has loaded', async () => {
       const fetchStub = await loaded([])
       expect(fetchStub.sessions.mock.calls[0][0]).toBe('/api/items/abc/sessions')
+    })
+
+    it('asks for this item’s standalone reflections once the item has loaded', async () => {
+      const fetchStub = await loaded([])
+      expect(fetchStub.reflections.mock.calls[0][0]).toBe('/api/items/abc/reflections')
+    })
+
+    it('shows a standalone reflection among the sessions, by when it was written', async () => {
+      stubReflections(async () =>
+        json([
+          {
+            id: 'r9',
+            mood: 'Delighted',
+            notes: 'Nothing else has made me feel this small.',
+            createdAt: '2026-11-13T12:00:00',
+            updatedAt: '2026-11-13T12:00:00',
+            tags: ['awe'],
+          },
+        ]),
+      )
+      await loaded([
+        session('s2', '2026-11-14', 'The quantum moon finally made sense.'),
+        session('s1', '2026-11-12', 'Burned to death by the sun, twice.'),
+      ])
+
+      const cards = (await within(region()).findAllByRole('article')).map((card) => card.textContent)
+      expect(cards).toHaveLength(3)
+      expect(cards[0]).toMatch('The quantum moon finally made sense.')
+      expect(cards[1]).toMatch('Nothing else has made me feel this small.')
+      expect(cards[1]).toMatch('#awe')
+      expect(cards[2]).toMatch('Burned to death by the sun, twice.')
+      expect(within(region()).queryByText(/No sessions yet/)).toBeNull()
+    })
+
+    it('gives a standalone reflection its own buttons, not its session namesake’s', async () => {
+      stubReflections(async () =>
+        json([
+          {
+            id: 's1',
+            mood: 'Moved',
+            notes: 'Its id matches a session’s, which must not matter.',
+            createdAt: '2026-11-13T12:00:00',
+            updatedAt: '2026-11-13T12:00:00',
+            tags: [],
+          },
+        ]),
+      )
+      await loaded([session('s1', '2026-11-12', 'Burned to death by the sun, twice.')])
+
+      const cards = await within(region()).findAllByRole('article')
+      const reflectionCard = cards.find((card) => card.textContent.includes('must not matter'))
+      const names = within(reflectionCard).getAllByRole('button').map((button) => button.textContent)
+      expect(names).toHaveLength(2)
+      for (const name of names) expect(name).toMatch('the reflection from')
     })
 
     it('asks for this item’s status changes once the item has loaded', async () => {
@@ -716,6 +892,7 @@ describe('ItemPage', () => {
 
     it.each([
       ['sessions', () => stubSessions(neverAnswers)],
+      ['reflections', () => stubReflections(neverAnswers)],
       ['status changes', () => stubStatusChanges(neverAnswers)],
       ['rating changes', () => stubRatingChanges(neverAnswers)],
     ])('says it is loading until the %s arrive', async (_, stubSlowOne) => {
@@ -871,6 +1048,7 @@ describe('ItemPage', () => {
 
     it.each([
       ['sessions', () => stubSessions(async () => new Response(null, { status: 404 }))],
+      ['reflections', () => stubReflections(async () => new Response(null, { status: 404 }))],
       ['status changes', () => stubStatusChanges(async () => new Response(null, { status: 404 }))],
       ['rating changes', () => stubRatingChanges(async () => new Response(null, { status: 404 }))],
     ])('shows the item as not found when the %s say it’s gone', async (_, stubGone) => {
@@ -1098,6 +1276,124 @@ describe('ItemPage', () => {
 
         await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
         expect(within(region()).getAllByRole('article')).toHaveLength(2)
+      })
+    })
+
+    describe('a standalone reflection', () => {
+      // Written at midday, so its day is the same in any time zone the tests run in.
+      const reflection = (id, day, notes, { mood = 'Moved', tags = [] } = {}) => ({
+        id,
+        mood,
+        notes,
+        createdAt: `${day}T12:00:00`,
+        updatedAt: `${day}T12:00:00`,
+        tags,
+      })
+      const day = (key) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(`${key}T12:00`))
+      const button = (action, key) => screen.getByRole('button', { name: `${action} the reflection from ${day(key)}` })
+
+      const NEWER = reflection('r2', '2026-11-14', 'Nothing else has made me feel this small.', { tags: ['awe'] })
+      const OLDER = reflection('r1', '2026-11-12', 'The ending surprised me more than I expected.', { mood: 'Hooked' })
+
+      async function shown(...answers) {
+        stubReflections(async () => json([NEWER, OLDER]))
+        const fetchStub = stubFetch(async () => json(ITEM))
+        renderPage()
+        await within(await screen.findByRole('region', { name: 'Timeline' })).findAllByRole('article')
+        for (const answer of answers) fetchStub.mockImplementationOnce(answer)
+        return fetchStub
+      }
+
+      describe('editing it', () => {
+        const dialog = () => screen.getByRole('dialog', { name: 'Edit reflection' })
+        const save = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Save changes' }))
+
+        it('opens the form filled in with the reflection as it is', async () => {
+          await shown()
+          fireEvent.click(button('Edit', '2026-11-14'))
+
+          expect(within(dialog()).getByText('Outer Wilds: change what you thought.')).toBeTruthy()
+          expect(within(dialog()).getByRole('radio', { name: 'Moved' }).checked).toBe(true)
+          expect(within(dialog()).getByLabelText('Notes').value).toBe('Nothing else has made me feel this small.')
+          const chosen = within(within(dialog()).getByRole('list', { name: 'Chosen tags' })).getAllByRole('listitem')
+          expect(chosen.map((tag) => tag.textContent)).toEqual(['awe'])
+        })
+
+        it('saves the changes, shows them and says so', async () => {
+          const edited = { ...NEWER, notes: 'Smaller still on a second visit.', updatedAt: '2026-11-15T09:00:00' }
+          const fetchStub = await shown(async () => json(edited))
+          fireEvent.click(button('Edit', '2026-11-14'))
+          fireEvent.change(within(dialog()).getByLabelText('Notes'), { target: { value: 'Smaller still on a second visit.' } })
+          save()
+
+          expect(await screen.findByText('Changes saved')).toBeTruthy()
+          const [url, options] = fetchStub.mock.calls[1]
+          expect(url).toBe('/api/items/abc/reflections/r2')
+          expect(options.method).toBe('PUT')
+          expect(JSON.parse(options.body)).toEqual({ mood: 'Moved', notes: 'Smaller still on a second visit.', tags: ['awe'] })
+          await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+          const cards = within(screen.getByRole('region', { name: 'Timeline' })).getAllByRole('article')
+          expect(cards[0].textContent).toMatch('Smaller still on a second visit.')
+          expect(cards[0].textContent).toMatch('Edited')
+        })
+
+        it('loads the timeline afresh when the reflection was deleted meanwhile', async () => {
+          const fetchStub = await shown(async () => new Response(null, { status: 404 }))
+          fireEvent.click(button('Edit', '2026-11-14'))
+          save()
+
+          await vi.waitFor(() => expect(fetchStub.reflections).toHaveBeenCalledTimes(2))
+          expect(screen.queryByRole('dialog')).toBeNull()
+        })
+
+        it('stays open when saving fails', async () => {
+          await shown(async () => json({ status: 500 }, 500))
+          fireEvent.click(button('Edit', '2026-11-14'))
+          save()
+
+          await vi.waitFor(() =>
+            expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't save your changes"),
+          )
+        })
+      })
+
+      describe('deleting it', () => {
+        const dialog = () => screen.getByRole('dialog', { name: 'Delete this reflection?' })
+        const confirm = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Delete' }))
+
+        it('asks first, naming its day, and keeping it sends nothing', async () => {
+          const fetchStub = await shown()
+          fireEvent.click(button('Delete', '2026-11-12'))
+          expect(within(dialog()).getByText(`Your reflection from ${day('2026-11-12')}. This can't be undone.`)).toBeTruthy()
+
+          fireEvent.click(within(dialog()).getByRole('button', { name: 'Keep it' }))
+
+          expect(screen.queryByRole('dialog')).toBeNull()
+          expect(fetchStub).toHaveBeenCalledTimes(1)
+        })
+
+        it('deletes it, takes it off the timeline and says so', async () => {
+          const fetchStub = await shown(async () => new Response(null, { status: 204 }))
+          fireEvent.click(button('Delete', '2026-11-12'))
+          confirm()
+
+          expect(await screen.findByText('Reflection deleted')).toBeTruthy()
+          const [url, options] = fetchStub.mock.calls[1]
+          expect(url).toBe('/api/items/abc/reflections/r1')
+          expect(options.method).toBe('DELETE')
+          const cards = within(screen.getByRole('region', { name: 'Timeline' })).getAllByRole('article')
+          expect(cards).toHaveLength(1)
+          expect(cards[0].textContent).toMatch('Nothing else has made me feel this small.')
+        })
+
+        it('keeps it, and says so in the modal, when deleting fails', async () => {
+          await shown(async () => new Response(null, { status: 500 }))
+          fireEvent.click(button('Delete', '2026-11-12'))
+          confirm()
+
+          await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
+          expect(within(screen.getByRole('region', { name: 'Timeline' })).getAllByRole('article')).toHaveLength(2)
+        })
       })
     })
   })

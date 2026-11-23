@@ -43,6 +43,7 @@ export {
   LuLogOut as SignOutIcon,
   LuList as ListIcon,
   LuListFilter as FilterIcon,
+  LuNotebookPen as WriteReflectionIcon,
   LuPencil as EditIcon,
   LuX as CloseIcon,
   LuSearch as SearchIcon,

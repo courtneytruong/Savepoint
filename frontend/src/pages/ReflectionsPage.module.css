@@ -1,0 +1,50 @@
+/* The same layout as the library page, and the /components gallery's Reflections. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-16);
+  padding: var(--spacing-16) var(--spacing-24);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+/* On phones the tag picker drops to its own row, full width, so there's room to type. */
+.tag {
+  width: min(280px, 100%);
+}
+
+@media (max-width: 600px) {
+  .tag {
+    width: 100%;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-12) var(--spacing-24);
+  padding: var(--spacing-16) var(--spacing-24);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  margin: 0;
+  padding: 0 var(--spacing-24) var(--spacing-24);
+  list-style: none;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24);
+  padding: var(--spacing-24);
+}
+
+.pagination {
+  padding: var(--spacing-16) var(--spacing-24);
+  border-top: 1px solid var(--color-hairline);
+}

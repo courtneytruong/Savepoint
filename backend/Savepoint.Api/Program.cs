@@ -57,6 +57,7 @@ app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapItemEndpoints();
 app.MapSessionEndpoints();
+app.MapReflectionEndpoints();
 app.MapTagEndpoints();
 
 app.Run();

@@ -32,8 +32,10 @@
   gap: var(--spacing-12) var(--spacing-16);
 }
 
+/* Wraps, so the order toggle and both buttons still fit on a phone. */
 .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-8);
 }

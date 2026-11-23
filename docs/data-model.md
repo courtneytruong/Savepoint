@@ -115,6 +115,10 @@ A reflection requires a mood and notes. Without a minimum length, a required ref
 
 A reflection with no `SessionId` is a final thought or overall review. Because these still belong to an item, every reflection has an `ItemId`.
 
+- One can be written about an item at any status, and an item can have any number of them. Limiting them to finished items would turn away thoughts written partway through that aren't about one session.
+- It's dated by when it was written (`CreatedAt`), with no date to pick, so it isn't mistaken for a session.
+- It can be edited and deleted on its own. A session's reflection is only edited or deleted with its session.
+
 A session's reflection must belong to the same item as the session. A composite foreign key from `Reflections (SessionId, ItemId)` to `Sessions (Id, ItemId)` enforces this, and PostgreSQL skips the check when `SessionId` is null. It requires a unique constraint on `Sessions (Id, ItemId)`.
 
 ### Sessions are real days that have happened
