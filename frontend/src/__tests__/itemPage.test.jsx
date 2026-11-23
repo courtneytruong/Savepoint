@@ -524,7 +524,7 @@ describe('ItemPage', () => {
         date: toDateKey(new Date()),
         durationMinutes: 90,
         pagesRead: null,
-        reflection: { mood: 'Hooked', notes: 'Couldn’t stop after the first loop.' },
+        reflection: { mood: 'Hooked', notes: 'Couldn’t stop after the first loop.', tags: [] },
       })
       await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     })
@@ -884,7 +884,7 @@ describe('ItemPage', () => {
           date: '2026-11-15',
           durationMinutes: 90,
           pagesRead: null,
-          reflection: { mood: 'Frustrated', notes: 'Third try, and I finally escaped.' },
+          reflection: { mood: 'Frustrated', notes: 'Third try, and I finally escaped.', tags: [] },
         })
         const cards = within(region()).getAllByRole('article').map((card) => card.textContent)
         expect(cards[0]).toMatch('Third try, and I finally escaped.')

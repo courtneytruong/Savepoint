@@ -1,6 +1,8 @@
 // The reflection rules in docs/data-model.md. The API checks the same rules, so
 // these only exist to tell the user sooner.
 
+import { validateTags } from './tagRules.js'
+
 export const MIN_NOTES_LENGTH = 20
 export const MAX_NOTES_LENGTH = 10_000
 
@@ -13,8 +15,8 @@ export const MAX_NOTES_LENGTH = 10_000
 export const notesLength = (notes = '') => [...notes.trim()].length
 
 /**
- * Whether a reflection's mood or notes changed after it was written. The API sets
- * updatedAt to createdAt at first, and moves it only for those changes.
+ * Whether a reflection's mood, notes or tags changed after it was written. The API
+ * sets updatedAt to createdAt at first, and moves it only for those changes.
  */
 export const wasEdited = ({ createdAt, updatedAt } = {}) =>
   Boolean(createdAt && updatedAt) && new Date(updatedAt) > new Date(createdAt)
@@ -22,7 +24,7 @@ export const wasEdited = ({ createdAt, updatedAt } = {}) =>
 const plural =(count, word) => `${count.toLocaleString()} ${count === 1 ? word : `${word}s`}`
 
 /** Returns a message for each field that breaks a rule, or an empty object. */
-export function validateReflection({ mood, notes }) {
+export function validateReflection({ mood, notes, tags }) {
   const errors = {}
   if (!mood) errors.mood = 'Choose the mood that fits best.'
 
@@ -33,6 +35,9 @@ export function validateReflection({ mood, notes }) {
   } else if (length > MAX_NOTES_LENGTH) {
     errors.notes = `Keep it to ${MAX_NOTES_LENGTH.toLocaleString()} characters: ${plural(length - MAX_NOTES_LENGTH, 'character')} over.`
   }
+
+  const tagsError = validateTags(tags)
+  if (tagsError) errors.tags = tagsError
 
   return errors
 }

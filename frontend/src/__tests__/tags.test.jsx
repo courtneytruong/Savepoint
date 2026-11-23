@@ -1,7 +1,16 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanTag, ReflectionForm, TagInput } from '../components/index.js'
+import {
+  cleanTag,
+  MAX_TAG_LENGTH,
+  MAX_TAGS,
+  ReflectionForm,
+  TagInput,
+  tagLength,
+  tagNameError,
+  validateTags,
+} from '../components/index.js'
 
 afterEach(cleanup)
 
@@ -31,6 +40,37 @@ const chosen = () =>
 describe('cleanTag', () => {
   it('trims the ends and collapses spaces inside', () => {
     expect(cleanTag('  quantum    moon ')).toBe('quantum moon')
+  })
+
+  it('composes an accent typed as two characters, as the API saves it', () => {
+    // Written as escapes, since the two spellings look the same.
+    expect(cleanTag('Cózy')).toBe('Cózy')
+  })
+})
+
+describe('tagLength', () => {
+  it('counts the cleaned name, with an emoji as one character', () => {
+    expect(tagLength('  found   family ')).toBe(12)
+    expect(tagLength('🌙🌙')).toBe(2)
+  })
+})
+
+describe('validateTags', () => {
+  it('passes up to 10 tags of up to 40 characters', () => {
+    const tags = Array.from({ length: MAX_TAGS }, (_, n) => `${n}`.padEnd(MAX_TAG_LENGTH, 'a'))
+    expect(validateTags(tags)).toBeNull()
+    expect(validateTags([])).toBeNull()
+    expect(validateTags()).toBeNull()
+  })
+
+  it('says how far over 40 characters a tag is', () => {
+    expect(validateTags(['ok', 'a'.repeat(43)])).toBe('Keep a tag to 40 characters: 3 over.')
+    expect(tagNameError('🌙'.repeat(40))).toBeNull()
+  })
+
+  it('says how many tags to remove past 10', () => {
+    const tags = Array.from({ length: 12 }, (_, n) => `tag ${n}`)
+    expect(validateTags(tags)).toBe('Use up to 10 tags: remove 2.')
   })
 })
 

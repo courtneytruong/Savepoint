@@ -48,6 +48,13 @@ describe('validateReflection', () => {
     )
     expect(validateReflection({ mood: 'Moved', notes: 'a'.repeat(10_250) }).notes).toMatch('250 characters over')
   })
+
+  it('passes on what is wrong with the tags', () => {
+    expect(validateReflection({ mood: 'Moved', notes: TWENTY, tags: ['cozy'] })).toEqual({})
+    expect(validateReflection({ mood: 'Moved', notes: TWENTY, tags: ['a'.repeat(41)] }).tags).toBe(
+      'Keep a tag to 40 characters: 1 over.',
+    )
+  })
 })
 
 function renderForm(onSubmit = vi.fn()) {
