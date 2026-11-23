@@ -3,12 +3,21 @@ import { BrowserRouter, Navigate, Outlet, Link as RouterLink, Route, Routes, use
 import { createAccount, getAccount, signIn } from './api/auth.js'
 import { AuthLayout, CreateAccountForm, LinkProvider, SignInForm, Spinner } from './components/index.js'
 import styles from './App.module.css'
+import { CalendarPage } from './pages/CalendarPage.jsx'
 import { ItemPage } from './pages/ItemPage.jsx'
 import { ReflectionsPage } from './pages/ReflectionsPage.jsx'
 import { TimelinePage } from './pages/TimelinePage.jsx'
 import { LandingPage } from './pages/LandingPage.jsx'
 import { LibraryPage } from './pages/LibraryPage.jsx'
-import { CREATE_ACCOUNT_PATH, ITEM_PATH, LIBRARY_PATH, REFLECTIONS_PATH, SIGN_IN_PATH, TIMELINE_PATH } from './paths.js'
+import {
+  CALENDAR_PATH,
+  CREATE_ACCOUNT_PATH,
+  ITEM_PATH,
+  LIBRARY_PATH,
+  REFLECTIONS_PATH,
+  SIGN_IN_PATH,
+  TIMELINE_PATH,
+} from './paths.js'
 
 // Every link in the components goes through React Router, so moving around the
 // app doesn't reload the page. nginx and Vite answer any path with the app.
@@ -70,6 +79,10 @@ function Session() {
         <Route
           path={TIMELINE_PATH}
           element={<TimelinePage account={account} onSignedOut={() => setAccount(null)} />}
+        />
+        <Route
+          path={CALENDAR_PATH}
+          element={<CalendarPage account={account} onSignedOut={() => setAccount(null)} />}
         />
       </Route>
       {/* Any other address goes home. */}

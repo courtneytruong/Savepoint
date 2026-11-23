@@ -46,7 +46,7 @@ export { ReflectionFields, ReflectionForm } from './reflections/ReflectionForm.j
 export { MAX_NOTES_LENGTH, MIN_NOTES_LENGTH, notesLength, validateReflection } from '../rules/reflectionRules.js'
 export { SearchField } from './forms/SearchField.jsx'
 export { Section } from './layout/Section.jsx'
-export { SessionCalendar } from './reflections/SessionCalendar.jsx'
+export { ActivityCalendar } from './reflections/ActivityCalendar.jsx'
 export { EditSessionModal, LogSessionModal } from './reflections/SessionModal.jsx'
 export { EditReflectionModal, WriteReflectionModal } from './reflections/ReflectionModal.jsx'
 export { SessionForm } from './reflections/SessionForm.jsx'

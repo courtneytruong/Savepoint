@@ -248,6 +248,16 @@ describe('Timeline across items', () => {
     expect(within(added).getByRole('link', { name: 'Piranesi' }).getAttribute('href')).toBe('/items/b1')
   })
 
+  it('can show one day’s entries with no month headings, cards a level below the day’s heading', () => {
+    const day = entries.filter((entry) => entry.day === '2026-11-08')
+    render(<Timeline entries={day} order="oldest" oneDay headingAs="h3" />)
+
+    expect(screen.queryByRole('heading', { level: 3 })).toBeNull()
+    expect(screen.getByRole('heading', { level: 4, name: 'Outer Wilds' })).toBeTruthy()
+    // The date isn't shown beside each entry, but is still there to be read out.
+    expect(items()[0].querySelector('time').getAttribute('datetime')).toBe('2026-11-08')
+  })
+
   it('gives cards their item’s title as a heading below the month’s, and words them for it', () => {
     render(<Timeline entries={entries} order="oldest" headingAs="h2" />)
     const cards = screen.getAllByRole('article')

@@ -33,7 +33,7 @@ import {
   Rating,
   sortRows,
   Select,
-  SessionCalendar,
+  ActivityCalendar,
   Sidebar,
   SidebarGroup,
   SidebarLink,
@@ -56,6 +56,7 @@ import {
   ViewToggle,
   weekdayNames,
 } from '../components/index.js'
+import { buildActivityTimeline } from '../rules/activityTimeline.js'
 
 afterEach(cleanup)
 
@@ -443,76 +444,127 @@ describe('calendar dates', () => {
   })
 })
 
-describe('SessionCalendar', () => {
+describe('ActivityCalendar', () => {
   const today = new Date(2026, 10, 15)
-  const session = (id, date, itemTitle, durationMinutes, mood) => ({
+  const book = (id, title) => ({ id, title, medium: 'Book', href: `/items/${id}` })
+  const DUNE = book('dune', 'Dune')
+  const PIRANESI = book('piranesi', 'Piranesi')
+  const MIDDLEMARCH = book('middlemarch', 'Middlemarch')
+  const HYPERION = book('hyperion', 'Hyperion')
+  const FUTURE = book('future', 'Future')
+  const session = (id, date, item, durationMinutes, mood, hour = 20) => ({
     id,
+    itemId: item.id,
     date,
-    itemTitle,
-    medium: 'Book',
     durationMinutes,
-    mood,
-    notes: `Notes for ${itemTitle}`,
+    pagesRead: null,
+    createdAt: `${date}T${hour}:00:00`,
+    updatedAt: `${date}T${hour}:00:00`,
+    reflection: { id: `r-${id}`, mood, notes: `Notes for ${item.title}`, tags: [] },
+    item,
   })
-  const sessions = [
-    session(1, '2026-11-15', 'Dune', 60, 'Curious'),
-    session(2, '2026-11-15', 'Piranesi', 30, 'Moved'),
-    session(3, '2026-11-03', 'Middlemarch', 45, 'Bored'),
-    session(4, '2026-10-30', 'Hyperion', 20, 'Hooked'),
-    session(5, '2026-11-20', 'Future', 20, 'Hooked'),
-  ]
-  const renderCalendar = () => render(<SessionCalendar sessions={sessions} today={today} weekStartsOn={0} />)
-  const dayButtons = () => screen.getAllByRole('button', { pressed: undefined }).filter((b) => b.hasAttribute('aria-pressed'))
+  // Times without a zone are the reader's own, so the days hold wherever tests run.
+  const entries = buildActivityTimeline({
+    statusChanges: [
+      { id: 'c1', status: 'InProgress', changedAt: '2026-11-01T12:00:00', item: PIRANESI },
+      { id: 'c2', status: 'InProgress', changedAt: '2026-11-15T09:00:00', item: DUNE },
+    ],
+    ratingChanges: [],
+    sessions: [
+      session('s1', '2026-11-15', DUNE, 60, 'Curious', 18),
+      session('s2', '2026-11-15', PIRANESI, 30, 'Moved'),
+      session('s3', '2026-11-03', MIDDLEMARCH, 45, 'Bored'),
+      session('s4', '2026-10-30', HYPERION, 20, 'Hooked'),
+      session('s5', '2026-11-20', FUTURE, 20, 'Hooked'),
+    ],
+    reflections: [
+      {
+        id: 'x1',
+        mood: 'Delighted',
+        notes: 'Better on a second read.',
+        createdAt: '2026-11-08T12:00:00',
+        updatedAt: '2026-11-08T12:00:00',
+        tags: [],
+        item: HYPERION,
+      },
+    ],
+  })
+  const renderCalendar = () => render(<ActivityCalendar entries={entries} today={today} weekStartsOn={0} />)
+  const dayButtons = () => screen.getAllByRole('button').filter((button) => button.hasAttribute('aria-pressed'))
+  // A day's number is its first span; the time spent comes after it.
+  const dayNumber = (button) => button.querySelector('span').textContent
+  const dayButton = (number) => dayButtons().find((button) => dayNumber(button) === String(number))
+  const detail = () => within(screen.getByRole('region', { name: 'Selected day' }))
 
-  it('makes only days with sessions into buttons, each describing the day', () => {
+  it('makes only days with something on them into buttons, each describing the day', () => {
     renderCalendar()
 
-    expect(dayButtons()).toHaveLength(3)
-    const fifteenth = dayButtons().find((button) => button.textContent.startsWith('15'))
-    expect(fifteenth.getAttribute('aria-label')).toContain('2 sessions, 1h 30m. Curious, Moved')
+    expect(dayButtons().map(dayNumber)).toEqual(['1', '3', '8', '15', '20'])
+    expect(dayButton(15).getAttribute('aria-label')).toContain('2 sessions, 1h 30m; 1 other change. Curious, Moved')
+    expect(dayButton(8).getAttribute('aria-label')).toContain('1 reflection. Delighted')
   })
 
-  it('marks today, whether or not it has sessions', () => {
+  it('marks a day with only a change with a ring rather than a mood dot, and no time', () => {
+    renderCalendar()
+
+    const first = dayButton(1)
+    expect(first.getAttribute('aria-label')).toMatch(/: 1 other change\.$/)
+    expect(first.querySelectorAll('[style*="background"]')).toHaveLength(0)
+    expect(first.textContent).toBe('1')
+  })
+
+  it('marks today, whether or not anything happened on it', () => {
     renderCalendar()
 
     expect(document.querySelector('[aria-current="date"]').textContent).toMatch(/^15/)
   })
 
-  it('opens on the latest day up to today, not a later one', () => {
+  it('opens on the latest day up to today, listing everything from it as cards', () => {
     renderCalendar()
 
-    expect(screen.getByText('Dune')).toBeTruthy()
-    expect(screen.getByText('Piranesi')).toBeTruthy()
-    expect(screen.queryByText('Future')).toBeNull()
+    expect(detail().getByRole('heading', { level: 3 }).textContent).toMatch(/15/)
+    const text = detail().getAllByRole('listitem').map((item) => item.textContent)
+    expect(text[0]).toContain('Added Dune to your library')
+    expect(detail().getByRole('heading', { name: 'Dune' })).toBeTruthy()
+    expect(detail().getByRole('heading', { name: 'Piranesi' })).toBeTruthy()
+    expect(detail().queryByText('Future')).toBeNull()
   })
 
-  it('lists a chosen day’s sessions with their mood, length and notes', () => {
+  it('lists a chosen day’s session with its item, mood, length and notes', () => {
     renderCalendar()
 
-    fireEvent.click(dayButtons().find((button) => button.textContent.startsWith('3')))
-    const detail = within(screen.getByRole('region', { name: 'Selected day' }))
+    fireEvent.click(dayButton(3))
 
-    expect(detail.getByText('Middlemarch')).toBeTruthy()
-    expect(detail.getByText('45m')).toBeTruthy()
-    expect(detail.getByText('Bored')).toBeTruthy()
-    expect(detail.getByText('Notes for Middlemarch')).toBeTruthy()
-    expect(detail.queryByText('Dune')).toBeNull()
+    expect(detail().getByRole('link', { name: 'Middlemarch' }).getAttribute('href')).toBe('/items/middlemarch')
+    expect(detail().getByText('Read for 45m')).toBeTruthy()
+    expect(detail().getByText('Bored')).toBeTruthy()
+    expect(detail().getByText('Notes for Middlemarch')).toBeTruthy()
+    expect(detail().queryByText('Dune')).toBeNull()
+  })
+
+  it('lists a standalone reflection on the day it was written', () => {
+    renderCalendar()
+
+    fireEvent.click(dayButton(8))
+
+    expect(detail().getByRole('heading', { name: 'Hyperion' })).toBeTruthy()
+    expect(detail().getByText('Better on a second read.')).toBeTruthy()
   })
 
   it('moves between months', () => {
     renderCalendar()
-    const title = () => screen.getByRole('heading', { level: 3 }).textContent
+    const title = () => screen.getByRole('heading', { level: 2 }).textContent
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous month' }))
     expect(title()).toBe(new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(2026, 9, 1)))
-    expect(screen.getByText('Hyperion')).toBeTruthy()
+    expect(detail().getByText('Notes for Hyperion')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
     fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
-    expect(screen.getByRole('heading', { name: 'Nothing logged this month' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Nothing happened this month' })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Today' }))
-    expect(screen.getByText('Dune')).toBeTruthy()
+    expect(detail().getByText('Notes for Dune')).toBeTruthy()
   })
 })
 
