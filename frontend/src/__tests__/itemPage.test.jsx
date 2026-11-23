@@ -795,12 +795,12 @@ describe('ItemPage', () => {
 
     it('asks for this item’s sessions once the item has loaded', async () => {
       const fetchStub = await loaded([])
-      expect(fetchStub.sessions.mock.calls[0][0]).toBe('/api/items/abc/sessions')
+      await vi.waitFor(() => expect(fetchStub.sessions.mock.calls[0]?.[0]).toBe('/api/items/abc/sessions'))
     })
 
     it('asks for this item’s standalone reflections once the item has loaded', async () => {
       const fetchStub = await loaded([])
-      expect(fetchStub.reflections.mock.calls[0][0]).toBe('/api/items/abc/reflections')
+      await vi.waitFor(() => expect(fetchStub.reflections.mock.calls[0]?.[0]).toBe('/api/items/abc/reflections'))
     })
 
     it('shows a standalone reflection among the sessions, by when it was written', async () => {
@@ -854,12 +854,12 @@ describe('ItemPage', () => {
 
     it('asks for this item’s status changes once the item has loaded', async () => {
       const fetchStub = await loaded([])
-      expect(fetchStub.statusChanges.mock.calls[0][0]).toBe('/api/items/abc/status-changes')
+      await vi.waitFor(() => expect(fetchStub.statusChanges.mock.calls[0]?.[0]).toBe('/api/items/abc/status-changes'))
     })
 
     it('asks for this item’s rating changes once the item has loaded', async () => {
       const fetchStub = await loaded([])
-      expect(fetchStub.ratingChanges.mock.calls[0][0]).toBe('/api/items/abc/rating-changes')
+      await vi.waitFor(() => expect(fetchStub.ratingChanges.mock.calls[0]?.[0]).toBe('/api/items/abc/rating-changes'))
     })
 
     it('shows each change of rating, after the status it was added with', async () => {
