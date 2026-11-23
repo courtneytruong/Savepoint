@@ -96,7 +96,13 @@ public static class ReflectionWriting
         reflection.Notes,
         reflection.CreatedAt,
         reflection.UpdatedAt,
-        // Sorted here rather than in SQL, so the order doesn't depend on the
-        // database's collation. Two of a user's tags never share a normalized name.
-        [.. reflection.Tags.OrderBy(t => t.NormalizedName, StringComparer.Ordinal).Select(t => t.Name)]);
+        TagNamesInOrder(reflection.Tags));
+
+    /// <summary>
+    /// Tag names in alphabetical order ignoring case and accents. Sorted here rather
+    /// than in SQL, so the order doesn't depend on the database's collation. Two of a
+    /// user's tags never share a normalized name.
+    /// </summary>
+    public static List<string> TagNamesInOrder(IEnumerable<Tag> tags) =>
+        [.. tags.OrderBy(t => t.NormalizedName, StringComparer.Ordinal).Select(t => t.Name)];
 }

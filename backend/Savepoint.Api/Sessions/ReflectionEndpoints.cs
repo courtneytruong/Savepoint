@@ -25,7 +25,76 @@ public static class ReflectionEndpoints
         reflections.MapPost("/", Create);
         reflections.MapPut("/{reflectionId:guid}", Update);
         reflections.MapDelete("/{reflectionId:guid}", Delete);
+
+        app.MapGet("/api/reflections", ListAll).RequireAuthorization();
         return app;
+    }
+
+    /// <summary>A reflection anywhere in the library, with what it's about, for the Reflections page.</summary>
+    public record LibraryReflectionResponse(
+        Guid Id,
+        string Mood,
+        string Notes,
+        DateTimeOffset CreatedAt,
+        DateTimeOffset UpdatedAt,
+        List<string> Tags,
+        ReflectionItem Item,
+        ReflectionSession? Session);
+
+    public record ReflectionItem(Guid Id, string Title, string Medium);
+
+    /// <summary>The session a reflection is about. Date is "yyyy-MM-dd", the day it happened.</summary>
+    public record ReflectionSession(
+        Guid Id, DateOnly Date, int DurationMinutes, int? PagesRead, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+
+    /// <summary>
+    /// Every reflection in the person's library, sessions' and standalone ones alike,
+    /// newest written first. Each has its item, and its session when it has one, which
+    /// is null for a standalone one. The day a standalone one belongs on is left to the
+    /// frontend, which knows the person's time zone. All at once, since the page
+    /// filters in the browser, as the library does. 200, with an empty list for
+    /// someone with none.
+    /// </summary>
+    private static async Task<List<LibraryReflectionResponse>> ListAll(
+        ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.IdOf(principal, users);
+        // One query: each reflection joined to its item, which also keeps to the
+        // person's own, and to its session, if any.
+        var rows = await (
+                from reflection in db.Reflections
+                join item in db.Items on reflection.ItemId equals item.Id
+                where item.UserId == userId
+                orderby reflection.CreatedAt descending, reflection.Id descending
+                select new
+                {
+                    reflection.Id,
+                    reflection.Mood,
+                    reflection.Notes,
+                    reflection.CreatedAt,
+                    reflection.UpdatedAt,
+                    Tags = reflection.Tags.ToList(),
+                    Item = new { item.Id, item.Title, item.Medium },
+                    Session = db.Sessions
+                        .Where(s => s.Id == reflection.SessionId)
+                        .Select(s => new ReflectionSession(s.Id, s.Date, s.DurationMinutes, s.PagesRead, s.CreatedAt, s.UpdatedAt))
+                        .SingleOrDefault(),
+                })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. rows.Select(r => new LibraryReflectionResponse(
+                r.Id,
+                r.Mood.ToString(),
+                r.Notes,
+                r.CreatedAt,
+                r.UpdatedAt,
+                ReflectionWriting.TagNamesInOrder(r.Tags),
+                new ReflectionItem(r.Item.Id, r.Item.Title, r.Item.Medium.ToString()),
+                r.Session)),
+        ];
     }
 
     /// <summary>
