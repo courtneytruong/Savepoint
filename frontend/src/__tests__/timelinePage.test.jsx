@@ -140,6 +140,103 @@ describe('TimelinePage', () => {
     expect(screen.getByRole('button', { name: 'Show 10 later' })).toBeTruthy()
   })
 
+  describe('filters', () => {
+    const MIXED = {
+      statusChanges: [
+        { id: 'c1', status: 'Backlog', changedAt: '2026-11-01T12:00:00', item: BOOK },
+        { id: 'c2', status: 'InProgress', changedAt: '2026-11-02T12:00:00', item: GAME },
+      ],
+      ratingChanges: [{ id: 'r1', rating: 4, changedAt: '2026-11-03T12:00:00', item: BOOK }],
+      sessions: [
+        {
+          id: 's1',
+          itemId: 'g1',
+          date: '2026-11-04',
+          durationMinutes: 90,
+          pagesRead: null,
+          createdAt: '2026-11-04T20:00:00',
+          updatedAt: '2026-11-04T20:00:00',
+          reflection: { id: 'sr1', mood: 'Curious', notes: 'The quantum moon keeps slipping away.', tags: [] },
+          item: GAME,
+        },
+      ],
+      reflections: [
+        {
+          id: 'x1',
+          mood: 'Moved',
+          notes: 'The house has its own tides.',
+          createdAt: '2026-11-05T12:00:00',
+          updatedAt: '2026-11-05T12:00:00',
+          tags: [],
+          item: BOOK,
+        },
+      ],
+    }
+    const press = (group, name) =>
+      fireEvent.click(within(screen.getByRole('group', { name: group })).getByRole('button', { name }))
+
+    async function shown() {
+      stubFetch(async () => json(MIXED))
+      renderPage()
+      await screen.findByRole('heading', { level: 2, name: /November/ })
+    }
+
+    it('filters by type', async () => {
+      await shown()
+      press('Filter by type', 'Books')
+
+      const text = entries()
+      expect(text).toHaveLength(3)
+      for (const entry of text) expect(entry).toContain('Piranesi')
+      expect(screen.getByRole('status').textContent).toBe('Showing 3 of 3')
+    })
+
+    it.each([
+      ['Sessions', 'The quantum moon keeps slipping away.'],
+      ['Reflections', 'The house has its own tides.'],
+      ['Ratings', 'Rated Piranesi 4 stars'],
+    ])('filters by kind: %s', async (kind, text) => {
+      await shown()
+      press('Filter by kind', kind)
+
+      expect(entries()).toHaveLength(1)
+      expect(entries()[0]).toContain(text)
+    })
+
+    it('counts an item being added as a status change', async () => {
+      await shown()
+      press('Filter by kind', 'Status changes')
+
+      expect(entries()).toEqual([
+        expect.stringContaining('Added Outer Wilds to your library'),
+        expect.stringContaining('Added Piranesi to your library'),
+      ])
+    })
+
+    it('combines both, and says when nothing matches, with a way to clear them', async () => {
+      await shown()
+      press('Filter by type', 'Games')
+      press('Filter by kind', 'Ratings')
+
+      expect(screen.getByRole('heading', { name: 'Nothing matches those filters' })).toBeTruthy()
+      fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+
+      expect(entries()).toHaveLength(5)
+    })
+
+    it('starts again from the first 50 when a filter changes', async () => {
+      stubFetch(async () => json(manyItems(120)))
+      renderPage()
+      await screen.findAllByRole('heading', { level: 2 })
+      fireEvent.click(screen.getByRole('button', { name: 'Show 50 earlier' }))
+      expect(entries()).toHaveLength(100)
+
+      press('Filter by type', 'Books')
+
+      expect(entries()).toHaveLength(50)
+    })
+  })
+
   it('marks itself in the header and the sidebar', async () => {
     stubFetch(async () => json(ACTIVITY))
     renderPage()

@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react'
 import { getActivity } from '../api/activity.js'
-import { Button, EmptyState, Heading, Timeline, TimelineOrderToggle, useTimelineOrder } from '../components/index.js'
-import { ErrorIcon, TimelineIcon } from '../components/icons.js'
+import {
+  Button,
+  EmptyState,
+  FilterGroup,
+  FilterPill,
+  Heading,
+  Timeline,
+  TimelineOrderToggle,
+  useTimelineOrder,
+} from '../components/index.js'
+import { ErrorIcon, NoResultsIcon, TimelineIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { buildActivityTimeline } from '../rules/activityTimeline.js'
 import { AppLayout } from './AppLayout.jsx'
@@ -13,16 +22,34 @@ const FAILED_MESSAGE = "Something went wrong on Savepoint's server. Try again."
 // Page numbers would cut months in half, so the list only grows.
 const STEP = 50
 
+const MEDIUM_FILTERS = [
+  ['All', null],
+  ['Books', 'Book'],
+  ['Games', 'Game'],
+]
+
+// By the timeline's entry types. Status changes include an item being added.
+const KIND_FILTERS = [
+  ['Everything', null],
+  ['Sessions', 'session'],
+  ['Reflections', 'reflection'],
+  ['Status changes', 'status'],
+  ['Ratings', 'rating'],
+]
+
 /**
  * Everything that happened across the library, newest first unless chosen
  * otherwise, grouped by month: items added, status and rating changes, sessions
- * and standalone reflections, each naming its book or game.
+ * and standalone reflections, each naming its book or game. Filtered by type and
+ * by kind in the browser, as the other pages are.
  */
 export function TimelinePage({ account, onSignedOut }) {
   // loading, failed or ready, with the entries once ready, oldest first.
   const [loaded, setLoaded] = useState({ state: 'loading', entries: [] })
   const [tries, setTries] = useState(0)
   const [order, setOrder] = useTimelineOrder()
+  const [medium, setMedium] = useState(null)
+  const [kind, setKind] = useState(null)
   const [count, setCount] = useState(STEP)
 
   useEffect(() => {
@@ -41,10 +68,26 @@ export function TimelinePage({ account, onSignedOut }) {
     setTries((count) => count + 1)
   }
 
+  // A change to what's shown starts again from the first ones.
+  const filterBy = (setter) => (value) => {
+    setter(value)
+    setCount(STEP)
+  }
+
+  function clearFilters() {
+    setMedium(null)
+    setKind(null)
+    setCount(STEP)
+  }
+
   const { state, entries } = loaded
-  const total = entries.length
+  const hasAny = state === 'ready' && entries.length > 0
+  const matching = entries.filter(
+    (entry) => (!medium || entry.item.medium === medium) && (!kind || entry.type === kind),
+  )
+  const total = matching.length
   // The first ones in reading order: the newest, or the oldest.
-  const shown = order === 'oldest' ? entries.slice(0, count) : entries.slice(-count)
+  const shown = order === 'oldest' ? matching.slice(0, count) : matching.slice(-count)
   const more = Math.min(STEP, total - shown.length)
 
   let content
@@ -61,6 +104,21 @@ export function TimelinePage({ account, onSignedOut }) {
         }
       >
         {FAILED_MESSAGE}
+      </EmptyState>
+    )
+  } else if (hasAny && total === 0) {
+    content = (
+      <EmptyState
+        icon={<NoResultsIcon />}
+        title="Nothing matches those filters"
+        headingAs="h2"
+        action={
+          <Button variant="outline" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        }
+      >
+        Try another type or kind, or remove a filter to see more.
       </EmptyState>
     )
   } else {
@@ -87,7 +145,7 @@ export function TimelinePage({ account, onSignedOut }) {
             </EmptyState>
           }
         />
-        {state === 'ready' && total > 0 && (
+        {hasAny && (
           <div className={styles.more}>
             <p role="status">
               Showing {shown.length.toLocaleString()} of {total.toLocaleString()}
@@ -107,8 +165,26 @@ export function TimelinePage({ account, onSignedOut }) {
     <AppLayout account={account} onSignedOut={onSignedOut} current="timeline">
       <div className={styles.toolbar}>
         <Heading as="h1">Timeline</Heading>
-        {state === 'ready' && total > 0 && <TimelineOrderToggle value={order} onChange={setOrder} />}
+        {hasAny && <TimelineOrderToggle value={order} onChange={setOrder} />}
       </div>
+      {hasAny && (
+        <div className={styles.filters}>
+          <FilterGroup label="Filter by type">
+            {MEDIUM_FILTERS.map(([label, value]) => (
+              <FilterPill key={label} selected={medium === value} onClick={() => filterBy(setMedium)(value)}>
+                {label}
+              </FilterPill>
+            ))}
+          </FilterGroup>
+          <FilterGroup label="Filter by kind">
+            {KIND_FILTERS.map(([label, value]) => (
+              <FilterPill key={label} selected={kind === value} onClick={() => filterBy(setKind)(value)}>
+                {label}
+              </FilterPill>
+            ))}
+          </FilterGroup>
+        </div>
+      )}
       <div className={styles.content}>{content}</div>
     </AppLayout>
   )
