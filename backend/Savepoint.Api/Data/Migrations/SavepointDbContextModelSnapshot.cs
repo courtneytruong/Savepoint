@@ -362,6 +362,49 @@ namespace Savepoint.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Savepoint.Api.Tags.ReflectionTag", b =>
+                {
+                    b.Property<Guid>("ReflectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ReflectionId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("ReflectionTags", (string)null);
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Tags.Tag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("Tags", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Tags_Name_Length", "char_length(\"Name\") BETWEEN 1 AND 40");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.HasOne("Savepoint.Api.Accounts.User", null)
@@ -436,6 +479,30 @@ namespace Savepoint.Api.Data.Migrations
                     b.HasOne("Savepoint.Api.Library.Item", null)
                         .WithMany()
                         .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Tags.ReflectionTag", b =>
+                {
+                    b.HasOne("Savepoint.Api.Sessions.Reflection", null)
+                        .WithMany()
+                        .HasForeignKey("ReflectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Savepoint.Api.Tags.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Savepoint.Api.Tags.Tag", b =>
+                {
+                    b.HasOne("Savepoint.Api.Accounts.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -22,6 +22,11 @@
   box-shadow: 0 1px 0 var(--color-focus);
 }
 
+/* After focus, as for the other fields, so the underline stays red while it's fixed. */
+.box[data-invalid] {
+  border-bottom-color: var(--color-danger);
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;

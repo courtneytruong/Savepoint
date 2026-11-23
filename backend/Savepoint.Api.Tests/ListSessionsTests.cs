@@ -1,6 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Savepoint.Api.Data;
+using Savepoint.Api.Tags;
 
 namespace Savepoint.Api.Tests;
 
@@ -88,6 +92,32 @@ public sealed class ListSessionsTests(PostgresFixture postgres) : IAsyncDisposab
         Assert.Equal(
             session.GetProperty("createdAt").GetDateTimeOffset(),
             session.GetProperty("updatedAt").GetDateTimeOffset());
+        Assert.Empty(reflection.GetProperty("tags").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Answers_with_a_reflections_tags_in_order_ignoring_case_and_accents()
+    {
+        var (client, userId) = await factory.SignedInClientAsync(cancellationToken);
+        using var _ = client;
+        var itemId = await CreateItem(client);
+        await Log(client, itemId, DaysAgo(1), "The statues in the halls.");
+        // Straight into the database, since saving tags through the API comes later.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SavepointDbContext>();
+            var reflection = await db.Reflections.Include(r => r.Tags).SingleAsync(r => r.ItemId == itemId, cancellationToken);
+            reflection.Tags.AddRange(
+                new Tag { UserId = userId, Name = "Space", NormalizedName = "space" },
+                new Tag { UserId = userId, Name = "Épique", NormalizedName = "epique" },
+                new Tag { UserId = userId, Name = "cozy", NormalizedName = "cozy" });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var session = Assert.Single(await ListOk(client, itemId));
+
+        var tags = session.GetProperty("reflection").GetProperty("tags").EnumerateArray().Select(t => t.GetString());
+        Assert.Equal(["cozy", "Épique", "Space"], tags);
     }
 
     [Fact]

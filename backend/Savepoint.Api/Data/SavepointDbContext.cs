@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
 using Savepoint.Api.Library;
 using Savepoint.Api.Sessions;
+using Savepoint.Api.Tags;
 
 namespace Savepoint.Api.Data;
 
@@ -29,6 +30,10 @@ public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
     public DbSet<Session> Sessions => Set<Session>();
 
     public DbSet<Reflection> Reflections => Set<Reflection>();
+
+    public DbSet<Tag> Tags => Set<Tag>();
+
+    public DbSet<ReflectionTag> ReflectionTags => Set<ReflectionTag>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -58,5 +63,6 @@ public class SavepointDbContext(DbContextOptions<SavepointDbContext> options)
 
         builder.ConfigureLibrary();
         builder.ConfigureSessions();
+        builder.ConfigureTags();
     }
 }

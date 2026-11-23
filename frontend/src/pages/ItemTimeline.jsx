@@ -17,6 +17,7 @@ import {
   VisuallyHidden,
 } from '../components/index.js'
 import { DeleteIcon, EditIcon, NewestFirstIcon, OldestFirstIcon, ReflectionIcon } from '../components/icons.js'
+import { useTagSuggestions } from '../hooks/useTagSuggestions.js'
 import { parseDateKey } from '../utils/calendarDates.js'
 import styles from './ItemPage.module.css'
 
@@ -53,6 +54,7 @@ export function ItemTimeline({ item, onItemMissing }) {
   const [editing, setEditing] = useState(null)
   // The session being deleted, if any.
   const [deleting, setDeleting] = useState(null)
+  const tagSuggestions = useTagSuggestions(logging || editing !== null)
   // Remembered in this browser for every item, as the library's view is.
   const [order, setOrder] = useStoredChoice(
     'savepoint.timeline.order',
@@ -222,11 +224,18 @@ export function ItemTimeline({ item, onItemMissing }) {
         </div>
       </header>
       {content}
-      <LogSessionModal open={logging} item={item} onClose={() => setLogging(false)} onSubmit={saveSession} />
+      <LogSessionModal
+        open={logging}
+        item={item}
+        tagSuggestions={tagSuggestions}
+        onClose={() => setLogging(false)}
+        onSubmit={saveSession}
+      />
       <EditSessionModal
         open={editing !== null}
         item={item}
         session={editing}
+        tagSuggestions={tagSuggestions}
         onClose={() => setEditing(null)}
         onSubmit={saveEdit}
       />

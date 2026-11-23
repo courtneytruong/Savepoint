@@ -18,7 +18,8 @@ import { cleanTag } from '../../rules/tagRules.js'
  * Backspace in the empty field removes the last tag. Leaving the field adds
  * whatever was typed, so a tag can't be lost by pressing Save.
  *
- * value: the chosen tag names. suggestions: every existing tag name.
+ * value: the chosen tag names. suggestions: every existing tag name. error: a
+ * message shown under the field, which also marks it invalid, as Field does.
  */
 export function TagInput({
   label = 'Tags',
@@ -27,6 +28,7 @@ export function TagInput({
   suggestions = [],
   placeholder = 'Add a tag',
   hint,
+  error,
   id,
   className,
 }) {
@@ -34,6 +36,8 @@ export function TagInput({
   const inputId = id ?? generatedId
   const listId = `${inputId}-list`
   const hintId = `${inputId}-hint`
+  const errorId = `${inputId}-error`
+  const describedBy = classNames(hint && hintId, error && errorId) || undefined
   const boxRef = useRef(null)
   const inputRef = useRef(null)
   const popupRef = useRef(null)
@@ -132,6 +136,7 @@ export function TagInput({
       <div
         ref={boxRef}
         className={styles.box}
+        data-invalid={error ? true : undefined}
         onMouseDown={(event) => {
           if (event.target === boxRef.current) {
             event.preventDefault()
@@ -171,7 +176,8 @@ export function TagInput({
           aria-expanded={showList}
           aria-controls={listId}
           aria-activedescendant={showList && options[active] ? optionId(active) : undefined}
-          aria-describedby={hint ? hintId : undefined}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : undefined}
           className={styles.input}
           placeholder={value.length === 0 ? placeholder : undefined}
           value={query}
@@ -191,6 +197,11 @@ export function TagInput({
       {hint && (
         <p id={hintId} className={fieldStyles.hint}>
           {hint}
+        </p>
+      )}
+      {error && (
+        <p id={errorId} className={fieldStyles.error}>
+          {error}
         </p>
       )}
 

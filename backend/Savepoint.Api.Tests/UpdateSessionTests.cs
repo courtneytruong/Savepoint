@@ -95,6 +95,7 @@ public sealed class UpdateSessionTests(PostgresFixture postgres) : IAsyncDisposa
         Assert.Equal(created.GetProperty("reflection").GetProperty("id").GetGuid(), reflection.GetProperty("id").GetGuid());
         Assert.Equal("Moved", reflection.GetProperty("mood").GetString());
         Assert.Equal("Now I see what the statues mean.", reflection.GetProperty("notes").GetString());
+        Assert.Empty(reflection.GetProperty("tags").EnumerateArray());
         Assert.Equal(Time(created, "createdAt"), Time(session, "createdAt"));
     }
 

@@ -77,7 +77,7 @@ describe('logSession', () => {
     expect(options.headers['Content-Type']).toBe('application/json')
   })
 
-  it('sends neither the item id, which is in the address, nor tags, which wait for their feature', async () => {
+  it('sends the session with its tags, but not the item id, which is in the address', async () => {
     const fetchStub = stubFetch(async () => json(SESSION, 201))
 
     await logSession('abc', FROM_FORM)
@@ -86,8 +86,15 @@ describe('logSession', () => {
       date: '2026-11-14',
       durationMinutes: 45,
       pagesRead: 30,
-      reflection: { mood: 'Moved', notes: 'The crossing of the ice stayed with me.' },
+      reflection: { mood: 'Moved', notes: 'The crossing of the ice stayed with me.', tags: ['ice'] },
     })
+  })
+
+  it('sends no tags as an empty list', async () => {
+    const fetchStub = stubFetch(async () => json(SESSION, 201))
+    const { tags: _, ...untagged } = FROM_FORM.reflection
+    await logSession('abc', { ...FROM_FORM, reflection: untagged })
+    expect(JSON.parse(fetchStub.mock.calls[0][1].body).reflection.tags).toEqual([])
   })
 
   it('sends no page count as null', async () => {
@@ -115,7 +122,7 @@ describe('logSession', () => {
 })
 
 describe('editSession', () => {
-  it('puts the whole session at its own address, without the item id or tags', async () => {
+  it('puts the whole session at its own address, tags and all, without the item id', async () => {
     const fetchStub = stubFetch(async () => json(SESSION, 200))
 
     expect(await editSession('abc', 's1', FROM_FORM)).toEqual({ session: SESSION })
@@ -126,7 +133,7 @@ describe('editSession', () => {
       date: '2026-11-14',
       durationMinutes: 45,
       pagesRead: 30,
-      reflection: { mood: 'Moved', notes: 'The crossing of the ice stayed with me.' },
+      reflection: { mood: 'Moved', notes: 'The crossing of the ice stayed with me.', tags: ['ice'] },
     })
   })
 

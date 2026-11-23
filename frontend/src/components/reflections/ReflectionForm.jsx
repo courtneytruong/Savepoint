@@ -7,14 +7,14 @@ import { TagInput } from '../forms/TagInput.jsx'
 import { classNames } from '../../utils/classNames.js'
 import { showErrorsAndFocus } from '../../utils/focusFirstProblem.js'
 import { MAX_NOTES_LENGTH, MIN_NOTES_LENGTH, notesLength, validateReflection } from '../../rules/reflectionRules.js'
+import { MAX_TAGS } from '../../rules/tagRules.js'
 
 /**
  * The mood, notes and tags of a reflection, without a form around them, so a larger
  * form (such as logging a session) can include them. value is { mood, notes, tags },
  * and onChange receives the whole new value. tagSuggestions: every existing tag.
- * withTags: false leaves the tags field out, until the app saves tags.
  */
-export function ReflectionFields({ value, onChange, errors = {}, tagSuggestions, withTags = true }) {
+export function ReflectionFields({ value, onChange, errors = {}, tagSuggestions }) {
   const moodName = `${useId()}-mood`
 
   return (
@@ -34,14 +34,13 @@ export function ReflectionFields({ value, onChange, errors = {}, tagSuggestions,
         hint={<LengthCounter length={notesLength(value.notes)} min={MIN_NOTES_LENGTH} max={MAX_NOTES_LENGTH} />}
         error={errors.notes}
       />
-      {withTags && (
-        <TagInput
-          value={value.tags}
-          onChange={(tags) => onChange({ ...value, tags })}
-          suggestions={tagSuggestions}
-          hint="Optional. Press Enter or a comma after each one."
-        />
-      )}
+      <TagInput
+        value={value.tags}
+        onChange={(tags) => onChange({ ...value, tags })}
+        suggestions={tagSuggestions}
+        hint={`Optional, up to ${MAX_TAGS}. Press Enter or a comma after each one.`}
+        error={errors.tags}
+      />
     </>
   )
 }

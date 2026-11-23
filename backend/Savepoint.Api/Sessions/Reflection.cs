@@ -1,3 +1,5 @@
+using Savepoint.Api.Tags;
+
 namespace Savepoint.Api.Sessions;
 
 /// <summary>
@@ -30,4 +32,7 @@ public class Reflection
     /// the API moves it on each edit.
     /// </summary>
     public DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>The user's own tags on it, at most 10.</summary>
+    public List<Tag> Tags { get; set; } = [];
 }

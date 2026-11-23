@@ -4,20 +4,20 @@
 const sessionsPath = (itemId) => `/api/items/${encodeURIComponent(itemId)}/sessions`
 
 // The body the API takes, from what SessionForm gives: without its itemId, which
-// is in the address, or the reflection's tags, which wait for the tags feature.
+// is in the address. Tags go by name, and the API makes any that are new.
 const toRequest = ({ date, durationMinutes, pagesRead, reflection }) => ({
   date,
   durationMinutes,
   pagesRead,
-  reflection: { mood: reflection.mood, notes: reflection.notes },
+  reflection: { mood: reflection.mood, notes: reflection.notes, tags: reflection.tags ?? [] },
 })
 
 /**
  * Every session for an item, newest day first, each as { id, itemId, date,
  * durationMinutes, pagesRead, createdAt, updatedAt, reflection: { id, mood, notes,
- * createdAt, updatedAt } }. Each updatedAt starts as its createdAt, and moves when
+ * createdAt, updatedAt, tags } }. Each updatedAt starts as its createdAt, and moves when
  * its own fields are edited. date is a "yyyy-MM-dd" day key, and pagesRead is null when not
- * counted. Answers null when there's no such item in this library: the API answers
+ * counted. tags are names, alphabetical ignoring case and accents. Answers null when there's no such item in this library: the API answers
  * 404 for other people's items too. Throws on any other answer, as when the server
  * fails or can't be reached.
  */
@@ -29,9 +29,8 @@ export async function getSessions(itemId, { signal } = {}) {
 }
 
 /**
- * Logs a session with its reflection, which the API saves together. Takes what
- * SessionForm gives; its itemId and the reflection's tags aren't sent, since the
- * item is in the address and tags wait for the tags feature.
+ * Logs a session with its reflection and tags, which the API saves together. Takes
+ * what SessionForm gives; its itemId isn't sent, since the item is in the address.
  *
  * Resolves with { session }, in the shape getSessions gives, { error: 'missing' }
  * when the item is no longer in this library, or { error: 'failed' } for any other
@@ -50,8 +49,8 @@ export async function logSession(itemId, values) {
 }
 
 /**
- * Replaces a session's date, duration and pages, and its reflection's mood and
- * notes, all of them each time, so a null pagesRead clears it. Takes what
+ * Replaces a session's date, duration and pages, and its reflection's mood, notes
+ * and tags, all of them each time, so a null pagesRead or no tags clears them. Takes what
  * SessionForm gives, as logSession does. Answers as logSession does too: { session },
  * { error: 'missing' } when the item or the session is no longer there, or
  * { error: 'failed' }, and throws if the server can't be reached.

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Savepoint.Api.Accounts;
 using Savepoint.Api.Data;
 using Savepoint.Api.Library;
+using Savepoint.Api.Tags;
 
 namespace Savepoint.Api.Sessions;
 
@@ -29,12 +30,12 @@ public static class SessionEndpoints
     }
 
     // Strings and nullable numbers, so a missing or unknown value gets a field code
-    // rather than a request the JSON reader refuses outright. The frontend also
-    // sends reflection tags, which wait for the tags feature and are ignored. The
-    // same body logs a session and edits one.
+    // rather than a request the JSON reader refuses outright. The same body logs a
+    // session and edits one.
     public record SessionRequest(string? Date, int? DurationMinutes, int? PagesRead, ReflectionRequest? Reflection);
 
-    public record ReflectionRequest(string? Mood, string? Notes);
+    // Tags are names, so a new one is created by using it. Missing means none.
+    public record ReflectionRequest(string? Mood, string? Notes, List<string?>? Tags);
 
     /// <summary>A session as the frontend sees it, with its reflection. Date is "yyyy-MM-dd".</summary>
     public record SessionResponse(
@@ -47,7 +48,9 @@ public static class SessionEndpoints
         DateTimeOffset UpdatedAt,
         ReflectionResponse Reflection);
 
-    public record ReflectionResponse(Guid Id, string Mood, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    /// <summary>A reflection with its tags' names, in alphabetical order ignoring case and accents.</summary>
+    public record ReflectionResponse(
+        Guid Id, string Mood, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, List<string> Tags);
 
     /// <summary>
     /// Every session for an item, each with its reflection, newest day first. Within
@@ -68,7 +71,7 @@ public static class SessionEndpoints
 
         var sessions = await db.Sessions
             .Where(s => s.ItemId == itemId)
-            .Include(s => s.Reflection)
+            .Include(s => s.Reflection).ThenInclude(r => r!.Tags)
             // Ids are made in time order, so they break a tie between sessions saved at once.
             .OrderByDescending(s => s.Date).ThenByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id)
             .AsNoTracking()
@@ -78,10 +81,11 @@ public static class SessionEndpoints
     }
 
     /// <summary>
-    /// Logs a session with its reflection, in one transaction: both save, or neither
-    /// does, since every session has a reflection. 201 with the session, 404 when the
-    /// item isn't the signed-in person's, or 400 with a code per field. Reflection
-    /// fields are named reflection.mood and reflection.notes.
+    /// Logs a session with its reflection and its tags, in one transaction: all save,
+    /// or none does, since every session has a reflection. A tag name the person hasn't
+    /// used yet makes a new tag. 201 with the session, 404 when the item isn't the
+    /// signed-in person's, or 400 with a code per field. Reflection fields are named
+    /// reflection.mood, reflection.notes and reflection.tags.
     /// </summary>
     private static async Task<Results<Created<SessionResponse>, NotFound, ValidationProblem>> Create(
         Guid itemId, SessionRequest request, ClaimsPrincipal principal, UserManager<User> users,
@@ -95,15 +99,22 @@ public static class SessionEndpoints
         if (medium is null) return TypedResults.NotFound();
         if (PagesForAGame(medium.Value, details) is { } problem) return problem;
 
+        var userId = CurrentUser.IdOf(principal, users);
         var session = new Session
         {
             ItemId = itemId,
             Date = details.Date,
             DurationMinutes = details.DurationMinutes,
             PagesRead = details.PagesRead,
-            Reflection = new Reflection { ItemId = itemId, Mood = details.Mood, Notes = details.Notes },
+            Reflection = new Reflection
+            {
+                ItemId = itemId,
+                Mood = details.Mood,
+                Notes = details.Notes,
+                Tags = await TagStore.FindOrAddAsync(db, userId, details.Tags, cancellationToken),
+            },
         };
-        // One save, so it's one transaction.
+        // One save, so it's one transaction, new tags included.
         db.Sessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -111,13 +122,14 @@ public static class SessionEndpoints
     }
 
     /// <summary>
-    /// Replaces a session's date, duration and pages, and its reflection's mood and
-    /// notes, so everything is sent each time, as when logging it. One transaction,
-    /// so the two change together. Each keeps its own UpdatedAt, which moves only when
+    /// Replaces a session's date, duration and pages, and its reflection's mood, notes
+    /// and tags, so everything is sent each time, as when logging it. One transaction,
+    /// so it all changes together. Each keeps its own UpdatedAt, which moves only when
     /// its own fields change: the session's for its date, duration or pages, the
-    /// reflection's for its mood or notes, since fixing a duration isn't editing what
-    /// was thought. 200 with the session, 404 when the item isn't the signed-in person's
-    /// or the session isn't that item's, or 400 as for logging one.
+    /// reflection's for its mood, notes or tags, since fixing a duration isn't editing
+    /// what was thought. A tag left on no reflection is deleted. 200 with the session,
+    /// 404 when the item isn't the signed-in person's or the session isn't that item's,
+    /// or 400 as for logging one.
     /// </summary>
     private static async Task<Results<Ok<SessionResponse>, NotFound, ValidationProblem>> Update(
         Guid itemId, Guid sessionId, SessionRequest request, ClaimsPrincipal principal, UserManager<User> users,
@@ -153,34 +165,55 @@ public static class SessionEndpoints
         // Leaving without committing rolls the transaction back.
         if (changed == 0) return TypedResults.NotFound();
 
+        // Tags are compared as sets of normalized names, so sending the same tags in
+        // another order or case isn't a change.
+        var reflection = await db.Reflections.Include(r => r.Tags).SingleAsync(r => r.SessionId == sessionId, cancellationToken);
+        var tagsChanged = !reflection.Tags.Select(t => t.NormalizedName).ToHashSet()
+            .SetEquals(details.Tags.Select(TagNames.Normalize));
+
         await db.Reflections
-            .Where(r => r.SessionId == sessionId)
+            .Where(r => r.Id == reflection.Id)
             .ExecuteUpdateAsync(
                 set => set
                     // The database's clock, as for CreatedAt, so the two always compare.
                     // Worked out from the old values, since SET reads the row as it was.
                     .SetProperty(
                         r => r.UpdatedAt,
-                        r => r.Mood != details.Mood || r.Notes != details.Notes ? DateTimeOffset.UtcNow : r.UpdatedAt)
+                        r => tagsChanged || r.Mood != details.Mood || r.Notes != details.Notes
+                            ? DateTimeOffset.UtcNow
+                            : r.UpdatedAt)
                     .SetProperty(r => r.Mood, details.Mood)
                     .SetProperty(r => r.Notes, details.Notes),
                 cancellationToken);
 
+        if (tagsChanged)
+        {
+            var userId = CurrentUser.IdOf(principal, users);
+            var tags = await TagStore.FindOrAddAsync(db, userId, details.Tags, cancellationToken);
+            reflection.Tags.Clear();
+            reflection.Tags.AddRange(tags);
+            await db.SaveChangesAsync(cancellationToken);
+            await TagStore.DeleteUnusedAsync(db, userId, cancellationToken);
+        }
+
         await transaction.CommitAsync(cancellationToken);
 
-        var session = await mine.Include(s => s.Reflection).AsNoTracking().SingleAsync(cancellationToken);
+        var session = await mine.Include(s => s.Reflection).ThenInclude(r => r!.Tags).AsNoTracking().SingleAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(session));
     }
 
     /// <summary>
-    /// Deletes a session, and through the database's cascade, its reflection. 204, or
-    /// 404 as for editing, which includes deleting the same session a second time.
+    /// Deletes a session, and through the database's cascade, its reflection, along
+    /// with any tag that leaves on no reflection. 204, or 404 as for editing, which
+    /// includes deleting the same session a second time.
     /// </summary>
     private static async Task<Results<NoContent, NotFound>> Delete(
         Guid itemId, Guid sessionId, ClaimsPrincipal principal, UserManager<User> users, SavepointDbContext db,
         CancellationToken cancellationToken)
     {
         var userId = CurrentUser.IdOf(principal, users);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         // One DELETE, which also says whether the session was there. Matching the item
         // and its owner keeps it to the person's own sessions.
         var deleted = await db.Sessions
@@ -188,12 +221,17 @@ public static class SessionEndpoints
                 && s.ItemId == itemId
                 && db.Items.Any(i => i.Id == itemId && i.UserId == userId))
             .ExecuteDeleteAsync(cancellationToken);
+        if (deleted == 0) return TypedResults.NotFound();
 
-        return deleted == 0 ? TypedResults.NotFound() : TypedResults.NoContent();
+        await TagStore.DeleteUnusedAsync(db, userId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return TypedResults.NoContent();
     }
 
-    // The checked, trimmed fields shared by logging and editing a session.
-    private sealed record SessionDetails(DateOnly Date, int DurationMinutes, int? PagesRead, Mood Mood, string Notes);
+    // The checked, trimmed fields shared by logging and editing a session. Tags are
+    // cleaned names, one per tag.
+    private sealed record SessionDetails(
+        DateOnly Date, int DurationMinutes, int? PagesRead, Mood Mood, string Notes, List<string> Tags);
 
     /// <summary>
     /// Checks the fields that logging and editing share, adding a code to errors for
@@ -206,7 +244,8 @@ public static class SessionEndpoints
         var durationMinutes = CheckDuration(request.DurationMinutes, errors);
         if (request.PagesRead <= 0) errors["pagesRead"] = ["invalid"];
         var (mood, notes) = CheckReflection(request.Reflection, errors);
-        return new SessionDetails(date, durationMinutes, request.PagesRead, mood, notes);
+        var tags = TagStore.Check(request.Reflection?.Tags, "reflection.tags", errors);
+        return new SessionDetails(date, durationMinutes, request.PagesRead, mood, notes, tags);
     }
 
     // The item's medium when it's the signed-in person's, or null, which is a 404.
@@ -296,6 +335,13 @@ public static class SessionEndpoints
             session.CreatedAt,
             session.UpdatedAt,
             new ReflectionResponse(
-                reflection.Id, reflection.Mood.ToString(), reflection.Notes, reflection.CreatedAt, reflection.UpdatedAt));
+                reflection.Id,
+                reflection.Mood.ToString(),
+                reflection.Notes,
+                reflection.CreatedAt,
+                reflection.UpdatedAt,
+                // Sorted here rather than in SQL, so the order doesn't depend on the
+                // database's collation. Two of a user's tags never share a normalized name.
+                [.. reflection.Tags.OrderBy(t => t.NormalizedName, StringComparer.Ordinal).Select(t => t.Name)]));
     }
 }

@@ -38,6 +38,7 @@ const FIRST_CHANGE = { id: 'c1', status: 'InProgress', changedAt: ITEM.createdAt
 let sessionsAnswer
 let statusChangesAnswer
 let ratingChangesAnswer
+let tagsAnswer
 const stubSessions = (answer) => {
   sessionsAnswer = answer
 }
@@ -46,6 +47,10 @@ const stubStatusChanges = (answer) => {
 }
 const stubRatingChanges = (answer) => {
   ratingChangesAnswer = answer
+}
+// The tag suggestions a session modal loads when it opens: none unless a test says otherwise.
+const stubTags = (answer) => {
+  tagsAnswer = answer
 }
 const isList = (ending) => (url, options) => url.endsWith(ending) && !options?.method
 const isSessionList = isList('/sessions')
@@ -60,18 +65,21 @@ function stubFetch(...answers) {
     (statusChangesAnswer ?? (async () => json([FIRST_CHANGE])))(url, options),
   )
   const ratingChangesStub = vi.fn((url, options) => (ratingChangesAnswer ?? (async () => json([])))(url, options))
+  const tagsStub = vi.fn((url, options) => (tagsAnswer ?? (async () => json([])))(url, options))
   vi.stubGlobal(
     'fetch',
     vi.fn((url, options) => {
       if (isSessionList(url, options)) return sessionsStub(url, options)
       if (isStatusChangeList(url, options)) return statusChangesStub(url, options)
       if (isRatingChangeList(url, options)) return ratingChangesStub(url, options)
+      if (url === '/api/tags') return tagsStub(url, options)
       return fetchStub(url, options)
     }),
   )
   fetchStub.sessions = sessionsStub
   fetchStub.statusChanges = statusChangesStub
   fetchStub.ratingChanges = ratingChangesStub
+  fetchStub.tags = tagsStub
   return fetchStub
 }
 
@@ -96,6 +104,7 @@ describe('ItemPage', () => {
     sessionsAnswer = undefined
     statusChangesAnswer = undefined
     ratingChangesAnswer = undefined
+    tagsAnswer = undefined
     window.localStorage.clear()
   })
 
@@ -494,12 +503,66 @@ describe('ItemPage', () => {
       set('Notes', '  Couldn’t stop after the first loop.  ')
     }
 
-    it('opens for this item, with no item picker and no tags', async () => {
+    const tagField = () => within(dialog()).getByRole('combobox', { name: 'Tags' })
+    function addTag(name) {
+      fireEvent.change(tagField(), { target: { value: name } })
+      fireEvent.keyDown(tagField(), { key: 'Enter' })
+    }
+    const chosenTags = () =>
+      within(within(dialog()).getByRole('list', { name: 'Chosen tags' }))
+        .getAllByRole('listitem')
+        .map((tag) => tag.textContent)
+
+    it('opens for this item, with no item picker but a field for tags', async () => {
       await opened()
       expect(within(dialog()).getByText('Outer Wilds: how long, and what you thought.')).toBeTruthy()
       expect(within(dialog()).queryByRole('combobox', { name: 'Book or game' })).toBeNull()
-      expect(within(dialog()).queryByLabelText('Tags')).toBeNull()
+      expect(tagField()).toBeTruthy()
       expect(within(dialog()).getByLabelText('Date').value).toBe(toDateKey(new Date()))
+    })
+
+    it('logs it with its tags, suggesting the ones already used', async () => {
+      stubTags(async () => json(['cozy', 'Space']))
+      const fetchStub = await opened(ITEM, async () => json(SESSION, 201))
+      fillIn()
+      fireEvent.change(tagField(), { target: { value: 'co' } })
+      // By text, as in tags.test.jsx: happy-dom counts the popover list as hidden here.
+      await vi.waitFor(() =>
+        expect(within(dialog()).queryAllByRole('option', { hidden: true }).map((o) => o.textContent)).toContain('cozy'),
+      )
+      fireEvent.keyDown(tagField(), { key: 'Enter' })
+      addTag('found family')
+      submit()
+
+      expect(await screen.findByText('Session logged')).toBeTruthy()
+      expect(JSON.parse(fetchStub.mock.calls[1][1].body).reflection.tags).toEqual(['cozy', 'found family'])
+    })
+
+    it('loads the suggestions afresh each time it opens, so new tags are there', async () => {
+      const fetchStub = await opened()
+      await vi.waitFor(() => expect(fetchStub.tags).toHaveBeenCalledTimes(1))
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Log session' }))
+      await vi.waitFor(() => expect(fetchStub.tags).toHaveBeenCalledTimes(2))
+    })
+
+    it('still takes tags when the suggestions can’t load', async () => {
+      stubTags(async () => json({ status: 500 }, 500))
+      const fetchStub = await opened()
+      await vi.waitFor(() => expect(fetchStub.tags).toHaveBeenCalledTimes(1))
+      addTag('Space')
+      expect(chosenTags()).toEqual(['Space'])
+    })
+
+    it('says what’s wrong with the tags, and sends nothing', async () => {
+      const fetchStub = await opened()
+      fillIn()
+      addTag('a'.repeat(41))
+      submit()
+
+      expect(within(dialog()).getByText('Keep a tag to 40 characters: 1 over.')).toBeTruthy()
+      expect(document.activeElement).toBe(tagField())
+      expect(fetchStub).toHaveBeenCalledTimes(1)
     })
 
     it('asks for pages only for a book', async () => {
@@ -524,7 +587,7 @@ describe('ItemPage', () => {
         date: toDateKey(new Date()),
         durationMinutes: 90,
         pagesRead: null,
-        reflection: { mood: 'Hooked', notes: 'Couldn’t stop after the first loop.' },
+        reflection: { mood: 'Hooked', notes: 'Couldn’t stop after the first loop.', tags: [] },
       })
       await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     })
@@ -587,7 +650,7 @@ describe('ItemPage', () => {
 
   describe('its timeline', () => {
     // A session as the API gives it, logged on the day it happened unless told otherwise.
-    const session = (id, date, notes, { loggedAt = `${date}T20:00:00`, pagesRead = null, mood = 'Curious' } = {}) => ({
+    const session = (id, date, notes, { loggedAt = `${date}T20:00:00`, pagesRead = null, mood = 'Curious', tags = [] } = {}) => ({
       id,
       itemId: 'abc',
       date,
@@ -595,7 +658,7 @@ describe('ItemPage', () => {
       pagesRead,
       createdAt: loggedAt,
       updatedAt: loggedAt,
-      reflection: { id: `r-${id}`, mood, notes, createdAt: loggedAt, updatedAt: loggedAt },
+      reflection: { id: `r-${id}`, mood, notes, createdAt: loggedAt, updatedAt: loggedAt, tags },
     })
 
     const region = () => screen.getByRole('region', { name: 'Timeline' })
@@ -637,6 +700,18 @@ describe('ItemPage', () => {
       expect(entries[0]).toMatch('Changed rating from 3 to 5 stars')
       expect(entries[1]).toMatch('Rated 3 stars')
       expect(entries[2]).toMatch('Added to your library')
+    })
+
+    it('shows a session’s tags on its card, and none on a card without', async () => {
+      await loaded([
+        session('s2', '2026-11-14', 'The quantum moon finally made sense.', { tags: ['Space', 'sun'] }),
+        session('s1', '2026-11-12', 'Burned to death by the sun, twice.'),
+      ])
+      const [tagged, untagged] = await within(region()).findAllByRole('article')
+
+      const tags = within(within(tagged).getByRole('list', { name: 'Tags' })).getAllByRole('listitem')
+      expect(tags.map((tag) => tag.textContent)).toEqual(['#Space', '#sun'])
+      expect(within(untagged).queryByRole('list', { name: 'Tags' })).toBeNull()
     })
 
     it.each([
@@ -862,7 +937,27 @@ describe('ItemPage', () => {
         expect(within(dialog()).getByLabelText('Minutes').value).toBe('30')
         expect(within(dialog()).getByRole('radio', { name: 'Frustrated' }).checked).toBe(true)
         expect(within(dialog()).getByLabelText('Notes').value).toBe('Burned to death by the sun, twice.')
-        expect(within(dialog()).queryByLabelText('Tags')).toBeNull()
+      })
+
+      it('starts from the session’s tags, saves them as changed and shows them on its card', async () => {
+        const TAGGED = session('s1', '2026-11-12', 'Burned to death by the sun, twice.', { tags: ['Space', 'sun'] })
+        stubSessions(async () => json([TAGGED]))
+        const fetchStub = stubFetch(async () => json(ITEM))
+        renderPage()
+        await within(await screen.findByRole('region', { name: 'Timeline' })).findAllByRole('article')
+        fetchStub.mockImplementationOnce(async () => json({ ...TAGGED, reflection: { ...TAGGED.reflection, tags: ['Space'] } }))
+        fireEvent.click(editButton('2026-11-12'))
+
+        const chosen = within(within(dialog()).getByRole('list', { name: 'Chosen tags' }))
+        expect(chosen.getAllByRole('listitem').map((tag) => tag.textContent)).toEqual(['Space', 'sun'])
+        fireEvent.click(within(dialog()).getByRole('button', { name: 'Remove sun' }))
+        save()
+
+        expect(await screen.findByText('Changes saved')).toBeTruthy()
+        expect(JSON.parse(fetchStub.mock.calls[1][1].body).reflection.tags).toEqual(['Space'])
+        const card = within(region()).getByRole('article')
+        const tags = within(within(card).getByRole('list', { name: 'Tags' })).getAllByRole('listitem')
+        expect(tags.map((tag) => tag.textContent)).toEqual(['#Space'])
       })
 
       it('saves the changes and shows them, moving the session if its day changed', async () => {
@@ -884,7 +979,7 @@ describe('ItemPage', () => {
           date: '2026-11-15',
           durationMinutes: 90,
           pagesRead: null,
-          reflection: { mood: 'Frustrated', notes: 'Third try, and I finally escaped.' },
+          reflection: { mood: 'Frustrated', notes: 'Third try, and I finally escaped.', tags: [] },
         })
         const cards = within(region()).getAllByRole('article').map((card) => card.textContent)
         expect(cards[0]).toMatch('Third try, and I finally escaped.')
