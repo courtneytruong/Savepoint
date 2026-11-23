@@ -52,7 +52,8 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  /* Room for the chosen day's cards beside the month. */
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
   gap: var(--spacing-24);
   align-items: start;
 }
@@ -93,7 +94,7 @@
   text-align: left;
 }
 
-/* Days with sessions are lit, and can be chosen. */
+/* Days with anything on them are lit, and can be chosen. */
 .active {
   border-color: var(--color-border-card);
   background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
@@ -147,6 +148,16 @@
   border-radius: 50%;
 }
 
+/* Anything else that happened, such as an item added or rated: a small ring, so it
+   reads as different from the mood dots without a color of its own. */
+.change {
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--color-ash-lilac);
+  border-radius: 50%;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -196,55 +207,6 @@
   letter-spacing: var(--tracking-subheading);
 }
 
-.sessions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-12);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.session {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-  padding: var(--spacing-16);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-overlay-cards);
-  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
-}
-
-.sessionTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-8);
-  margin-bottom: var(--spacing-4);
-}
-
-.sessionTitle {
-  margin: 0;
-  color: var(--color-soft-quartz);
-  font-weight: var(--font-weight-medium);
-}
-
-.sessionMeta,
-.notes {
-  margin: 0;
-  font-size: var(--text-caption);
-  line-height: 20px;
-  letter-spacing: var(--tracking-caption);
-}
-
-.sessionMeta {
-  color: var(--color-ash-lilac);
-}
-
-.notes {
-  color: var(--color-muted-steel);
-}
-
 /* On narrower screens the day list moves below, and the days keep only their dots. */
 @media (max-width: 960px) {
   .layout {
@@ -272,7 +234,8 @@
     justify-content: center;
   }
 
-  .dot {
+  .dot,
+  .change {
     width: 6px;
     height: 6px;
   }

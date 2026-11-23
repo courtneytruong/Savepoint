@@ -177,6 +177,9 @@ function TimelineSkeleton() {
  * order: newest (default) or oldest first.
  * empty: shown when there are no entries, in place of the default empty state.
  * actionsFor: given a session or reflection entry, buttons for its card, such as Edit.
+ * oneDay: every entry is from one day, shown under a heading of its own, such as a
+ * calendar's chosen day: no month headings, and no dates on screen beside them. Card
+ * headings then sit one level below headingAs, which names that day's heading.
  */
 export function Timeline({
   entries = [],
@@ -185,6 +188,7 @@ export function Timeline({
   order = 'newest',
   loading = false,
   empty,
+  oneDay = false,
   headingAs: MonthHeading = 'h3',
   className,
 }) {
@@ -202,6 +206,38 @@ export function Timeline({
   }
 
   const ordered = order === 'oldest' ? entries : [...entries].reverse()
+  const cardHeading = levelBelow(MonthHeading)
+
+  // One entry along the line. Its date is left out on screen when the one before
+  // has the same day, but screen readers still hear it.
+  function entryItem(entry, index, list) {
+    const { Icon, color, content } = describe(entry, medium, actionsFor, cardHeading)
+    const date = parseDateKey(entry.day)
+    const sameDay = list[index - 1]?.day === entry.day
+    return (
+      <li key={entry.key} className={styles.entry} style={{ '--node-color': color }}>
+        <time
+          className={classNames(styles.date, sameDay && styles.sameDay)}
+          dateTime={toDateKey(date)}
+          title={fullDayFormat.format(date)}
+        >
+          {dayFormat.format(date)}
+        </time>
+        <span className={styles.node} aria-hidden="true">
+          <Icon />
+        </span>
+        <div className={styles.body}>{content}</div>
+      </li>
+    )
+  }
+
+  if (oneDay) {
+    return (
+      <div className={classNames(styles.timeline, styles.oneDay, className)}>
+        <ol className={styles.list}>{ordered.map(entryItem)}</ol>
+      </div>
+    )
+  }
 
   return (
     <div className={classNames(styles.timeline, className)}>
@@ -210,30 +246,10 @@ export function Timeline({
           <MonthHeading id={`${id}-${month}`} className={styles.month}>
             {monthFormat.format(parseDateKey(`${month}-01`))}
           </MonthHeading>
-          <ol className={styles.list}>
-            {monthEntries.map((entry, index) => {
-              const { Icon, color, content } = describe(entry, medium, actionsFor, levelBelow(MonthHeading))
-              const date = parseDateKey(entry.day)
-              const sameDay = monthEntries[index - 1]?.day === entry.day
-              return (
-                <li key={entry.key} className={styles.entry} style={{ '--node-color': color }}>
-                  <time
-                    className={classNames(styles.date, sameDay && styles.sameDay)}
-                    dateTime={toDateKey(date)}
-                    title={fullDayFormat.format(date)}
-                  >
-                    {dayFormat.format(date)}
-                  </time>
-                  <span className={styles.node} aria-hidden="true">
-                    <Icon />
-                  </span>
-                  <div className={styles.body}>{content}</div>
-                </li>
-              )
-            })}
-          </ol>
+          <ol className={styles.list}>{monthEntries.map(entryItem)}</ol>
         </section>
       ))}
     </div>
   )
 }
+

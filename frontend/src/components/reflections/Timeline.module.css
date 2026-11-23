@@ -136,6 +136,35 @@ a.itemName:hover {
   }
 }
 
+/* One day's entries, under that day's own heading: no date column, so the cards
+   have the room, and the dates are only read out. */
+.oneDay .entry {
+  grid-template-columns: var(--node-size) minmax(0, 1fr);
+  grid-template-areas: 'node body';
+}
+
+.oneDay .entry::before {
+  left: calc(var(--node-size) / 2 - 1px);
+}
+
+.oneDay .date {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.oneDay .node {
+  grid-area: node;
+}
+
+.oneDay .body {
+  grid-area: body;
+}
+
 /* On phones the date moves above each entry, so the cards keep their width. */
 @media (max-width: 600px) {
   .timeline {
