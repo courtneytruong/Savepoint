@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Savepoint.Api.Accounts;
+using Savepoint.Api.Activity;
 using Savepoint.Api.Data;
 using Savepoint.Api.Health;
 using Savepoint.Api.Library;
@@ -59,5 +60,6 @@ app.MapItemEndpoints();
 app.MapSessionEndpoints();
 app.MapReflectionEndpoints();
 app.MapTagEndpoints();
+app.MapActivityEndpoints();
 
 app.Run();
