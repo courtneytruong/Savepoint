@@ -12,8 +12,8 @@ import {
   SidebarLink,
   useToast,
 } from '../components/index.js'
-import { BookIcon, GameIcon, LibraryIcon } from '../components/icons.js'
-import { LIBRARY_PATH, libraryPath } from '../paths.js'
+import { BookIcon, GameIcon, LibraryIcon, ReflectionIcon } from '../components/icons.js'
+import { LIBRARY_PATH, libraryPath, REFLECTIONS_PATH } from '../paths.js'
 import styles from './AppLayout.module.css'
 
 /**
@@ -21,11 +21,16 @@ import styles from './AppLayout.module.css'
  * the sidebar beside the page. The intro text lives on the landing page. The
  * header and sidebar list only pages that exist; more join as they're built.
  *
- * counts: how many items the library has, and how many are a Book or a Game,
- * shown in the sidebar once known. medium: the library's type filter, if any,
+ * current: the page you're on, library (the default, for item pages too) or
+ * reflections, marked in the header and the sidebar. counts: how many items the
+ * library has, how many are a Book or a Game, and how many reflections there are,
+ * each shown in the sidebar once known. medium: the library's type filter, if any,
  * which marks its shortcut in the sidebar as the page you're on.
  */
-export function AppLayout({ account, onSignedOut, counts = {}, medium = null, children }) {
+export function AppLayout({ account, onSignedOut, current = 'library', counts = {}, medium = null, children }) {
+  const onLibrary = current === 'library'
+  const onReflections = current === 'reflections'
+
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -60,8 +65,11 @@ export function AppLayout({ account, onSignedOut, counts = {}, medium = null, ch
         brand="Savepoint"
         actions={<AccountMenu name={account.displayName} email={account.email} onSignOut={handleSignOut} />}
       >
-        <Link href={LIBRARY_PATH} aria-current="page">
+        <Link href={LIBRARY_PATH} aria-current={onLibrary ? 'page' : undefined}>
           Library
+        </Link>
+        <Link href={REFLECTIONS_PATH} aria-current={onReflections ? 'page' : undefined}>
+          Reflections
         </Link>
       </Header>
 
@@ -72,8 +80,21 @@ export function AppLayout({ account, onSignedOut, counts = {}, medium = null, ch
               sidebar={
                 <Sidebar>
                   <SidebarGroup>
-                    <SidebarLink href={LIBRARY_PATH} icon={<LibraryIcon />} count={counts.library} active={!medium}>
+                    <SidebarLink
+                      href={LIBRARY_PATH}
+                      icon={<LibraryIcon />}
+                      count={counts.library}
+                      active={onLibrary && !medium}
+                    >
                       Library
+                    </SidebarLink>
+                    <SidebarLink
+                      href={REFLECTIONS_PATH}
+                      icon={<ReflectionIcon />}
+                      count={counts.reflections}
+                      active={onReflections}
+                    >
+                      Reflections
                     </SidebarLink>
                   </SidebarGroup>
                   {/* Shortcuts to the library's type filter. */}
@@ -82,7 +103,7 @@ export function AppLayout({ account, onSignedOut, counts = {}, medium = null, ch
                       href={libraryPath({ medium: 'Book' })}
                       icon={<BookIcon />}
                       count={counts.Book}
-                      active={medium === 'Book'}
+                      active={onLibrary && medium === 'Book'}
                     >
                       Books
                     </SidebarLink>
@@ -90,7 +111,7 @@ export function AppLayout({ account, onSignedOut, counts = {}, medium = null, ch
                       href={libraryPath({ medium: 'Game' })}
                       icon={<GameIcon />}
                       count={counts.Game}
-                      active={medium === 'Game'}
+                      active={onLibrary && medium === 'Game'}
                     >
                       Games
                     </SidebarLink>
