@@ -10,11 +10,11 @@ import {
   EditReflectionModal,
   EditSessionModal,
   Heading,
-  IconToggle,
   LogSessionModal,
   Text,
   Timeline,
-  useStoredChoice,
+  TimelineOrderToggle,
+  useTimelineOrder,
   useToast,
   VisuallyHidden,
   WriteReflectionModal,
@@ -22,8 +22,6 @@ import {
 import {
   DeleteIcon,
   EditIcon,
-  NewestFirstIcon,
-  OldestFirstIcon,
   ReflectionIcon,
   WriteReflectionIcon,
 } from '../components/icons.js'
@@ -40,12 +38,6 @@ const sessionDay = (session) => dayFormat.format(parseDateKey(session.date))
 const reflectionDay = (reflection) => dayFormat.format(new Date(reflection.createdAt))
 
 const NOT_LOADED = { state: 'loading', sessions: [], reflections: [], statusChanges: [], ratingChanges: [] }
-
-// The ways round the timeline can be read, as Timeline's order values.
-const ORDERS = [
-  { value: 'newest', label: 'Newest first', Icon: NewestFirstIcon },
-  { value: 'oldest', label: 'Oldest first', Icon: OldestFirstIcon },
-]
 
 /**
  * The Timeline part of an item's page: its status and rating changes, its sessions
@@ -72,12 +64,7 @@ export function ItemTimeline({ item, onItemMissing }) {
   const [editingReflection, setEditingReflection] = useState(null)
   const [deletingReflection, setDeletingReflection] = useState(null)
   const tagSuggestions = useTagSuggestions(logging || writing || editing !== null || editingReflection !== null)
-  // Remembered in this browser for every item, as the library's view is.
-  const [order, setOrder] = useStoredChoice(
-    'savepoint.timeline.order',
-    ORDERS.map(({ value }) => value),
-    'newest',
-  )
+  const [order, setOrder] = useTimelineOrder()
   const toast = useToast()
   // Always the page's latest callback, without it being a reason to load again:
   // the page passes a new function each render.
@@ -308,7 +295,7 @@ export function ItemTimeline({ item, onItemMissing }) {
         </Heading>
         <div className={styles.actions}>
           {loaded.state === 'ready' && (
-            <IconToggle label="Timeline order" options={ORDERS} value={order} onChange={setOrder} />
+            <TimelineOrderToggle value={order} onChange={setOrder} />
           )}
           <Button variant="outline" onClick={() => setWriting(true)}>
             <WriteReflectionIcon />
