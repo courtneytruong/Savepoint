@@ -12,8 +12,8 @@ import {
   SidebarLink,
   useToast,
 } from '../components/index.js'
-import { BookIcon, GameIcon, LibraryIcon, ReflectionIcon, TimelineIcon } from '../components/icons.js'
-import { LIBRARY_PATH, libraryPath, REFLECTIONS_PATH, TIMELINE_PATH } from '../paths.js'
+import { BookIcon, CalendarIcon, GameIcon, LibraryIcon, ReflectionIcon, TimelineIcon } from '../components/icons.js'
+import { CALENDAR_PATH, LIBRARY_PATH, libraryPath, REFLECTIONS_PATH, TIMELINE_PATH } from '../paths.js'
 import styles from './AppLayout.module.css'
 
 /**
@@ -22,7 +22,7 @@ import styles from './AppLayout.module.css'
  * header and sidebar list only pages that exist; more join as they're built.
  *
  * current: the page you're on, library (the default, for item pages too),
- * reflections or timeline, marked in the header and the sidebar. counts: how many items the
+ * reflections, timeline or calendar, marked in the header and the sidebar. counts: how many items the
  * library has, how many are a Book or a Game, and how many reflections there are,
  * each shown in the sidebar once known. medium: the library's type filter, if any,
  * which marks its shortcut in the sidebar as the page you're on.
@@ -31,6 +31,7 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
   const onLibrary = current === 'library'
   const onReflections = current === 'reflections'
   const onTimeline = current === 'timeline'
+  const onCalendar = current === 'calendar'
 
   const toast = useToast()
   const navigate = useNavigate()
@@ -75,6 +76,9 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
         <Link href={TIMELINE_PATH} aria-current={onTimeline ? 'page' : undefined}>
           Timeline
         </Link>
+        <Link href={CALENDAR_PATH} aria-current={onCalendar ? 'page' : undefined}>
+          Calendar
+        </Link>
       </Header>
 
       <main className={styles.main}>
@@ -102,6 +106,9 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
                     </SidebarLink>
                     <SidebarLink href={TIMELINE_PATH} icon={<TimelineIcon />} active={onTimeline}>
                       Timeline
+                    </SidebarLink>
+                    <SidebarLink href={CALENDAR_PATH} icon={<CalendarIcon />} active={onCalendar}>
+                      Calendar
                     </SidebarLink>
                   </SidebarGroup>
                   {/* Shortcuts to the library's type filter. */}

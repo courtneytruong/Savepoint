@@ -4,6 +4,7 @@ export const CREATE_ACCOUNT_PATH = '/create-account'
 export const LIBRARY_PATH = '/'
 export const REFLECTIONS_PATH = '/reflections'
 export const TIMELINE_PATH = '/timeline'
+export const CALENDAR_PATH = '/calendar'
 // The route for an item's own page; itemPath fills in the id.
 export const ITEM_PATH = '/items/:id'
 
