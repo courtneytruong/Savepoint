@@ -830,7 +830,7 @@ describe('ItemPage', () => {
       expect(within(region()).queryByText(/No sessions yet/)).toBeNull()
     })
 
-    it('gives a standalone reflection no session buttons', async () => {
+    it('gives a standalone reflection its own buttons, not its session namesake’s', async () => {
       stubReflections(async () =>
         json([
           {
@@ -847,7 +847,9 @@ describe('ItemPage', () => {
 
       const cards = await within(region()).findAllByRole('article')
       const reflectionCard = cards.find((card) => card.textContent.includes('must not matter'))
-      expect(within(reflectionCard).queryByRole('button')).toBeNull()
+      const names = within(reflectionCard).getAllByRole('button').map((button) => button.textContent)
+      expect(names).toHaveLength(2)
+      for (const name of names) expect(name).toMatch('the reflection from')
     })
 
     it('asks for this item’s status changes once the item has loaded', async () => {
@@ -1274,6 +1276,124 @@ describe('ItemPage', () => {
 
         await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
         expect(within(region()).getAllByRole('article')).toHaveLength(2)
+      })
+    })
+
+    describe('a standalone reflection', () => {
+      // Written at midday, so its day is the same in any time zone the tests run in.
+      const reflection = (id, day, notes, { mood = 'Moved', tags = [] } = {}) => ({
+        id,
+        mood,
+        notes,
+        createdAt: `${day}T12:00:00`,
+        updatedAt: `${day}T12:00:00`,
+        tags,
+      })
+      const day = (key) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(`${key}T12:00`))
+      const button = (action, key) => screen.getByRole('button', { name: `${action} the reflection from ${day(key)}` })
+
+      const NEWER = reflection('r2', '2026-11-14', 'Nothing else has made me feel this small.', { tags: ['awe'] })
+      const OLDER = reflection('r1', '2026-11-12', 'The ending surprised me more than I expected.', { mood: 'Hooked' })
+
+      async function shown(...answers) {
+        stubReflections(async () => json([NEWER, OLDER]))
+        const fetchStub = stubFetch(async () => json(ITEM))
+        renderPage()
+        await within(await screen.findByRole('region', { name: 'Timeline' })).findAllByRole('article')
+        for (const answer of answers) fetchStub.mockImplementationOnce(answer)
+        return fetchStub
+      }
+
+      describe('editing it', () => {
+        const dialog = () => screen.getByRole('dialog', { name: 'Edit reflection' })
+        const save = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Save changes' }))
+
+        it('opens the form filled in with the reflection as it is', async () => {
+          await shown()
+          fireEvent.click(button('Edit', '2026-11-14'))
+
+          expect(within(dialog()).getByText('Outer Wilds: change what you thought.')).toBeTruthy()
+          expect(within(dialog()).getByRole('radio', { name: 'Moved' }).checked).toBe(true)
+          expect(within(dialog()).getByLabelText('Notes').value).toBe('Nothing else has made me feel this small.')
+          const chosen = within(within(dialog()).getByRole('list', { name: 'Chosen tags' })).getAllByRole('listitem')
+          expect(chosen.map((tag) => tag.textContent)).toEqual(['awe'])
+        })
+
+        it('saves the changes, shows them and says so', async () => {
+          const edited = { ...NEWER, notes: 'Smaller still on a second visit.', updatedAt: '2026-11-15T09:00:00' }
+          const fetchStub = await shown(async () => json(edited))
+          fireEvent.click(button('Edit', '2026-11-14'))
+          fireEvent.change(within(dialog()).getByLabelText('Notes'), { target: { value: 'Smaller still on a second visit.' } })
+          save()
+
+          expect(await screen.findByText('Changes saved')).toBeTruthy()
+          const [url, options] = fetchStub.mock.calls[1]
+          expect(url).toBe('/api/items/abc/reflections/r2')
+          expect(options.method).toBe('PUT')
+          expect(JSON.parse(options.body)).toEqual({ mood: 'Moved', notes: 'Smaller still on a second visit.', tags: ['awe'] })
+          await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+          const cards = within(screen.getByRole('region', { name: 'Timeline' })).getAllByRole('article')
+          expect(cards[0].textContent).toMatch('Smaller still on a second visit.')
+          expect(cards[0].textContent).toMatch('Edited')
+        })
+
+        it('loads the timeline afresh when the reflection was deleted meanwhile', async () => {
+          const fetchStub = await shown(async () => new Response(null, { status: 404 }))
+          fireEvent.click(button('Edit', '2026-11-14'))
+          save()
+
+          await vi.waitFor(() => expect(fetchStub.reflections).toHaveBeenCalledTimes(2))
+          expect(screen.queryByRole('dialog')).toBeNull()
+        })
+
+        it('stays open when saving fails', async () => {
+          await shown(async () => json({ status: 500 }, 500))
+          fireEvent.click(button('Edit', '2026-11-14'))
+          save()
+
+          await vi.waitFor(() =>
+            expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't save your changes"),
+          )
+        })
+      })
+
+      describe('deleting it', () => {
+        const dialog = () => screen.getByRole('dialog', { name: 'Delete this reflection?' })
+        const confirm = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Delete' }))
+
+        it('asks first, naming its day, and keeping it sends nothing', async () => {
+          const fetchStub = await shown()
+          fireEvent.click(button('Delete', '2026-11-12'))
+          expect(within(dialog()).getByText(`Your reflection from ${day('2026-11-12')}. This can't be undone.`)).toBeTruthy()
+
+          fireEvent.click(within(dialog()).getByRole('button', { name: 'Keep it' }))
+
+          expect(screen.queryByRole('dialog')).toBeNull()
+          expect(fetchStub).toHaveBeenCalledTimes(1)
+        })
+
+        it('deletes it, takes it off the timeline and says so', async () => {
+          const fetchStub = await shown(async () => new Response(null, { status: 204 }))
+          fireEvent.click(button('Delete', '2026-11-12'))
+          confirm()
+
+          expect(await screen.findByText('Reflection deleted')).toBeTruthy()
+          const [url, options] = fetchStub.mock.calls[1]
+          expect(url).toBe('/api/items/abc/reflections/r1')
+          expect(options.method).toBe('DELETE')
+          const cards = within(screen.getByRole('region', { name: 'Timeline' })).getAllByRole('article')
+          expect(cards).toHaveLength(1)
+          expect(cards[0].textContent).toMatch('Nothing else has made me feel this small.')
+        })
+
+        it('keeps it, and says so in the modal, when deleting fails', async () => {
+          await shown(async () => new Response(null, { status: 500 }))
+          fireEvent.click(button('Delete', '2026-11-12'))
+          confirm()
+
+          await vi.waitFor(() => expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't delete it"))
+          expect(within(screen.getByRole('region', { name: 'Timeline' })).getAllByRole('article')).toHaveLength(2)
+        })
       })
     })
   })
