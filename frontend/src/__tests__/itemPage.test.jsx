@@ -658,6 +658,118 @@ describe('ItemPage', () => {
     })
   })
 
+  describe('writing a reflection', () => {
+    const REFLECTION = {
+      id: 'r9',
+      mood: 'Delighted',
+      notes: 'Nothing else has made me feel this small.',
+      createdAt: '2026-11-15T20:00:00+00:00',
+      updatedAt: '2026-11-15T20:00:00+00:00',
+      tags: ['awe'],
+    }
+
+    async function opened(...answers) {
+      const fetchStub = stubFetch(async () => json(ITEM), ...answers)
+      renderPage()
+      await screen.findByRole('heading', { level: 1, name: ITEM.title })
+      fireEvent.click(screen.getByRole('button', { name: 'Write a reflection' }))
+      return fetchStub
+    }
+
+    const dialog = () => screen.getByRole('dialog', { name: 'Write a reflection' })
+    const submit = () => fireEvent.click(within(dialog()).getByRole('button', { name: 'Save reflection' }))
+    const region = () => screen.getByRole('region', { name: 'Timeline' })
+
+    function fillIn() {
+      fireEvent.click(within(dialog()).getByRole('radio', { name: 'Delighted' }))
+      fireEvent.change(within(dialog()).getByLabelText('Notes'), {
+        target: { value: '  Nothing else has made me feel this small.  ' },
+      })
+      const tags = within(dialog()).getByRole('combobox', { name: 'Tags' })
+      fireEvent.change(tags, { target: { value: 'awe' } })
+      fireEvent.keyDown(tags, { key: 'Enter' })
+    }
+
+    it('opens for this item with a mood, notes and tags, but no date or time', async () => {
+      await opened()
+      expect(within(dialog()).getByText('Outer Wilds: a thought about it as a whole, not about one session.')).toBeTruthy()
+      expect(within(dialog()).getByRole('radio', { name: 'Delighted' })).toBeTruthy()
+      expect(within(dialog()).getByLabelText('Notes')).toBeTruthy()
+      expect(within(dialog()).getByRole('combobox', { name: 'Tags' })).toBeTruthy()
+      expect(within(dialog()).queryByLabelText('Date')).toBeNull()
+      expect(within(dialog()).queryByLabelText('Hours')).toBeNull()
+    })
+
+    it('saves it for this item, closes, says so and shows it on the timeline', async () => {
+      const fetchStub = await opened(async () => json(REFLECTION, 201))
+      await within(region()).findByText('Added to your library')
+      fillIn()
+      submit()
+
+      expect(await screen.findByText('Reflection saved')).toBeTruthy()
+      const [url, options] = fetchStub.mock.calls[1]
+      expect(url).toBe('/api/items/abc/reflections')
+      expect(options.method).toBe('POST')
+      expect(JSON.parse(options.body)).toEqual({
+        mood: 'Delighted',
+        notes: 'Nothing else has made me feel this small.',
+        tags: ['awe'],
+      })
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      const card = within(region()).getByRole('article')
+      expect(card.textContent).toMatch('Nothing else has made me feel this small.')
+      expect(card.textContent).toMatch('#awe')
+      expect(within(region()).queryByText(/No sessions yet/)).toBeNull()
+    })
+
+    it('sends nothing until the form is valid', async () => {
+      const fetchStub = await opened()
+      submit()
+
+      expect(within(dialog()).getByText('Choose the mood that fits best.')).toBeTruthy()
+      expect(fetchStub).toHaveBeenCalledTimes(1)
+    })
+
+    it('loads the tag suggestions when it opens', async () => {
+      const fetchStub = await opened()
+      await vi.waitFor(() => expect(fetchStub.tags).toHaveBeenCalledTimes(1))
+    })
+
+    it('stays open with what was written when saving fails, so it can be sent again', async () => {
+      await opened(async () => json({ status: 500 }, 500))
+      fillIn()
+      submit()
+
+      await vi.waitFor(() =>
+        expect(within(dialog()).getByRole('alert').textContent).toMatch("Couldn't save the reflection"),
+      )
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('  Nothing else has made me feel this small.  ')
+      expect(within(dialog()).getByRole('button', { name: 'Save reflection' }).disabled).toBe(false)
+    })
+
+    it('shows the item as not found when it was deleted meanwhile', async () => {
+      await opened(async () => new Response(null, { status: 404 }))
+      fillIn()
+      submit()
+
+      expect(await screen.findByRole('heading', { name: "This item isn't in your library" })).toBeTruthy()
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('closes only from Cancel, and starts empty each time it opens', async () => {
+      await opened()
+      fireEvent.change(within(dialog()).getByLabelText('Notes'), { target: { value: 'Half a thought about the' } })
+
+      fireEvent(dialog(), new Event('cancel', { cancelable: true }))
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('Half a thought about the')
+
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Write a reflection' }))
+      expect(within(dialog()).getByLabelText('Notes').value).toBe('')
+    })
+  })
+
   describe('its timeline', () => {
     // A session as the API gives it, logged on the day it happened unless told otherwise.
     const session = (id, date, notes, { loggedAt = `${date}T20:00:00`, pagesRead = null, mood = 'Curious', tags = [] } = {}) => ({

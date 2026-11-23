@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useId, useState } from 'react'
 import { getRatingChanges, getStatusChanges } from '../api/items.js'
-import { getReflections } from '../api/reflections.js'
+import { getReflections, writeReflection } from '../api/reflections.js'
 import { deleteSession, editSession, getSessions, logSession } from '../api/sessions.js'
 import {
   Alert,
@@ -16,8 +16,16 @@ import {
   useStoredChoice,
   useToast,
   VisuallyHidden,
+  WriteReflectionModal,
 } from '../components/index.js'
-import { DeleteIcon, EditIcon, NewestFirstIcon, OldestFirstIcon, ReflectionIcon } from '../components/icons.js'
+import {
+  DeleteIcon,
+  EditIcon,
+  NewestFirstIcon,
+  OldestFirstIcon,
+  ReflectionIcon,
+  WriteReflectionIcon,
+} from '../components/icons.js'
 import { useTagSuggestions } from '../hooks/useTagSuggestions.js'
 import { parseDateKey } from '../utils/calendarDates.js'
 import styles from './ItemPage.module.css'
@@ -38,8 +46,8 @@ const ORDERS = [
 
 /**
  * The Timeline part of an item's page: its status and rating changes, its sessions
- * with their reflections, and its standalone reflections, newest first, and the way
- * to log another session. Give it key={item.id}, so another item starts afresh.
+ * with their reflections, and its standalone reflections, newest first, and the ways
+ * to log another session or write another reflection. Give it key={item.id}, so another item starts afresh.
  *
  * item: the item the page shows. onItemMissing: called when the API says the item
  * is no longer in this library, so the page can say so.
@@ -51,11 +59,12 @@ export function ItemTimeline({ item, onItemMissing }) {
   // Counting tries makes Try again load afresh, through the same effect.
   const [tries, setTries] = useState(0)
   const [logging, setLogging] = useState(false)
+  const [writing, setWriting] = useState(false)
   // The session being edited, if any.
   const [editing, setEditing] = useState(null)
   // The session being deleted, if any.
   const [deleting, setDeleting] = useState(null)
-  const tagSuggestions = useTagSuggestions(logging || editing !== null)
+  const tagSuggestions = useTagSuggestions(logging || writing || editing !== null)
   // Remembered in this browser for every item, as the library's view is.
   const [order, setOrder] = useStoredChoice(
     'savepoint.timeline.order',
@@ -110,6 +119,23 @@ export function ItemTimeline({ item, onItemMissing }) {
       toast.show({ title: 'Session logged' })
     } else if (result.error === 'missing') {
       setLogging(false)
+      onItemMissing()
+      return {}
+    }
+    return result
+  }
+
+  async function saveReflection(values) {
+    const result = await writeReflection(item.id, values)
+    if (result.reflection) {
+      setWriting(false)
+      // Only into a timeline that has loaded, as for a session.
+      setLoaded((current) =>
+        current.state === 'ready' ? { ...current, reflections: [...current.reflections, result.reflection] } : current,
+      )
+      toast.show({ title: 'Reflection saved' })
+    } else if (result.error === 'missing') {
+      setWriting(false)
       onItemMissing()
       return {}
     }
@@ -225,6 +251,10 @@ export function ItemTimeline({ item, onItemMissing }) {
           {loaded.state === 'ready' && (
             <IconToggle label="Timeline order" options={ORDERS} value={order} onChange={setOrder} />
           )}
+          <Button variant="outline" onClick={() => setWriting(true)}>
+            <WriteReflectionIcon />
+            Write a reflection
+          </Button>
           <Button onClick={() => setLogging(true)}>
             <ReflectionIcon />
             Log session
@@ -238,6 +268,13 @@ export function ItemTimeline({ item, onItemMissing }) {
         tagSuggestions={tagSuggestions}
         onClose={() => setLogging(false)}
         onSubmit={saveSession}
+      />
+      <WriteReflectionModal
+        open={writing}
+        item={item}
+        tagSuggestions={tagSuggestions}
+        onClose={() => setWriting(false)}
+        onSubmit={saveReflection}
       />
       <EditSessionModal
         open={editing !== null}
