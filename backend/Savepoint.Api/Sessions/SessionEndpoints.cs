@@ -34,9 +34,6 @@ public static class SessionEndpoints
     // session and edits one.
     public record SessionRequest(string? Date, int? DurationMinutes, int? PagesRead, ReflectionRequest? Reflection);
 
-    // Tags are names, so a new one is created by using it. Missing means none.
-    public record ReflectionRequest(string? Mood, string? Notes, List<string?>? Tags);
-
     /// <summary>A session as the frontend sees it, with its reflection. Date is "yyyy-MM-dd".</summary>
     public record SessionResponse(
         Guid Id,
@@ -47,10 +44,6 @@ public static class SessionEndpoints
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt,
         ReflectionResponse Reflection);
-
-    /// <summary>A reflection with its tags' names, in alphabetical order ignoring case and accents.</summary>
-    public record ReflectionResponse(
-        Guid Id, string Mood, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, List<string> Tags);
 
     /// <summary>
     /// Every session for an item, each with its reflection, newest day first. Within
@@ -109,9 +102,9 @@ public static class SessionEndpoints
             Reflection = new Reflection
             {
                 ItemId = itemId,
-                Mood = details.Mood,
-                Notes = details.Notes,
-                Tags = await TagStore.FindOrAddAsync(db, userId, details.Tags, cancellationToken),
+                Mood = details.Reflection.Mood,
+                Notes = details.Reflection.Notes,
+                Tags = await TagStore.FindOrAddAsync(db, userId, details.Reflection.Tags, cancellationToken),
             },
         };
         // One save, so it's one transaction, new tags included.
@@ -165,36 +158,9 @@ public static class SessionEndpoints
         // Leaving without committing rolls the transaction back.
         if (changed == 0) return TypedResults.NotFound();
 
-        // Tags are compared as sets of normalized names, so sending the same tags in
-        // another order or case isn't a change.
         var reflection = await db.Reflections.Include(r => r.Tags).SingleAsync(r => r.SessionId == sessionId, cancellationToken);
-        var tagsChanged = !reflection.Tags.Select(t => t.NormalizedName).ToHashSet()
-            .SetEquals(details.Tags.Select(TagNames.Normalize));
-
-        await db.Reflections
-            .Where(r => r.Id == reflection.Id)
-            .ExecuteUpdateAsync(
-                set => set
-                    // The database's clock, as for CreatedAt, so the two always compare.
-                    // Worked out from the old values, since SET reads the row as it was.
-                    .SetProperty(
-                        r => r.UpdatedAt,
-                        r => tagsChanged || r.Mood != details.Mood || r.Notes != details.Notes
-                            ? DateTimeOffset.UtcNow
-                            : r.UpdatedAt)
-                    .SetProperty(r => r.Mood, details.Mood)
-                    .SetProperty(r => r.Notes, details.Notes),
-                cancellationToken);
-
-        if (tagsChanged)
-        {
-            var userId = CurrentUser.IdOf(principal, users);
-            var tags = await TagStore.FindOrAddAsync(db, userId, details.Tags, cancellationToken);
-            reflection.Tags.Clear();
-            reflection.Tags.AddRange(tags);
-            await db.SaveChangesAsync(cancellationToken);
-            await TagStore.DeleteUnusedAsync(db, userId, cancellationToken);
-        }
+        await ReflectionWriting.UpdateAsync(
+            db, CurrentUser.IdOf(principal, users), reflection, details.Reflection, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
 
@@ -228,10 +194,8 @@ public static class SessionEndpoints
         return TypedResults.NoContent();
     }
 
-    // The checked, trimmed fields shared by logging and editing a session. Tags are
-    // cleaned names, one per tag.
-    private sealed record SessionDetails(
-        DateOnly Date, int DurationMinutes, int? PagesRead, Mood Mood, string Notes, List<string> Tags);
+    // The checked, trimmed fields shared by logging and editing a session.
+    private sealed record SessionDetails(DateOnly Date, int DurationMinutes, int? PagesRead, ReflectionDetails Reflection);
 
     /// <summary>
     /// Checks the fields that logging and editing share, adding a code to errors for
@@ -243,9 +207,8 @@ public static class SessionEndpoints
         var date = CheckDate(request.Date, errors);
         var durationMinutes = CheckDuration(request.DurationMinutes, errors);
         if (request.PagesRead <= 0) errors["pagesRead"] = ["invalid"];
-        var (mood, notes) = CheckReflection(request.Reflection, errors);
-        var tags = TagStore.Check(request.Reflection?.Tags, "reflection.tags", errors);
-        return new SessionDetails(date, durationMinutes, request.PagesRead, mood, notes, tags);
+        var reflection = ReflectionWriting.Check(request.Reflection, "reflection.", errors);
+        return new SessionDetails(date, durationMinutes, request.PagesRead, reflection);
     }
 
     // The item's medium when it's the signed-in person's, or null, which is a 404.
@@ -298,29 +261,6 @@ public static class SessionEndpoints
         return minutes ?? 0;
     }
 
-    /// <summary>
-    /// The reflection's mood and trimmed notes, adding a code to errors for each one
-    /// that's wrong. A missing reflection counts as missing both.
-    /// </summary>
-    private static (Mood Mood, string Notes) CheckReflection(
-        ReflectionRequest? reflection, Dictionary<string, string[]> errors)
-    {
-        Mood mood = default;
-        if (reflection?.Mood is null) errors["reflection.mood"] = ["required"];
-        else if (!EnumNames.TryParse(reflection.Mood, out mood)) errors["reflection.mood"] = ["invalid"];
-
-        var notes = reflection?.Notes?.Trim() ?? "";
-        // Counted as the database counts characters: by code point, so an emoji is one
-        // character, not the two that string.Length counts. Counting the other way, a
-        // note could pass here and then fail the database's check.
-        var length = notes.EnumerateRunes().Count();
-        if (length == 0) errors["reflection.notes"] = ["required"];
-        else if (length < SessionRules.MinNotesLength) errors["reflection.notes"] = ["tooShort"];
-        else if (length > SessionRules.MaxNotesLength) errors["reflection.notes"] = ["tooLong"];
-
-        return (mood, notes);
-    }
-
     // The reflection is always there for sessions the API saved.
     private static SessionResponse ToResponse(Session session)
     {
@@ -334,14 +274,6 @@ public static class SessionEndpoints
             session.PagesRead,
             session.CreatedAt,
             session.UpdatedAt,
-            new ReflectionResponse(
-                reflection.Id,
-                reflection.Mood.ToString(),
-                reflection.Notes,
-                reflection.CreatedAt,
-                reflection.UpdatedAt,
-                // Sorted here rather than in SQL, so the order doesn't depend on the
-                // database's collation. Two of a user's tags never share a normalized name.
-                [.. reflection.Tags.OrderBy(t => t.NormalizedName, StringComparer.Ordinal).Select(t => t.Name)]));
+            ReflectionWriting.ToResponse(reflection));
     }
 }
