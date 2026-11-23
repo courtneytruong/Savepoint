@@ -101,6 +101,7 @@ public sealed class CreateSessionTests(PostgresFixture postgres) : IAsyncDisposa
         var reflection = session.GetProperty("reflection");
         Assert.Equal("Moved", reflection.GetProperty("mood").GetString());
         Assert.Equal(Notes, reflection.GetProperty("notes").GetString());
+        Assert.Empty(reflection.GetProperty("tags").EnumerateArray());
         // Saved in one transaction, so the database's clock gave them one time.
         var createdAt = session.GetProperty("createdAt").GetDateTimeOffset();
         Assert.Equal(createdAt, reflection.GetProperty("createdAt").GetDateTimeOffset());

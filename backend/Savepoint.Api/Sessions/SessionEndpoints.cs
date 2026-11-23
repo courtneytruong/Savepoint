@@ -47,7 +47,9 @@ public static class SessionEndpoints
         DateTimeOffset UpdatedAt,
         ReflectionResponse Reflection);
 
-    public record ReflectionResponse(Guid Id, string Mood, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    /// <summary>A reflection with its tags' names, in alphabetical order ignoring case and accents.</summary>
+    public record ReflectionResponse(
+        Guid Id, string Mood, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, List<string> Tags);
 
     /// <summary>
     /// Every session for an item, each with its reflection, newest day first. Within
@@ -68,7 +70,7 @@ public static class SessionEndpoints
 
         var sessions = await db.Sessions
             .Where(s => s.ItemId == itemId)
-            .Include(s => s.Reflection)
+            .Include(s => s.Reflection).ThenInclude(r => r!.Tags)
             // Ids are made in time order, so they break a tie between sessions saved at once.
             .OrderByDescending(s => s.Date).ThenByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id)
             .AsNoTracking()
@@ -168,7 +170,7 @@ public static class SessionEndpoints
 
         await transaction.CommitAsync(cancellationToken);
 
-        var session = await mine.Include(s => s.Reflection).AsNoTracking().SingleAsync(cancellationToken);
+        var session = await mine.Include(s => s.Reflection).ThenInclude(r => r!.Tags).AsNoTracking().SingleAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(session));
     }
 
@@ -296,6 +298,13 @@ public static class SessionEndpoints
             session.CreatedAt,
             session.UpdatedAt,
             new ReflectionResponse(
-                reflection.Id, reflection.Mood.ToString(), reflection.Notes, reflection.CreatedAt, reflection.UpdatedAt));
+                reflection.Id,
+                reflection.Mood.ToString(),
+                reflection.Notes,
+                reflection.CreatedAt,
+                reflection.UpdatedAt,
+                // Sorted here rather than in SQL, so the order doesn't depend on the
+                // database's collation. Two of a user's tags never share a normalized name.
+                [.. reflection.Tags.OrderBy(t => t.NormalizedName, StringComparer.Ordinal).Select(t => t.Name)]));
     }
 }
