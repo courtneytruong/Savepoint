@@ -702,6 +702,18 @@ describe('ItemPage', () => {
       expect(entries[2]).toMatch('Added to your library')
     })
 
+    it('shows a session’s tags on its card, and none on a card without', async () => {
+      await loaded([
+        session('s2', '2026-11-14', 'The quantum moon finally made sense.', { tags: ['Space', 'sun'] }),
+        session('s1', '2026-11-12', 'Burned to death by the sun, twice.'),
+      ])
+      const [tagged, untagged] = await within(region()).findAllByRole('article')
+
+      const tags = within(within(tagged).getByRole('list', { name: 'Tags' })).getAllByRole('listitem')
+      expect(tags.map((tag) => tag.textContent)).toEqual(['#Space', '#sun'])
+      expect(within(untagged).queryByRole('list', { name: 'Tags' })).toBeNull()
+    })
+
     it.each([
       ['sessions', () => stubSessions(neverAnswers)],
       ['status changes', () => stubStatusChanges(neverAnswers)],
@@ -927,13 +939,13 @@ describe('ItemPage', () => {
         expect(within(dialog()).getByLabelText('Notes').value).toBe('Burned to death by the sun, twice.')
       })
 
-      it('starts from the session’s tags and saves them as changed', async () => {
+      it('starts from the session’s tags, saves them as changed and shows them on its card', async () => {
         const TAGGED = session('s1', '2026-11-12', 'Burned to death by the sun, twice.', { tags: ['Space', 'sun'] })
         stubSessions(async () => json([TAGGED]))
         const fetchStub = stubFetch(async () => json(ITEM))
         renderPage()
         await within(await screen.findByRole('region', { name: 'Timeline' })).findAllByRole('article')
-        fetchStub.mockImplementationOnce(async () => json(TAGGED))
+        fetchStub.mockImplementationOnce(async () => json({ ...TAGGED, reflection: { ...TAGGED.reflection, tags: ['Space'] } }))
         fireEvent.click(editButton('2026-11-12'))
 
         const chosen = within(within(dialog()).getByRole('list', { name: 'Chosen tags' }))
@@ -943,6 +955,9 @@ describe('ItemPage', () => {
 
         expect(await screen.findByText('Changes saved')).toBeTruthy()
         expect(JSON.parse(fetchStub.mock.calls[1][1].body).reflection.tags).toEqual(['Space'])
+        const card = within(region()).getByRole('article')
+        const tags = within(within(card).getByRole('list', { name: 'Tags' })).getAllByRole('listitem')
+        expect(tags.map((tag) => tag.textContent)).toEqual(['#Space'])
       })
 
       it('saves the changes and shows them, moving the session if its day changed', async () => {
