@@ -63,6 +63,7 @@ erDiagram
         uuid Id PK
         uuid UserId FK
         text Name
+        text NormalizedName
     }
     REFLECTION_TAGS {
         uuid ReflectionId PK, FK
@@ -85,7 +86,8 @@ erDiagram
 | Reflections | `SessionId` | Optional and unique, so a session has at most one reflection |
 | Reflections | `Mood` | `Hooked`, `Delighted`, `Moved`, `Curious`, `Frustrated` or `Bored` |
 | Reflections | `Notes` | 20 to 10,000 characters after trimming whitespace |
-| Tags | `Name` | Unique per user |
+| Tags | `Name` | 1 to 40 characters after cleaning; unique per user, ignoring case and accents |
+| ReflectionTags | | At most 10 tags on a reflection (enforced by the API) |
 | Users | `DisplayName` | 1 to 50 characters after trimming whitespace |
 
 ## Decisions
@@ -141,6 +143,16 @@ A change of opinion is exactly what the timeline should show, so each change add
 ### Moods are a fixed list
 
 A fixed list makes patterns visible across a timeline, which free text would not. Tags remain the free-form way to label reflections.
+
+### Tags are shared and tidy themselves
+
+A user's tag is one row shared by every reflection it's on, so the same label is reused rather than spelled a new way each time.
+
+- A name is cleaned before saving: its ends are trimmed and runs of spaces made single. It can then be 1 to 40 characters.
+- Two names are the same tag when they differ only in case or accents, so "Cozy", "cozy" and "Cózy" are one tag. `NormalizedName` holds the name without either and is unique per user. The tag keeps the spelling it was first given.
+- A reflection can have at most 10 tags.
+- When a save leaves a tag on no reflection, the same save deletes it, so old typos stop being suggested.
+- Renaming and merging tags are left for later.
 
 ### Timeline order
 
