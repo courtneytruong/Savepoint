@@ -148,6 +148,17 @@ describe('StatsPage', () => {
     const time = screen.getByRole('region', { name: 'Time per month' })
     expect(within(time).getByText('No time logged this year. Log a session to see it here.')).toBeTruthy()
     expect(within(time).queryByRole('list')).toBeNull()
+    const pages = screen.getByRole('region', { name: 'Pages read per month' })
+    expect(within(pages).getByText('No pages logged this year. Add pages read to a book session to see them here.')).toBeTruthy()
+  })
+
+  it("charts the range's pages by month", async () => {
+    stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(ACTIVITY)] })
+    renderPage()
+
+    const chart = await screen.findByRole('list', { name: 'Pages read each month, this year' })
+    const month = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(now)
+    expect(within(chart).getByRole('img', { name: `${month}: 30 pages` })).toBeTruthy()
   })
 
   it("charts the range's time by month", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_TICKS, minutesScale } from '../utils/chartScale.js'
+import { countScale, MAX_TICKS, minutesScale } from '../utils/chartScale.js'
 
 describe('minutesScale', () => {
   it('has only zero with nothing to show', () => {
@@ -20,6 +20,27 @@ describe('minutesScale', () => {
   it('never has more than a few steps, and always reaches the largest value', () => {
     for (const max of [1, 14, 59, 61, 199, 721, 5000, 99999]) {
       const { top, ticks } = minutesScale(max)
+      expect(top).toBeGreaterThanOrEqual(max)
+      expect(ticks.length - 1).toBeLessThanOrEqual(MAX_TICKS)
+      expect(ticks.at(-1)).toBe(top)
+    }
+  })
+})
+
+describe('countScale', () => {
+  it('has only zero with nothing to show', () => {
+    expect(countScale(0)).toEqual({ top: 0, ticks: [0] })
+  })
+
+  it('steps by 1, 2 or 5 times a power of ten', () => {
+    expect(countScale(3)).toEqual({ top: 3, ticks: [0, 1, 2, 3] })
+    expect(countScale(42)).toEqual({ top: 60, ticks: [0, 20, 40, 60] })
+    expect(countScale(380)).toEqual({ top: 400, ticks: [0, 100, 200, 300, 400] })
+  })
+
+  it('never has more than a few steps, and always reaches the largest value', () => {
+    for (const max of [1, 7, 99, 101, 1234, 56789]) {
+      const { top, ticks } = countScale(max)
       expect(top).toBeGreaterThanOrEqual(max)
       expect(ticks.length - 1).toBeLessThanOrEqual(MAX_TICKS)
       expect(ticks.at(-1)).toBe(top)

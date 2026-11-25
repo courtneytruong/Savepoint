@@ -48,6 +48,7 @@ import {
   Hero,
   Input,
   Modal,
+  MonthlyPagesChart,
   MonthlyTimeChart,
   MoodBadge,
   MoodPicker,
@@ -91,7 +92,8 @@ import { makeSampleReflections, makeSampleSessions, SAMPLE_COLUMNS, SAMPLE_ITEMS
 
 const STATUSES = ['Backlog', 'InProgress', 'Finished', 'Dropped']
 
-// A year of made-up minutes, books and games, with one quiet month, for the time chart.
+// A year of made-up minutes, books and games, with one quiet month, for the time
+// and pages charts. Pages come from reading, at about a page every two minutes.
 const SAMPLE_MONTHS = [
   [0, 0],
   [240, 90],
@@ -105,7 +107,12 @@ const SAMPLE_MONTHS = [
   [150, 900],
   [455, 230],
   [270, 60],
-].map(([Book, Game], index) => ({ month: `2026-${String(index + 1).padStart(2, '0')}`, Book, Game }))
+].map(([Book, Game], index) => ({
+  month: `2026-${String(index + 1).padStart(2, '0')}`,
+  Book,
+  Game,
+  pages: Math.round(Book / 2),
+}))
 
 const ICONS = [
   ['Add', AddIcon],
@@ -611,6 +618,11 @@ function GalleryPage({ page }) {
         <Section>
           <Heading size="medium">Time per month</Heading>
           <MonthlyTimeChart months={SAMPLE_MONTHS} label="Example: time logged each month" />
+        </Section>
+
+        <Section>
+          <Heading size="medium">Pages per month</Heading>
+          <MonthlyPagesChart months={SAMPLE_MONTHS} label="Example: pages read each month" />
         </Section>
 
         <Section>

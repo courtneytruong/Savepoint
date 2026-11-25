@@ -162,9 +162,15 @@ describe('buildStats', () => {
     expect(stats.tags[2]).toEqual({ name: 'tag 00', count: 1 })
   })
 
-  it('charts every month of this year so far, with minutes by type', () => {
+  it('charts every month of this year so far, with minutes by type and pages', () => {
     const stats = statsFor(
-      { sessions: [session(BOOK, '2026-03-02', 40), session(GAME, '2026-03-20', 90), session(BOOK, '2026-11-01', 15)] },
+      {
+        sessions: [
+          session(BOOK, '2026-03-02', 40, { pagesRead: 25 }),
+          session(GAME, '2026-03-20', 90),
+          session(BOOK, '2026-11-01', 15, { pagesRead: 8 }),
+        ],
+      },
       'year',
     )
 
@@ -181,9 +187,9 @@ describe('buildStats', () => {
       '2026-10',
       '2026-11',
     ])
-    expect(stats.months[0]).toEqual({ month: '2026-01', Book: 0, Game: 0 })
-    expect(stats.months[2]).toEqual({ month: '2026-03', Book: 40, Game: 90 })
-    expect(stats.months[10]).toEqual({ month: '2026-11', Book: 15, Game: 0 })
+    expect(stats.months[0]).toEqual({ month: '2026-01', Book: 0, Game: 0, pages: 0 })
+    expect(stats.months[2]).toEqual({ month: '2026-03', Book: 40, Game: 90, pages: 25 })
+    expect(stats.months[10]).toEqual({ month: '2026-11', Book: 15, Game: 0, pages: 8 })
   })
 
   it('charts twelve months for the last 12 months, across the new year', () => {
@@ -196,7 +202,7 @@ describe('buildStats', () => {
   it('charts all time from the first session, and nothing with no sessions', () => {
     const { months } = statsFor({ sessions: [session(GAME, '2025-10-15', 30)] }, 'all')
     expect(months).toHaveLength(14)
-    expect(months[0]).toEqual({ month: '2025-10', Book: 0, Game: 30 })
+    expect(months[0]).toEqual({ month: '2025-10', Book: 0, Game: 30, pages: 0 })
 
     expect(statsFor({}, 'all').months).toEqual([])
   })

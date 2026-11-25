@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { MonthlyTimeChart } from '../components/index.js'
+import { MonthlyPagesChart, MonthlyTimeChart } from '../components/index.js'
 
 const MONTHS = [
   { month: '2026-01', Book: 0, Game: 0 },
@@ -83,5 +83,51 @@ describe('MonthlyTimeChart', () => {
     const labels = [...container.querySelectorAll('[class*="month"]')].map((label) => label.textContent).filter(Boolean)
     // November 2025 to December 2026: the first month, then the one January.
     expect(labels).toEqual(['Nov2025', 'Jan2026'])
+  })
+})
+
+describe('MonthlyPagesChart', () => {
+  afterEach(cleanup)
+
+  const PAGES = [
+    { month: '2026-01', Book: 0, Game: 0, pages: 0 },
+    { month: '2026-02', Book: 60, Game: 30, pages: 1 },
+    { month: '2026-03', Book: 90, Game: 0, pages: 1420 },
+  ]
+  const renderPages = () => render(<MonthlyPagesChart months={PAGES} label="Pages read each month" />)
+  const pageColumns = () => within(screen.getByRole('list', { name: 'Pages read each month' })).getAllByRole('img')
+
+  it('names each month with its pages, whatever time was logged', () => {
+    renderPages()
+    expect(pageColumns().map((column) => column.getAttribute('aria-label'))).toEqual([
+      'January 2026: no pages read',
+      'February 2026: 1 page',
+      'March 2026: 1,420 pages',
+    ])
+  })
+
+  it('has no legend, as there is only one series', () => {
+    renderPages()
+    // The only list is the columns.
+    expect(screen.getAllByRole('list')).toHaveLength(1)
+  })
+
+  it('shows a month’s pages in the tooltip, and the busiest month’s on its bar', () => {
+    const { container } = renderPages()
+    expect(within(screen.getByRole('list', { name: 'Pages read each month' })).getByText('1,420')).toBeTruthy()
+
+    fireEvent.focus(pageColumns()[1])
+    expect(container.querySelector('[class*="tooltip"]').textContent).toBe('February 20261 page')
+  })
+
+  it('lists pages in the table, with no total column', () => {
+    renderPages()
+    fireEvent.click(screen.getByRole('button', { name: 'Show as table' }))
+    expect(within(screen.getByRole('table')).getAllByRole('row').map((row) => row.textContent)).toEqual([
+      'MonthPages',
+      'January 20260',
+      'February 20261',
+      'March 20261,420',
+    ])
   })
 })

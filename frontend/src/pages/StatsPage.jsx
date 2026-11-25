@@ -8,6 +8,7 @@ import {
   FilterPill,
   formatDuration,
   Heading,
+  MonthlyPagesChart,
   MonthlyTimeChart,
   Skeleton,
   SkeletonGroup,
@@ -39,7 +40,7 @@ function mostOften(moods) {
 
 const RANGE_VALUES = RANGES.map(([, value]) => value)
 
-// How each range ends "No time logged …".
+// How each range ends "No time logged …" and "No pages logged …".
 const NOTHING_LOGGED = { year: 'this year', last12: 'in the last 12 months', all: 'yet' }
 
 /**
@@ -156,6 +157,16 @@ export function StatsPage({ account, onSignedOut }) {
             <MonthlyTimeChart months={stats.months} label={`Time logged each month, ${rangeLabel.toLowerCase()}`} />
           ) : (
             <Text>No time logged {NOTHING_LOGGED[range]}. Log a session to see it here.</Text>
+          )}
+        </section>
+        <section aria-labelledby="stats-pages" className={styles.section}>
+          <Heading as="h2" id="stats-pages">
+            Pages read per month
+          </Heading>
+          {stats.pagesRead ? (
+            <MonthlyPagesChart months={stats.months} label={`Pages read each month, ${rangeLabel.toLowerCase()}`} />
+          ) : (
+            <Text>No pages logged {NOTHING_LOGGED[range]}. Add pages read to a book session to see them here.</Text>
           )}
         </section>
       </>

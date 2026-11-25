@@ -64,9 +64,9 @@ const countBy = (list, keyOf) => {
  * years ago, and adding a shelf of old books shouldn't fill this year.
  * minutes: { Book, Game } from sessions. pagesRead: from book sessions.
  * reflections: how many, a session's and standalone ones alike.
- * months: [{ month: 'YYYY-MM', Book, Game }] minutes for every month of the range
- * up to this one. All time starts at the first session's month, so it's empty
- * with no sessions.
+ * months: [{ month: 'YYYY-MM', Book, Game, pages }] for every month of the range
+ * up to this one, Book and Game in minutes, pages from book sessions. All time
+ * starts at the first session's month, so it's empty with no sessions.
  * moods: [{ mood, count }] for every mood, in MOODS' order.
  * tags: [{ name, count }], the TOP_TAGS most used, most used first, ties by name.
  *
@@ -99,13 +99,15 @@ export function buildStats({ items = [], entries = [], range = RANGES[0][1], tod
   // The first month to chart: the range's, or for all time the first session's.
   const firstDay = startKey ?? sessions.map((session) => session.day).sort()[0]
   const months = firstDay
-    ? monthsBetween(parseDateKey(firstDay), today).map((month) => ({ month, Book: 0, Game: 0 }))
+    ? monthsBetween(parseDateKey(firstDay), today).map((month) => ({ month, Book: 0, Game: 0, pages: 0 }))
     : []
   const monthIndex = new Map(months.map((month, index) => [month.month, index]))
   for (const session of sessions) {
     const index = monthIndex.get(session.day.slice(0, 7))
     // A session dated after this month has no bar yet.
-    if (index !== undefined) months[index][session.item.medium] += session.durationMinutes
+    if (index === undefined) continue
+    months[index][session.item.medium] += session.durationMinutes
+    months[index].pages += session.pagesRead ?? 0
   }
 
   const moodCounts = countBy(reflections, (reflection) => reflection.mood)
