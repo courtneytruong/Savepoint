@@ -9,6 +9,9 @@
 }
 
 .sidebar {
+  /* Shared by the toggle and the link that stops short of it. */
+  --toggle-width: 40px;
+
   display: flex;
   flex-direction: column;
   gap: var(--spacing-24);
@@ -51,22 +54,46 @@
   }
 }
 
-/* Sits closer to the links than the groups sit to each other. */
 .toggleRow {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: calc(var(--spacing-8) - var(--spacing-24));
 }
 
-.collapsed .toggleRow {
-  justify-content: flex-start;
+@media (min-width: 801px) {
+  .sidebar {
+    position: relative;
+  }
+
+  /* Open, the toggle sits at the end of the first link's row. That link stops
+     short of it, so its count and highlight don't run underneath. */
+  .toggleRow {
+    position: absolute;
+    top: var(--spacing-16);
+    right: var(--spacing-12);
+  }
+
+  .toggleRow + .group li:first-child .link {
+    margin-right: calc(var(--toggle-width) + var(--spacing-4));
+  }
+
+  /* Collapsed, there's room for one icon a row, so it sits above the links,
+     closer to them than the groups sit to each other. */
+  .collapsed .toggleRow {
+    position: static;
+    margin-bottom: calc(var(--spacing-8) - var(--spacing-24));
+  }
+
+  .collapsed .toggleRow + .group li:first-child .link {
+    margin-right: 0;
+  }
 }
 
-/* The same size as a collapsed link, so the icons line up in one column. */
+/* The same size as a collapsed link, 40px by 32px, so the icons line up in one
+   column and the toggle matches the height of the row it sits on. */
 .toggle {
   display: grid;
   place-items: center;
-  padding: var(--spacing-8) var(--spacing-12);
+  width: var(--toggle-width);
+  padding: var(--spacing-8) 0;
   border: 0;
   border-radius: var(--radius-overlay-cards);
   background: transparent;
