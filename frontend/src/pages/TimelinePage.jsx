@@ -3,6 +3,7 @@ import { getActivity } from '../api/activity.js'
 import {
   Button,
   EmptyState,
+  FilterDivider,
   FilterGroup,
   FilterPill,
   Heading,
@@ -169,14 +170,15 @@ export function TimelinePage({ account, onSignedOut }) {
       </div>
       {hasAny && (
         <div className={styles.filters}>
-          <FilterGroup label="Filter by type">
+          <FilterGroup label="Filter by type" showLabel>
             {MEDIUM_FILTERS.map(([label, value]) => (
               <FilterPill key={label} selected={medium === value} onClick={() => filterBy(setMedium)(value)}>
                 {label}
               </FilterPill>
             ))}
           </FilterGroup>
-          <FilterGroup label="Filter by kind">
+          <FilterDivider />
+          <FilterGroup label="Filter by kind" showLabel>
             {KIND_FILTERS.map(([label, value]) => (
               <FilterPill key={label} selected={kind === value} onClick={() => filterBy(setKind)(value)}>
                 {label}

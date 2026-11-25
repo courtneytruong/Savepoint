@@ -35,16 +35,6 @@
   align-items: flex-end;
   gap: var(--spacing-12) var(--spacing-24);
   padding: var(--spacing-16) var(--spacing-24);
-  /* Lets the divider check how much room the filters have. */
-  container-type: inline-size;
-}
-
-/* Under about 700px the status pills wrap below the type pills, where a line
-   between them would stand alone, so it only shows while they share a row. */
-@container (max-width: 700px) {
-  .filterDivider {
-    display: none;
-  }
 }
 
 .grid {

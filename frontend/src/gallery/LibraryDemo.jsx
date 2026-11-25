@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import {
   Button,
-  Divider,
   EmptyState,
+  FilterDivider,
   FilterGroup,
   FilterPill,
   Heading,
@@ -122,7 +122,7 @@ export function LibraryDemo({ onAddItem }) {
             </FilterPill>
           ))}
         </FilterGroup>
-        <Divider orientation="vertical" className={styles.filterDivider} />
+        <FilterDivider />
         <FilterGroup label="Filter by status" showLabel>
           {STATUS_FILTERS.map(([label, value]) => (
             <FilterPill key={label} selected={status === value} onClick={() => update(setStatus)(value)}>

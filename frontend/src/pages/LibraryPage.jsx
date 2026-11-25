@@ -4,8 +4,8 @@ import { createItem, getItems } from '../api/items.js'
 import {
   AddItemModal,
   Button,
-  Divider,
   EmptyState,
+  FilterDivider,
   FilterGroup,
   FilterPill,
   Heading,
@@ -235,7 +235,7 @@ export function LibraryPage({ account, onSignedOut }) {
             </FilterPill>
           ))}
         </FilterGroup>
-        <Divider orientation="vertical" className={styles.filterDivider} />
+        <FilterDivider />
         <FilterGroup label="Filter by status" showLabel>
           {STATUS_FILTERS.map(([label, value]) => (
             <FilterPill key={label} selected={status === value} onClick={() => filterBy({ status: value })}>

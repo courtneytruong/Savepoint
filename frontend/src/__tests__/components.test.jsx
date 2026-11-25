@@ -6,6 +6,7 @@ import {
   Card,
   Divider,
   EmptyState,
+  FilterDivider,
   FilterGroup,
   FilterPill,
   Footer,
@@ -772,6 +773,32 @@ describe('FilterPill', () => {
     // Named once, by the visible text, rather than by a second hidden copy.
     expect(group.getAttribute('aria-label')).toBeNull()
     expect(within(group).getByRole('button', { name: 'All' })).toBeTruthy()
+  })
+
+  it('shows a line between filter groups only while they share a row', () => {
+    // The test browser has no layout, so each group says which row it's on.
+    let statusTop = 0
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function () {
+      const top = this.getAttribute('aria-label') === 'Filter by status' ? statusTop : 0
+      return { top, bottom: top + 50 }
+    })
+    const row = (
+      <div>
+        <FilterGroup label="Filter by type" />
+        <FilterDivider />
+        <FilterGroup label="Filter by status" />
+      </div>
+    )
+
+    render(row)
+    expect(screen.getByRole('separator').className).not.toMatch(/dividerHidden/)
+    cleanup()
+
+    // Wrapped onto the next row, below the first group.
+    statusTop = 62
+    render(row)
+    expect(screen.getByRole('separator', { hidden: true }).className).toMatch(/dividerHidden/)
+    rect.mockRestore()
   })
 
   it('shows a count of zero as a count', () => {
