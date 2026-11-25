@@ -22,7 +22,7 @@ const now = new Date()
 const FIRST = toDateKey(new Date(now.getFullYear(), now.getMonth(), 1))
 const LONG_AGO = toDateKey(new Date(now.getFullYear() - 2, 0, 15))
 
-const session = (id, item, durationMinutes, pagesRead, mood, date = FIRST) => ({
+const session = (id, item, durationMinutes, pagesRead, mood, date = FIRST, tags = []) => ({
   id,
   itemId: item.id,
   date,
@@ -30,7 +30,7 @@ const session = (id, item, durationMinutes, pagesRead, mood, date = FIRST) => ({
   pagesRead,
   createdAt: `${date}T20:00:00`,
   updatedAt: `${date}T20:00:00`,
-  reflection: { id: `r-${id}`, mood, notes: '', tags: [] },
+  reflection: { id: `r-${id}`, mood, notes: '', tags },
   item,
 })
 
@@ -43,8 +43,8 @@ const ACTIVITY = {
   ],
   sessions: [
     session('s0', BOOK, 60, 100, 'Moved', LONG_AGO),
-    session('s1', BOOK, 45, 30, 'Curious'),
-    session('s2', GAME, 90, null, 'Curious'),
+    session('s1', BOOK, 45, 30, 'Curious', FIRST, ['twisty', 'cozy']),
+    session('s2', GAME, 90, null, 'Curious', FIRST, ['twisty']),
   ],
   reflections: [
     { id: 'r1', mood: 'Hooked', notes: '', tags: [], createdAt: `${FIRST}T23:00:00`, updatedAt: `${FIRST}T23:00:00`, item: GAME },
@@ -150,6 +150,28 @@ describe('StatsPage', () => {
     expect(within(time).queryByRole('list')).toBeNull()
     const pages = screen.getByRole('region', { name: 'Pages read per month' })
     expect(within(pages).getByText('No pages logged this year. Add pages read to a book session to see them here.')).toBeTruthy()
+    const moods = screen.getByRole('region', { name: 'Moods' })
+    expect(within(moods).getByText(/^No reflections written this year\./)).toBeTruthy()
+    const tags = screen.getByRole('region', { name: 'Top tags' })
+    expect(within(tags).getByText(/^No tags used this year\./)).toBeTruthy()
+  })
+
+  it("lists the range's moods, most often first, and its most-used tags", async () => {
+    stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(ACTIVITY)] })
+    renderPage()
+
+    const moods = await screen.findByRole('list', { name: 'Moods in your reflections, this year' })
+    const moodRows = within(moods).getAllByRole('listitem').map((row) => row.textContent)
+    // Every mood shows; ties keep the usual order of moods.
+    expect(moodRows).toEqual(['Curious, 2', 'Hooked, 1', 'Delighted, 0', 'Moved, 0', 'Frustrated, 0', 'Bored, 0'])
+
+    const tags = screen.getByRole('list', { name: 'Your most-used tags, this year' })
+    expect(within(tags).getAllByRole('listitem').map((row) => row.textContent)).toEqual(['#twisty, 2', '#cozy, 1'])
+
+    // The session from two years back was Moved, so all time counts it.
+    fireEvent.click(within(await loaded()).getByRole('button', { name: 'All time' }))
+    const allTime = screen.getByRole('list', { name: 'Moods in your reflections, all time' })
+    expect(within(allTime).getAllByRole('listitem')[2].textContent).toBe('Moved, 1')
   })
 
   it("charts the range's pages by month", async () => {

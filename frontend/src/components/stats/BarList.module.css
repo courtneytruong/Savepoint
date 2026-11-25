@@ -1,0 +1,62 @@
+/* Names, bars and amounts in three columns, so every bar starts at the same line. */
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr) auto;
+  gap: var(--spacing-12) var(--spacing-12);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each row shares the list's columns, and stays a list item for screen readers. */
+.row {
+  position: relative;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  overflow: hidden;
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--bar-color);
+  font-size: var(--text-body);
+}
+
+/* Thin, so bright colors don't glare; a faint track shows the full length. */
+.track {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--color-glass-white-04);
+}
+
+/* Square where it starts, rounded at its end. */
+.bar {
+  min-width: 4px;
+  border-radius: 0 5px 5px 0;
+  background: var(--bar-color);
+}
+
+.value {
+  min-width: 2ch;
+  color: var(--color-soft-quartz);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-caption);
+  text-align: end;
+}

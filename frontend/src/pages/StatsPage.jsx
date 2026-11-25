@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getActivity } from '../api/activity.js'
 import { getItems } from '../api/items.js'
 import {
+  BarList,
   Button,
   EmptyState,
   FilterGroup,
@@ -20,6 +21,7 @@ import {
 import { BookIcon, ErrorIcon, GameIcon, PagesIcon, ReflectionIcon, StatsIcon, TimeIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { buildActivityTimeline } from '../rules/activityTimeline.js'
+import { moodFor } from '../rules/moods.js'
 import { buildStats, RANGES } from '../rules/stats.js'
 import { AppLayout } from './AppLayout.jsx'
 import styles from './StatsPage.module.css'
@@ -40,7 +42,7 @@ function mostOften(moods) {
 
 const RANGE_VALUES = RANGES.map(([, value]) => value)
 
-// How each range ends "No time logged …" and "No pages logged …".
+// How each range ends "No time logged …", "No pages logged …" and so on.
 const NOTHING_LOGGED = { year: 'this year', last12: 'in the last 12 months', all: 'yet' }
 
 /**
@@ -120,6 +122,20 @@ export function StatsPage({ account, onSignedOut }) {
     const stats = buildStats({ items, entries, range })
     const minutes = stats.minutes.Book + stats.minutes.Game
     const mood = mostOften(stats.moods)
+    // Most often first. Sorting keeps ties in the moods' usual order.
+    const moodRows = [...stats.moods]
+      .sort((a, b) => b.count - a.count)
+      .map(({ mood: value, count: times }) => {
+        const { color, Icon } = moodFor(value)
+        return { key: value, name: value, value: times, color, icon: <Icon /> }
+      })
+    // Tags have no colors of their own, so they share the accent.
+    const tagRows = stats.tags.map(({ name, count: times }) => ({
+      key: name,
+      name: `#${name}`,
+      value: times,
+      color: 'var(--color-lilac-beam)',
+    }))
 
     content = (
       <>
@@ -169,6 +185,28 @@ export function StatsPage({ account, onSignedOut }) {
             <Text>No pages logged {NOTHING_LOGGED[range]}. Add pages read to a book session to see them here.</Text>
           )}
         </section>
+        <div className={styles.pair}>
+          <section aria-labelledby="stats-moods" className={styles.section}>
+            <Heading as="h2" id="stats-moods">
+              Moods
+            </Heading>
+            {stats.reflections ? (
+              <BarList label={`Moods in your reflections, ${rangeLabel.toLowerCase()}`} rows={moodRows} />
+            ) : (
+              <Text>No reflections written {NOTHING_LOGGED[range]}. Your moods add up here as you write them.</Text>
+            )}
+          </section>
+          <section aria-labelledby="stats-tags" className={styles.section}>
+            <Heading as="h2" id="stats-tags">
+              Top tags
+            </Heading>
+            {tagRows.length ? (
+              <BarList label={`Your most-used tags, ${rangeLabel.toLowerCase()}`} rows={tagRows} />
+            ) : (
+              <Text>No tags used {NOTHING_LOGGED[range]}. Tag a reflection to see your most-used tags here.</Text>
+            )}
+          </section>
+        </div>
       </>
     )
   }

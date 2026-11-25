@@ -35,6 +35,13 @@
   gap: var(--spacing-16);
 }
 
+/* Moods and tags side by side when there's room, one above the other when not. */
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: var(--spacing-32);
+}
+
 /* Loading: tiles in the same columns as StatGroup, so nothing jumps when they're replaced. */
 .loading {
   display: grid;

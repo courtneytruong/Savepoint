@@ -35,6 +35,7 @@ import {
   AccountMenu,
   Alert,
   Badge,
+  BarList,
   Button,
   Card,
   Divider,
@@ -623,6 +624,20 @@ function GalleryPage({ page }) {
         <Section>
           <Heading size="medium">Pages per month</Heading>
           <MonthlyPagesChart months={SAMPLE_MONTHS} label="Example: pages read each month" />
+        </Section>
+
+        <Section>
+          <Heading size="medium">Bar list</Heading>
+          <BarList
+            label="Example: moods in reflections"
+            rows={MOODS.map(({ value, color, Icon }, index) => ({
+              key: value,
+              name: value,
+              value: [14, 9, 7, 5, 2, 0][index],
+              color,
+              icon: <Icon />,
+            }))}
+          />
         </Section>
 
         <Section>
