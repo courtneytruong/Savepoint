@@ -4,12 +4,15 @@ import { getItems } from '../api/items.js'
 import {
   Button,
   EmptyState,
+  FilterGroup,
+  FilterPill,
   formatDuration,
   Heading,
   Skeleton,
   SkeletonGroup,
   StatGroup,
   StatTile,
+  useStoredChoice,
 } from '../components/index.js'
 import { BookIcon, ErrorIcon, GameIcon, PagesIcon, ReflectionIcon, StatsIcon, TimeIcon } from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
@@ -32,16 +35,21 @@ function mostOften(moods) {
   return top.count ? top.mood : null
 }
 
+const RANGE_VALUES = RANGES.map(([, value]) => value)
+
 /**
  * Numbers about the library: what was finished, how long was spent, pages read
- * and reflections written. Worked out in the browser from the library and its
- * history, loaded at the same time.
+ * and reflections written, over the time range chosen. Worked out in the browser
+ * from the library and its history, loaded at the same time, so changing the
+ * range needs no new request.
  */
 export function StatsPage({ account, onSignedOut }) {
   // loading, failed or ready, with the library and its history once ready.
   const [loaded, setLoaded] = useState({ state: 'loading', items: [], entries: [] })
   const [tries, setTries] = useState(0)
-  const [rangeLabel, range] = RANGES[0]
+  // Remembered in this browser, like the library's view.
+  const [range, setRange] = useStoredChoice('savepoint.stats.range', RANGE_VALUES, RANGE_VALUES[0])
+  const [rangeLabel] = RANGES.find(([, value]) => value === range)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -60,6 +68,8 @@ export function StatsPage({ account, onSignedOut }) {
   }
 
   const { state, items, entries } = loaded
+  // The choice only means something once there's a library to count.
+  const hasAny = state === 'ready' && items.length > 0
 
   let content
   if (state === 'loading') {
@@ -140,6 +150,17 @@ export function StatsPage({ account, onSignedOut }) {
       <div className={styles.toolbar}>
         <Heading as="h1">Stats</Heading>
       </div>
+      {hasAny && (
+        <div className={styles.filters}>
+          <FilterGroup label="Time range" showLabel>
+            {RANGES.map(([label, value]) => (
+              <FilterPill key={value} selected={range === value} onClick={() => setRange(value)}>
+                {label}
+              </FilterPill>
+            ))}
+          </FilterGroup>
+        </div>
+      )}
       <div className={styles.content}>{content}</div>
     </AppLayout>
   )

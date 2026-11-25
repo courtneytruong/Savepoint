@@ -9,6 +9,13 @@
   border-bottom: 1px solid var(--color-hairline);
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-12) var(--spacing-24);
+  padding: var(--spacing-16) var(--spacing-24) 0;
+}
+
 .content {
   padding: var(--spacing-24);
 }

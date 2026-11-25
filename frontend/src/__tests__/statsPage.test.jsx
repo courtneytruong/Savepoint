@@ -16,18 +16,20 @@ const ITEMS = [
 
 const EMPTY = { statusChanges: [], ratingChanges: [], sessions: [], reflections: [] }
 
-// The 1st of this month, so everything falls in this year, the page's default.
+// The 1st of this month, so everything falls in this year, the page's default,
+// and two years back, which only all time reaches, whatever month it is now.
 const now = new Date()
 const FIRST = toDateKey(new Date(now.getFullYear(), now.getMonth(), 1))
+const LONG_AGO = toDateKey(new Date(now.getFullYear() - 2, 0, 15))
 
-const session = (id, item, durationMinutes, pagesRead, mood) => ({
+const session = (id, item, durationMinutes, pagesRead, mood, date = FIRST) => ({
   id,
   itemId: item.id,
-  date: FIRST,
+  date,
   durationMinutes,
   pagesRead,
-  createdAt: `${FIRST}T20:00:00`,
-  updatedAt: `${FIRST}T20:00:00`,
+  createdAt: `${date}T20:00:00`,
+  updatedAt: `${date}T20:00:00`,
   reflection: { id: `r-${id}`, mood, notes: '', tags: [] },
   item,
 })
@@ -39,7 +41,11 @@ const ACTIVITY = {
     { id: 'c2', status: 'Finished', changedAt: `${FIRST}T22:00:00`, item: BOOK },
     { id: 'c3', status: 'InProgress', changedAt: `${FIRST}T08:00:00`, item: GAME },
   ],
-  sessions: [session('s1', BOOK, 45, 30, 'Curious'), session('s2', GAME, 90, null, 'Curious')],
+  sessions: [
+    session('s0', BOOK, 60, 100, 'Moved', LONG_AGO),
+    session('s1', BOOK, 45, 30, 'Curious'),
+    session('s2', GAME, 90, null, 'Curious'),
+  ],
   reflections: [
     { id: 'r1', mood: 'Hooked', notes: '', tags: [], createdAt: `${FIRST}T23:00:00`, updatedAt: `${FIRST}T23:00:00`, item: GAME },
   ],
@@ -71,10 +77,15 @@ function renderPage() {
 }
 
 // A tile, found by its label in the stats, not the header's or sidebar's links.
-const tile = (label) => within(screen.getByRole('region', { name: 'This year' })).getByText(label).closest('div')
+const tile = (label, range = 'This year') =>
+  within(screen.getByRole('region', { name: range })).getByText(label).closest('div')
+const loaded = () => screen.findByRole('group', { name: 'Time range' })
 
 describe('StatsPage', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    window.localStorage.clear()
+  })
 
   it('asks for the library and its history at once, and says it is loading', () => {
     const fetchStub = stubFetch({ items: [neverAnswers], activity: [neverAnswers] })
@@ -94,6 +105,37 @@ describe('StatsPage', () => {
     expect(tile('Time logged').textContent).toBe('Time logged2h 15m45m reading, 1h 30m playing')
     expect(tile('Pages read').textContent).toBe('Pages read30')
     expect(tile('Reflections').textContent).toBe('Reflections3Most often: Curious')
+  })
+
+  it('starts on this year, and changes every number with the range', async () => {
+    stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(ACTIVITY)] })
+    renderPage()
+
+    const ranges = await loaded()
+    const pill = (name) => within(ranges).getByRole('button', { name })
+    expect(pill('This year').getAttribute('aria-pressed')).toBe('true')
+    expect(pill('All time').getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(pill('All time'))
+    expect(pill('All time').getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('heading', { level: 2, name: 'All time' })).toBeTruthy()
+    expect(tile('Time logged', 'All time').textContent).toBe('Time logged3h 15m1h 45m reading, 1h 30m playing')
+    expect(tile('Pages read', 'All time').textContent).toBe('Pages read130')
+
+    // Two years back is further than the last 12 months.
+    fireEvent.click(pill('Last 12 months'))
+    expect(tile('Pages read', 'Last 12 months').textContent).toBe('Pages read30')
+  })
+
+  it('remembers the range for the next visit', async () => {
+    stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(ACTIVITY)] })
+    renderPage()
+    fireEvent.click(within(await loaded()).getByRole('button', { name: 'All time' }))
+    expect(window.localStorage.getItem('savepoint.stats.range')).toBe('all')
+
+    cleanup()
+    renderPage()
+    expect(await screen.findByRole('heading', { level: 2, name: 'All time' })).toBeTruthy()
   })
 
   it('leaves out the hints when nothing was logged', async () => {
@@ -121,6 +163,8 @@ describe('StatsPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'No stats yet' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Go to your library' })).toBeTruthy()
+    // With nothing to count, there's no range to choose.
+    expect(screen.queryByRole('group', { name: 'Time range' })).toBeNull()
   })
 
   it('says when it can’t load, and tries again', async () => {
