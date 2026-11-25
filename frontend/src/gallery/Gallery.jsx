@@ -48,6 +48,7 @@ import {
   Hero,
   Input,
   Modal,
+  MonthlyTimeChart,
   MoodBadge,
   MoodPicker,
   MOODS,
@@ -89,6 +90,22 @@ import { Palette } from './Palette.jsx'
 import { makeSampleReflections, makeSampleSessions, SAMPLE_COLUMNS, SAMPLE_ITEMS, SAMPLE_TAGS, TIMELINE_EXAMPLE } from './sampleData.jsx'
 
 const STATUSES = ['Backlog', 'InProgress', 'Finished', 'Dropped']
+
+// A year of made-up minutes, books and games, with one quiet month, for the time chart.
+const SAMPLE_MONTHS = [
+  [0, 0],
+  [240, 90],
+  [410, 600],
+  [180, 0],
+  [320, 1260],
+  [95, 340],
+  [520, 180],
+  [610, 75],
+  [300, 420],
+  [150, 900],
+  [455, 230],
+  [270, 60],
+].map(([Book, Game], index) => ({ month: `2026-${String(index + 1).padStart(2, '0')}`, Book, Game }))
 
 const ICONS = [
   ['Add', AddIcon],
@@ -589,6 +606,11 @@ function GalleryPage({ page }) {
             <StatTile icon={<TimeIcon />} label="Time logged" value="214h" />
             <StatTile icon={<ReflectionIcon />} label="Reflections" value="96" hint="Most often: Curious" />
           </StatGroup>
+        </Section>
+
+        <Section>
+          <Heading size="medium">Time per month</Heading>
+          <MonthlyTimeChart months={SAMPLE_MONTHS} label="Example: time logged each month" />
         </Section>
 
         <Section>

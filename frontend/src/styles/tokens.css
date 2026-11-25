@@ -76,6 +76,12 @@
      warning. */
   --color-status-dropped: #ff8ccf;
 
+  /* Books and games in charts. Darker than the accent so bars don't glare on the
+     dark surface; checked to stay apart for colorblind readers (ΔE 20.8) and at
+     3:1 or more on the cards and panels. */
+  --color-series-book: #8562ff;
+  --color-series-game: #2fa89a;
+
   /* Fills and borders for badges, strong enough to stand out on any surface. */
   --color-tint-accent: rgba(133, 98, 255, 0.38);
   --color-tint-neutral: rgba(255, 255, 255, 0.14);

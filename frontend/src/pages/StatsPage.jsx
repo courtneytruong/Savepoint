@@ -8,10 +8,12 @@ import {
   FilterPill,
   formatDuration,
   Heading,
+  MonthlyTimeChart,
   Skeleton,
   SkeletonGroup,
   StatGroup,
   StatTile,
+  Text,
   useStoredChoice,
 } from '../components/index.js'
 import { BookIcon, ErrorIcon, GameIcon, PagesIcon, ReflectionIcon, StatsIcon, TimeIcon } from '../components/icons.js'
@@ -36,6 +38,9 @@ function mostOften(moods) {
 }
 
 const RANGE_VALUES = RANGES.map(([, value]) => value)
+
+// How each range ends "No time logged …".
+const NOTHING_LOGGED = { year: 'this year', last12: 'in the last 12 months', all: 'yet' }
 
 /**
  * Numbers about the library: what was finished, how long was spent, pages read
@@ -116,32 +121,44 @@ export function StatsPage({ account, onSignedOut }) {
     const mood = mostOften(stats.moods)
 
     content = (
-      <section aria-labelledby="stats-headline" className={styles.section}>
-        <Heading as="h2" id="stats-headline">
-          {rangeLabel}
-        </Heading>
-        <StatGroup>
-          <StatTile icon={<BookIcon />} label="Books finished" value={count.format(stats.finished.Book)} />
-          <StatTile icon={<GameIcon />} label="Games finished" value={count.format(stats.finished.Game)} />
-          <StatTile
-            icon={<TimeIcon />}
-            label="Time logged"
-            value={formatDuration(minutes)}
-            hint={
-              minutes
-                ? `${formatDuration(stats.minutes.Book)} reading, ${formatDuration(stats.minutes.Game)} playing`
-                : undefined
-            }
-          />
-          <StatTile icon={<PagesIcon />} label="Pages read" value={count.format(stats.pagesRead)} />
-          <StatTile
-            icon={<ReflectionIcon />}
-            label="Reflections"
-            value={count.format(stats.reflections)}
-            hint={mood ? `Most often: ${mood}` : undefined}
-          />
-        </StatGroup>
-      </section>
+      <>
+        <section aria-labelledby="stats-headline" className={styles.section}>
+          <Heading as="h2" id="stats-headline">
+            {rangeLabel}
+          </Heading>
+          <StatGroup>
+            <StatTile icon={<BookIcon />} label="Books finished" value={count.format(stats.finished.Book)} />
+            <StatTile icon={<GameIcon />} label="Games finished" value={count.format(stats.finished.Game)} />
+            <StatTile
+              icon={<TimeIcon />}
+              label="Time logged"
+              value={formatDuration(minutes)}
+              hint={
+                minutes
+                  ? `${formatDuration(stats.minutes.Book)} reading, ${formatDuration(stats.minutes.Game)} playing`
+                  : undefined
+              }
+            />
+            <StatTile icon={<PagesIcon />} label="Pages read" value={count.format(stats.pagesRead)} />
+            <StatTile
+              icon={<ReflectionIcon />}
+              label="Reflections"
+              value={count.format(stats.reflections)}
+              hint={mood ? `Most often: ${mood}` : undefined}
+            />
+          </StatGroup>
+        </section>
+        <section aria-labelledby="stats-time" className={styles.section}>
+          <Heading as="h2" id="stats-time">
+            Time per month
+          </Heading>
+          {minutes ? (
+            <MonthlyTimeChart months={stats.months} label={`Time logged each month, ${rangeLabel.toLowerCase()}`} />
+          ) : (
+            <Text>No time logged {NOTHING_LOGGED[range]}. Log a session to see it here.</Text>
+          )}
+        </section>
+      </>
     )
   }
 

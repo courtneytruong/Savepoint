@@ -138,13 +138,33 @@ describe('StatsPage', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'All time' })).toBeTruthy()
   })
 
-  it('leaves out the hints when nothing was logged', async () => {
+  it('leaves out the hints and the chart when nothing was logged', async () => {
     stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(EMPTY)] })
     renderPage()
 
     await screen.findByRole('heading', { level: 2, name: 'This year' })
     expect(tile('Time logged').textContent).toBe('Time logged0m')
     expect(tile('Reflections').textContent).toBe('Reflections0')
+    const time = screen.getByRole('region', { name: 'Time per month' })
+    expect(within(time).getByText('No time logged this year. Log a session to see it here.')).toBeTruthy()
+    expect(within(time).queryByRole('list')).toBeNull()
+  })
+
+  it("charts the range's time by month", async () => {
+    stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(ACTIVITY)] })
+    renderPage()
+
+    const chart = await screen.findByRole('list', { name: 'Time logged each month, this year' })
+    // January to this month, whichever it is.
+    expect(within(chart).getAllByRole('img')).toHaveLength(now.getMonth() + 1)
+    const month = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(now)
+    expect(within(chart).getByRole('img', { name: `${month}: 2h 15m, 45m reading and 1h 30m playing` })).toBeTruthy()
+
+    fireEvent.click(within(await loaded()).getByRole('button', { name: 'All time' }))
+    // From the session two years back, in January, to this month.
+    expect(within(screen.getByRole('list', { name: 'Time logged each month, all time' })).getAllByRole('img')).toHaveLength(
+      24 + now.getMonth() + 1,
+    )
   })
 
   it('marks itself in the header and the sidebar', async () => {

@@ -1,0 +1,208 @@
+.chart {
+  --bars-height: 180px;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8) var(--spacing-16);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-16);
+  margin: 0;
+  padding: 0;
+  color: var(--color-muted-steel);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  list-style: none;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+/* A rect, as the marks are bars. */
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.plot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--spacing-8);
+}
+
+/* The axis labels sit beside the bars' area only, not the month labels below it. */
+.axis {
+  position: relative;
+  height: var(--bars-height);
+  min-width: 32px;
+}
+
+.axis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  color: var(--color-ash-lilac);
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.area {
+  position: relative;
+}
+
+.grid {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--bars-height);
+  pointer-events: none;
+}
+
+/* Hairline and solid, so they stay behind the data. */
+.grid span {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--color-hairline);
+}
+
+.grid .baseline {
+  background: var(--color-glass-white-30);
+}
+
+.columns {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+
+/* The whole height of the column answers the pointer, not just the bar. */
+.hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: var(--bars-height);
+  border-radius: 6px;
+}
+
+.active .hit {
+  background: var(--color-glass-white-04);
+}
+
+/* At most 24px wide, with the rest of the column left as air. Rounded at the
+   top and square on the baseline. The 2px gap between books and games is the
+   surface showing through, not a drawn line. */
+.bar {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  width: min(24px, 70%);
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+  transition: filter 150ms ease;
+}
+
+.active .bar {
+  filter: brightness(1.2);
+}
+
+.segment {
+  flex-basis: 0;
+  min-height: 2px;
+}
+
+/* The busiest month's total, on its cap. */
+.cap {
+  margin-bottom: var(--spacing-4);
+  color: var(--color-muted-steel);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.month {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 32px;
+  padding-top: var(--spacing-8);
+  color: var(--color-ash-lilac);
+  font-size: 12px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.year {
+  color: var(--color-dim-fog);
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  padding: var(--spacing-8) var(--spacing-12);
+  border: 1px solid var(--color-border-accent);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--color-card-top), var(--color-card-bottom));
+  box-shadow: 0 0 24px -6px var(--color-horizon-glow);
+  color: var(--color-ash-lilac);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  pointer-events: none;
+}
+
+/* The value leads; the month and the names follow, quieter. */
+.tooltipTotal {
+  color: var(--color-soft-quartz);
+  font-size: var(--text-body);
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltipRow strong {
+  color: var(--color-soft-quartz);
+  font-weight: var(--font-weight-medium);
+}
+
+/* A short stroke of the series color, not a box. */
+.lineKey {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
