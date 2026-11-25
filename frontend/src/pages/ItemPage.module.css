@@ -40,29 +40,31 @@
   gap: var(--spacing-8);
 }
 
-.creator {
-  margin-top: var(--spacing-4);
+/* "Nintendo | Game | Added: November 16, 2026". The lines between are only
+   drawn, so screen readers read the line as plain text. */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: var(--spacing-4);
+  margin-top: var(--spacing-8);
+}
+
+.meta > span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.meta > span + span::before {
+  content: '';
+  width: 1px;
+  height: 1em;
+  margin-inline: var(--spacing-12);
+  background: var(--color-glass-white-30);
 }
 
 .statuses[aria-busy='true'] button {
   cursor: progress;
-}
-
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-16) var(--spacing-32);
-  margin: 0;
-}
-
-.facts dt {
-  color: var(--color-ash-lilac);
-  font-size: var(--text-caption);
-}
-
-.facts dd {
-  margin: 2px 0 0;
-  color: var(--color-soft-quartz);
 }
 
 /* Below the details, set apart by a line, as the breadcrumb is above them. */

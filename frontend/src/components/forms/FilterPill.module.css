@@ -4,6 +4,26 @@
   gap: var(--spacing-8);
 }
 
+.dividerHidden {
+  visibility: hidden;
+}
+
+.labelled {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+/* Quiet, like the sidebar's group titles, so the pills stay the focus. */
+.label {
+  color: var(--color-ash-lilac);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-caption);
+  letter-spacing: 0.96px;
+  text-transform: uppercase;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;

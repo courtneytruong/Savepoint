@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Button,
   EmptyState,
+  FilterDivider,
   FilterGroup,
   FilterPill,
   Heading,
@@ -114,14 +115,15 @@ export function LibraryDemo({ onAddItem }) {
         </Button>
       </div>
       <div className={styles.filters}>
-        <FilterGroup label="Filter by type">
+        <FilterGroup label="Filter by type" showLabel>
           {MEDIUM_FILTERS.map(([label, value]) => (
             <FilterPill key={label} selected={medium === value} onClick={() => update(setMedium)(value)}>
               {label}
             </FilterPill>
           ))}
         </FilterGroup>
-        <FilterGroup label="Filter by status">
+        <FilterDivider />
+        <FilterGroup label="Filter by status" showLabel>
           {STATUS_FILTERS.map(([label, value]) => (
             <FilterPill key={label} selected={status === value} onClick={() => update(setStatus)(value)}>
               {label}

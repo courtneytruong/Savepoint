@@ -1,6 +1,7 @@
 .layout {
   display: grid;
-  grid-template-columns: 216px minmax(0, 1fr);
+  /* The sidebar sets its own width, so the column follows it as it collapses. */
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .content {
@@ -8,11 +9,106 @@
 }
 
 .sidebar {
+  /* Shared by the toggle and the link that stops short of it. */
+  --toggle-width: 40px;
+
   display: flex;
   flex-direction: column;
   gap: var(--spacing-24);
   padding: var(--spacing-16) var(--spacing-12);
   border-right: 1px solid var(--color-hairline);
+}
+
+/* Only on wide screens: small screens show a strip of links instead. */
+@media (min-width: 801px) {
+  .sidebar {
+    width: 216px;
+    /* Hides the names while it widens, without cutting off focus rings. */
+    overflow-x: clip;
+    transition: width 200ms ease;
+  }
+
+  /* The links' padding either side of their icons, 64px in all. */
+  .collapsed {
+    width: 64px;
+  }
+
+  .collapsed .title {
+    display: none;
+  }
+
+  /* Without its title, a line keeps a group apart from the one above. */
+  .collapsed .group + .group {
+    padding-top: var(--spacing-16);
+    border-top: 1px solid var(--color-hairline);
+  }
+
+  /* Out of sight but still read, as VisuallyHidden does, so each link keeps its name. */
+  .collapsed .name,
+  .collapsed .count {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+.toggleRow {
+  display: flex;
+}
+
+@media (min-width: 801px) {
+  .sidebar {
+    position: relative;
+  }
+
+  /* Open, the toggle sits at the end of the first link's row. That link stops
+     short of it, so its count and highlight don't run underneath. */
+  .toggleRow {
+    position: absolute;
+    top: var(--spacing-16);
+    right: var(--spacing-12);
+  }
+
+  .toggleRow + .group li:first-child .link {
+    margin-right: calc(var(--toggle-width) + var(--spacing-4));
+  }
+
+  /* Collapsed, there's room for one icon a row, so it sits above the links,
+     closer to them than the groups sit to each other. */
+  .collapsed .toggleRow {
+    position: static;
+    margin-bottom: calc(var(--spacing-8) - var(--spacing-24));
+  }
+
+  .collapsed .toggleRow + .group li:first-child .link {
+    margin-right: 0;
+  }
+}
+
+/* The same size as a collapsed link, 40px by 32px, so the icons line up in one
+   column and the toggle matches the height of the row it sits on. */
+.toggle {
+  display: grid;
+  place-items: center;
+  width: var(--toggle-width);
+  padding: var(--spacing-8) 0;
+  border: 0;
+  border-radius: var(--radius-overlay-cards);
+  background: transparent;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-body);
+  line-height: var(--leading-caption);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.toggle:hover {
+  background: var(--color-glass-white-04);
+  color: var(--color-soft-quartz);
 }
 
 .title {
@@ -96,7 +192,8 @@
     border-bottom: 1px solid var(--color-hairline);
   }
 
-  .title {
+  .title,
+  .toggleRow {
     display: none;
   }
 

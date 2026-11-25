@@ -6,6 +6,7 @@ import {
   Card,
   Divider,
   EmptyState,
+  FilterDivider,
   FilterGroup,
   FilterPill,
   Footer,
@@ -693,6 +694,51 @@ describe('Sidebar', () => {
 
     expect(screen.getByRole('link', { name: /^Library\s*,\s*11$/ })).toBeTruthy()
   })
+
+  it('has no collapse toggle unless it can be collapsed', () => {
+    render(
+      <Sidebar>
+        <SidebarGroup>
+          <SidebarLink href="#library">Library</SidebarLink>
+        </SidebarGroup>
+      </Sidebar>,
+    )
+
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('asks to collapse or expand, saying what pressing the toggle does', () => {
+    const onCollapsedChange = vi.fn()
+    const { rerender } = render(<Sidebar onCollapsedChange={onCollapsedChange} />)
+
+    const toggle = screen.getByRole('button', { name: 'Collapse sidebar' })
+    expect(toggle.getAttribute('type')).toBe('button')
+    fireEvent.click(toggle)
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(true)
+
+    rerender(<Sidebar collapsed onCollapsedChange={onCollapsedChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Expand sidebar' }))
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('keeps each link named the same when collapsed, without reading the name twice', () => {
+    render(
+      <Sidebar collapsed onCollapsedChange={() => {}}>
+        <SidebarGroup title="Browse">
+          <SidebarLink href="#library" active count={7}>
+            Library
+          </SidebarLink>
+        </SidebarGroup>
+      </Sidebar>,
+    )
+
+    const link = screen.getByRole('link', { name: /^Library\s*,\s*7$/ })
+    expect(link.getAttribute('aria-current')).toBe('page')
+    // The tooltip shows the name, but only to people who can see it.
+    const tips = screen.getAllByRole('tooltip', { hidden: true }).map((tip) => tip.textContent)
+    expect(tips).toEqual(['Expand sidebar', 'Library'])
+    expect(link.getAttribute('aria-describedby')).toBeNull()
+  })
 })
 
 describe('FilterPill', () => {
@@ -712,6 +758,47 @@ describe('FilterPill', () => {
     expect(off.getAttribute('type')).toBe('button')
     fireEvent.click(off)
     expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  it('can show its label, naming the group by that text alone', () => {
+    render(
+      <FilterGroup label="Filter by type" showLabel>
+        <FilterPill selected>All</FilterPill>
+      </FilterGroup>,
+    )
+
+    const group = screen.getByRole('group', { name: 'Filter by type' })
+    const label = screen.getByText('Filter by type')
+    expect(group.getAttribute('aria-labelledby')).toBe(label.id)
+    // Named once, by the visible text, rather than by a second hidden copy.
+    expect(group.getAttribute('aria-label')).toBeNull()
+    expect(within(group).getByRole('button', { name: 'All' })).toBeTruthy()
+  })
+
+  it('shows a line between filter groups only while they share a row', () => {
+    // The test browser has no layout, so each group says which row it's on.
+    let statusTop = 0
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function () {
+      const top = this.getAttribute('aria-label') === 'Filter by status' ? statusTop : 0
+      return { top, bottom: top + 50 }
+    })
+    const row = (
+      <div>
+        <FilterGroup label="Filter by type" />
+        <FilterDivider />
+        <FilterGroup label="Filter by status" />
+      </div>
+    )
+
+    render(row)
+    expect(screen.getByRole('separator').className).not.toMatch(/dividerHidden/)
+    cleanup()
+
+    // Wrapped onto the next row, below the first group.
+    statusTop = 62
+    render(row)
+    expect(screen.getByRole('separator', { hidden: true }).className).toMatch(/dividerHidden/)
+    rect.mockRestore()
   })
 
   it('shows a count of zero as a count', () => {

@@ -4,6 +4,7 @@ import {
   Combobox,
   countMoods,
   EmptyState,
+  FilterDivider,
   FilterGroup,
   FilterPill,
   filterReflections,
@@ -84,14 +85,15 @@ export function ReflectionsPage({ sessions }) {
       </div>
 
       <div className={styles.filters}>
-        <FilterGroup label="Filter by type">
+        <FilterGroup label="Filter by type" showLabel>
           {MEDIUM_FILTERS.map(([label, value]) => (
             <FilterPill key={label} selected={medium === value} onClick={() => update(setMedium)(value)}>
               {label}
             </FilterPill>
           ))}
         </FilterGroup>
-        <FilterGroup label="Filter by mood">
+        <FilterDivider />
+        <FilterGroup label="Filter by mood" showLabel>
           <FilterPill selected={mood === null} onClick={() => update(setMood)(null)}>
             Any mood
           </FilterPill>
