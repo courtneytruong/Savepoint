@@ -200,6 +200,24 @@ describe('StatsPage', () => {
     )
   })
 
+  it('breaks down the library as it is now, whatever the range', async () => {
+    stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(ACTIVITY)] })
+    renderPage()
+
+    const rowsOf = (name) =>
+      within(screen.getByRole('list', { name })).getAllByRole('listitem').map((row) => row.textContent)
+    const statuses = ['Backlog, 0', 'In progress, 1', 'Finished, 1', 'Dropped, 0']
+    const ratings = ['5 stars, 1', '4 stars, 0', '3 stars, 0', '2 stars, 0', '1 star, 0', 'Not rated, 1']
+
+    await screen.findByRole('heading', { level: 2, name: 'Your library now' })
+    expect(rowsOf('Items by status')).toEqual(statuses)
+    expect(rowsOf('Items by rating')).toEqual(ratings)
+
+    fireEvent.click(within(await loaded()).getByRole('button', { name: 'All time' }))
+    expect(rowsOf('Items by status')).toEqual(statuses)
+    expect(rowsOf('Items by rating')).toEqual(ratings)
+  })
+
   it('marks itself in the header and the sidebar', async () => {
     stubFetch({ items: [async () => json(ITEMS)], activity: [async () => json(ACTIVITY)] })
     renderPage()

@@ -35,6 +35,17 @@
   gap: var(--spacing-16);
 }
 
+/* Says the range doesn't change this part, right under its heading. */
+.note {
+  margin-top: var(--spacing-4);
+}
+
+/* The stars' own yellow, as on the item page. */
+.star {
+  color: var(--color-mood-delighted);
+  fill: currentColor;
+}
+
 /* Moods and tags side by side when there's room, one above the other when not. */
 .pair {
   display: grid;

@@ -18,11 +18,21 @@ import {
   Text,
   useStoredChoice,
 } from '../components/index.js'
-import { BookIcon, ErrorIcon, GameIcon, PagesIcon, ReflectionIcon, StatsIcon, TimeIcon } from '../components/icons.js'
+import {
+  BookIcon,
+  ErrorIcon,
+  GameIcon,
+  PagesIcon,
+  RatingIcon,
+  ReflectionIcon,
+  StatsIcon,
+  TimeIcon,
+} from '../components/icons.js'
 import { LIBRARY_PATH } from '../paths.js'
 import { buildActivityTimeline } from '../rules/activityTimeline.js'
 import { moodFor } from '../rules/moods.js'
 import { buildStats, RANGES } from '../rules/stats.js'
+import { STATUSES } from '../rules/statuses.js'
 import { AppLayout } from './AppLayout.jsx'
 import styles from './StatsPage.module.css'
 
@@ -129,6 +139,23 @@ export function StatsPage({ account, onSignedOut }) {
         const { color, Icon } = moodFor(value)
         return { key: value, name: value, value: times, color, icon: <Icon /> }
       })
+    // In the order an item moves through, not by size, so it reads the same each visit.
+    const statusRows = stats.statuses.map(({ status, count: items }) => {
+      const { label, color, Icon } = STATUSES[status]
+      return { key: status, name: label, value: items, color, icon: <Icon /> }
+    })
+    // Best first, then the items not rated yet. The star icons are the stars'
+    // yellow; the bars share the accent, as the yellow is also Delighted's.
+    const ratingRows = [
+      ...[...stats.ratings].reverse().map(({ rating, count: items }) => ({
+        key: rating,
+        name: `${rating} ${rating === 1 ? 'star' : 'stars'}`,
+        value: items,
+        color: 'var(--color-lilac-beam)',
+        icon: <RatingIcon className={styles.star} />,
+      })),
+      { key: 'unrated', name: 'Not rated', value: stats.unrated, color: 'var(--color-ash-lilac)' },
+    ]
     // Tags have no colors of their own, so they share the accent.
     const tagRows = stats.tags.map(({ name, count: times }) => ({
       key: name,
@@ -207,6 +234,28 @@ export function StatsPage({ account, onSignedOut }) {
             )}
           </section>
         </div>
+        <section aria-labelledby="stats-library" className={styles.section}>
+          <div>
+            <Heading as="h2" id="stats-library">
+              Your library now
+            </Heading>
+            <Text className={styles.note}>Every book and game as it stands today, whatever the time range.</Text>
+          </div>
+          <div className={styles.pair}>
+            <div className={styles.section}>
+              <Heading as="h3">
+                By status
+              </Heading>
+              <BarList label="Items by status" rows={statusRows} />
+            </div>
+            <div className={styles.section}>
+              <Heading as="h3">
+                By rating
+              </Heading>
+              <BarList label="Items by rating" rows={ratingRows} />
+            </div>
+          </div>
+        </section>
       </>
     )
   }
