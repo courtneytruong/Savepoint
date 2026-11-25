@@ -140,6 +140,11 @@ describe('ItemPage', () => {
     expect(within(details).getByText('Game')).toBeTruthy()
     expect(within(screen.getByRole('group', { name: 'Status' })).getByText('In progress')).toBeTruthy()
     expect(details.querySelector('time[datetime="2026-11-01T12:00:00+00:00"]')).toBeTruthy()
+    // Creator, type and date added share the line under the title, in that order.
+    const line = within(details).getByText('Mobius Digital').parentElement
+    // A non-breaking space, as a plain one would be trimmed in the browser.
+    expect(line.textContent).toMatch(/^Mobius Digital\s*Game\s*Added: \S/)
+    expect(line.querySelector('time')).toBeTruthy()
     // The timeline shows every change, so there's no "Status since" as well.
     expect(within(details).queryByText('Status since')).toBeNull()
   })

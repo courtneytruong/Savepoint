@@ -200,7 +200,18 @@ export function ItemPage({ account, onSignedOut }) {
         <header className={styles.header}>
           <div>
             <Heading as="h1">{item.title}</Heading>
-            {item.creator && <Text className={styles.creator}>{item.creator}</Text>}
+            {/* Who made it, what it is and when it was added, on one line under the title. */}
+            <Text size="caption" tone="steel" className={styles.meta}>
+              {item.creator && <span>{item.creator}</span>}
+              <span>
+                <MediumLabel medium={item.medium} />
+              </span>
+              <span>
+                {/* A plain space would be trimmed inside the flex span, and this one keeps the date with its label. */}
+                {'Added: '}
+                <DateTime value={item.createdAt} />
+              </span>
+            </Text>
           </div>
           <div className={styles.actions}>
             <Button onClick={() => setEditing(true)}>
@@ -213,7 +224,6 @@ export function ItemPage({ account, onSignedOut }) {
             </Button>
           </div>
         </header>
-        <MediumLabel medium={item.medium} />
         {/* The current status is the pressed one, so there's no badge as well. */}
         <FilterGroup label="Status" aria-busy={changing ? true : undefined} className={styles.statuses}>
           {Object.entries(STATUSES).map(([value, { label, color, Icon }]) => (
@@ -230,14 +240,6 @@ export function ItemPage({ account, onSignedOut }) {
           ))}
         </FilterGroup>
         <StarRating value={rating ?? item.rating} onChange={rate} busy={rating !== null} />
-        <dl className={styles.facts}>
-          <div>
-            <dt>Added</dt>
-            <dd>
-              <DateTime value={item.createdAt} />
-            </dd>
-          </div>
-        </dl>
         {/* As with saving details, an item that's gone shows as not found. */}
         <ItemTimeline
           key={item.id}
