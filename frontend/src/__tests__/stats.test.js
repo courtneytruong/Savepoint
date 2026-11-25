@@ -62,6 +62,7 @@ describe('buildStats', () => {
           status(BOOK, 'Finished', '2026-03-01T12:00:00'),
           status(BOOK, 'InProgress', '2026-06-01T12:00:00'),
           status(BOOK, 'Finished', '2026-07-01T12:00:00'),
+          status(GAME, 'InProgress', '2026-04-01T12:00:00'),
           status(GAME, 'Finished', '2026-05-01T12:00:00'),
         ],
       },
@@ -71,14 +72,29 @@ describe('buildStats', () => {
     expect(stats.finished).toEqual({ Book: 2, Game: 1 })
   })
 
-  it('counts an item added as Finished, on the day it was added', () => {
-    const stats = statsFor({ statusChanges: [status(BOOK, 'Finished', '2026-04-01T12:00:00')] }, 'year')
+  it("doesn't count an item added as Finished, which may have been finished long ago", () => {
+    const stats = statsFor(
+      {
+        statusChanges: [
+          status(BOOK, 'Finished', '2026-04-01T12:00:00'),
+          // A reread after adding it does count.
+          status(BOOK, 'InProgress', '2026-05-01T12:00:00'),
+          status(BOOK, 'Finished', '2026-06-01T12:00:00'),
+        ],
+      },
+      'year',
+    )
     expect(stats.finished.Book).toBe(1)
   })
 
   it('leaves out what happened before the range, and keeps it for all time', () => {
     const activity = {
-      statusChanges: [status(BOOK, 'Finished', '2025-06-01T12:00:00'), status(BOOK, 'Finished', '2026-01-01T00:30:00')],
+      statusChanges: [
+        status(BOOK, 'InProgress', '2025-05-01T12:00:00'),
+        status(BOOK, 'Finished', '2025-06-01T12:00:00'),
+        status(BOOK, 'InProgress', '2025-12-01T12:00:00'),
+        status(BOOK, 'Finished', '2026-01-01T00:30:00'),
+      ],
       sessions: [session(BOOK, '2025-06-01', 60), session(BOOK, '2026-01-01', 30)],
     }
 

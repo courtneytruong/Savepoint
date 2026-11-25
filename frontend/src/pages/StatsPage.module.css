@@ -1,0 +1,33 @@
+/* The same toolbar as the other pages. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-16);
+  padding: var(--spacing-16) var(--spacing-24);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.content {
+  padding: var(--spacing-24);
+}
+
+@media (max-width: 600px) {
+  .content {
+    padding: var(--spacing-16) var(--spacing-12);
+  }
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+/* Loading: tiles in the same columns as StatGroup, so nothing jumps when they're replaced. */
+.loading {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: var(--spacing-16);
+}

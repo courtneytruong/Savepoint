@@ -60,7 +60,8 @@ const countBy = (list, keyOf) => {
  * Within the range, by the day each thing happened (a session by its own date,
  * even if it was logged later):
  * finished: { Book, Game }, every move to Finished, so a reread or replay counts
- * again. Adding an item as Finished counts too, on the day it was added.
+ * again. Adding an item as Finished doesn't count: it could have been finished
+ * years ago, and adding a shelf of old books shouldn't fill this year.
  * minutes: { Book, Game } from sessions. pagesRead: from book sessions.
  * reflections: how many, a session's and standalone ones alike.
  * months: [{ month: 'YYYY-MM', Book, Game }] minutes for every month of the range
@@ -92,7 +93,8 @@ export function buildStats({ items = [], entries = [], range = RANGES[0][1], tod
       ]),
     )
 
-  const finishes = inRange.filter((entry) => entry.type === 'status' && entry.status === 'Finished')
+  // An item's first status change is when it was added, not when it was finished.
+  const finishes = inRange.filter((entry) => entry.type === 'status' && entry.status === 'Finished' && !entry.first)
 
   // The first month to chart: the range's, or for all time the first session's.
   const firstDay = startKey ?? sessions.map((session) => session.day).sort()[0]

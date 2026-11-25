@@ -6,6 +6,7 @@ import styles from './App.module.css'
 import { CalendarPage } from './pages/CalendarPage.jsx'
 import { ItemPage } from './pages/ItemPage.jsx'
 import { ReflectionsPage } from './pages/ReflectionsPage.jsx'
+import { StatsPage } from './pages/StatsPage.jsx'
 import { TimelinePage } from './pages/TimelinePage.jsx'
 import { LandingPage } from './pages/LandingPage.jsx'
 import { LibraryPage } from './pages/LibraryPage.jsx'
@@ -16,6 +17,7 @@ import {
   LIBRARY_PATH,
   REFLECTIONS_PATH,
   SIGN_IN_PATH,
+  STATS_PATH,
   TIMELINE_PATH,
 } from './paths.js'
 
@@ -84,6 +86,7 @@ function Session() {
           path={CALENDAR_PATH}
           element={<CalendarPage account={account} onSignedOut={() => setAccount(null)} />}
         />
+        <Route path={STATS_PATH} element={<StatsPage account={account} onSignedOut={() => setAccount(null)} />} />
       </Route>
       {/* Any other address goes home. */}
       <Route path="*" element={<Navigate to={LIBRARY_PATH} replace />} />

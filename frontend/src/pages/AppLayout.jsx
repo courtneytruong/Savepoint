@@ -13,8 +13,16 @@ import {
   useStoredChoice,
   useToast,
 } from '../components/index.js'
-import { BookIcon, CalendarIcon, GameIcon, LibraryIcon, ReflectionIcon, TimelineIcon } from '../components/icons.js'
-import { CALENDAR_PATH, LIBRARY_PATH, libraryPath, REFLECTIONS_PATH, TIMELINE_PATH } from '../paths.js'
+import {
+  BookIcon,
+  CalendarIcon,
+  GameIcon,
+  LibraryIcon,
+  ReflectionIcon,
+  StatsIcon,
+  TimelineIcon,
+} from '../components/icons.js'
+import { CALENDAR_PATH, LIBRARY_PATH, libraryPath, REFLECTIONS_PATH, STATS_PATH, TIMELINE_PATH } from '../paths.js'
 import styles from './AppLayout.module.css'
 
 /**
@@ -23,7 +31,7 @@ import styles from './AppLayout.module.css'
  * header and sidebar list only pages that exist; more join as they're built.
  *
  * current: the page you're on, library (the default, for item pages too),
- * reflections, timeline or calendar, marked in the header and the sidebar. counts: how many items the
+ * reflections, timeline, calendar or stats, marked in the header and the sidebar. counts: how many items the
  * library has, how many are a Book or a Game, and how many reflections there are,
  * each shown in the sidebar once known. medium: the library's type filter, if any,
  * which marks its shortcut in the sidebar as the page you're on.
@@ -33,6 +41,7 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
   const onReflections = current === 'reflections'
   const onTimeline = current === 'timeline'
   const onCalendar = current === 'calendar'
+  const onStats = current === 'stats'
 
   const toast = useToast()
   const navigate = useNavigate()
@@ -82,6 +91,9 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
         <Link href={CALENDAR_PATH} aria-current={onCalendar ? 'page' : undefined}>
           Calendar
         </Link>
+        <Link href={STATS_PATH} aria-current={onStats ? 'page' : undefined}>
+          Stats
+        </Link>
       </Header>
 
       <main className={styles.main}>
@@ -115,6 +127,9 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
                     </SidebarLink>
                     <SidebarLink href={CALENDAR_PATH} icon={<CalendarIcon />} active={onCalendar}>
                       Calendar
+                    </SidebarLink>
+                    <SidebarLink href={STATS_PATH} icon={<StatsIcon />} active={onStats}>
+                      Stats
                     </SidebarLink>
                   </SidebarGroup>
                   {/* Shortcuts to the library's type filter. */}
