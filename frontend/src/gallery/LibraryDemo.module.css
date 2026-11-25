@@ -7,12 +7,13 @@
   border-bottom: 1px solid var(--color-hairline);
 }
 
-/* The search takes the room between the heading and the view switch. On phones it
-   drops to its own row, full width, so there's space to type. */
+/* The search grows up to its widest, then sits centred in the room left between
+   the heading and the view switch. On phones it drops to its own row, full
+   width, so there's space to type. */
 .search {
   flex: 1;
   max-width: 420px;
-  margin-inline-start: auto;
+  margin-inline: auto;
 }
 
 @media (max-width: 600px) {
