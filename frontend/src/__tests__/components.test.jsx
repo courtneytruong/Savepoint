@@ -759,6 +759,21 @@ describe('FilterPill', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  it('can show its label, naming the group by that text alone', () => {
+    render(
+      <FilterGroup label="Filter by type" showLabel>
+        <FilterPill selected>All</FilterPill>
+      </FilterGroup>,
+    )
+
+    const group = screen.getByRole('group', { name: 'Filter by type' })
+    const label = screen.getByText('Filter by type')
+    expect(group.getAttribute('aria-labelledby')).toBe(label.id)
+    // Named once, by the visible text, rather than by a second hidden copy.
+    expect(group.getAttribute('aria-label')).toBeNull()
+    expect(within(group).getByRole('button', { name: 'All' })).toBeTruthy()
+  })
+
   it('shows a count of zero as a count', () => {
     render(<FilterPill count={0}>Dropped</FilterPill>)
 

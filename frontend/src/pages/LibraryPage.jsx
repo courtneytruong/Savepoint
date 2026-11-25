@@ -4,6 +4,7 @@ import { createItem, getItems } from '../api/items.js'
 import {
   AddItemModal,
   Button,
+  Divider,
   EmptyState,
   FilterGroup,
   FilterPill,
@@ -227,14 +228,15 @@ export function LibraryPage({ account, onSignedOut }) {
         {addButton('Add item')}
       </div>
       <div className={styles.filters}>
-        <FilterGroup label="Filter by type">
+        <FilterGroup label="Filter by type" showLabel>
           {MEDIUM_FILTERS.map(([label, value]) => (
             <FilterPill key={label} selected={medium === value} onClick={() => filterBy({ medium: value })}>
               {label}
             </FilterPill>
           ))}
         </FilterGroup>
-        <FilterGroup label="Filter by status">
+        <Divider orientation="vertical" className={styles.filterDivider} />
+        <FilterGroup label="Filter by status" showLabel>
           {STATUS_FILTERS.map(([label, value]) => (
             <FilterPill key={label} selected={status === value} onClick={() => filterBy({ status: value })}>
               {label}

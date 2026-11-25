@@ -1,10 +1,34 @@
+import { useId } from 'react'
 import styles from './FilterPill.module.css'
 import { classNames } from '../../utils/classNames.js'
 import { VisuallyHidden } from '../ui/VisuallyHidden.jsx'
 
-/** Groups filter pills, and tells screen readers what they filter. */
-export function FilterGroup({ label, className, ...props }) {
-  return <div role="group" aria-label={label} className={classNames(styles.group, className)} {...props} />
+/**
+ * Groups filter pills, and tells screen readers what they filter.
+ *
+ * showLabel: shows the label above the pills too. The group is then named by
+ * that text, so screen readers hear it once, and everyone can see what the
+ * pills filter.
+ */
+export function FilterGroup({ label, showLabel = false, className, children, ...props }) {
+  const labelId = useId()
+
+  if (!showLabel) {
+    return (
+      <div role="group" aria-label={label} className={classNames(styles.group, className)} {...props}>
+        {children}
+      </div>
+    )
+  }
+
+  return (
+    <div role="group" aria-labelledby={labelId} className={classNames(styles.labelled, className)} {...props}>
+      <span id={labelId} className={styles.label}>
+        {label}
+      </span>
+      <div className={styles.group}>{children}</div>
+    </div>
+  )
 }
 
 /**
