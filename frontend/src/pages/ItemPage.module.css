@@ -55,13 +55,26 @@
   margin: 0;
 }
 
+/* Each fact reads on one line, as "Added: November 16, 2026". */
+.facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-4);
+}
+
 .facts dt {
   color: var(--color-ash-lilac);
   font-size: var(--text-caption);
 }
 
+/* Added by the style, not the text, as the list already pairs each term with its value. */
+.facts dt::after {
+  content: ':';
+}
+
 .facts dd {
-  margin: 2px 0 0;
+  margin: 0;
   color: var(--color-soft-quartz);
 }
 
