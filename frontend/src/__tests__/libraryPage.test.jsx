@@ -124,6 +124,21 @@ describe('LibraryPage', () => {
     expect(within(card).getByRole('link').getAttribute('href')).toBe(`/items/${ITEMS[2].id}`)
   })
 
+  it('remembers a collapsed sidebar for the next visit', async () => {
+    stubItems(async () => json(ITEMS))
+    renderPage()
+    await vi.waitFor(() => expect(sidebarLink(3)).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    expect(window.localStorage.getItem('savepoint.sidebar')).toBe('collapsed')
+    // Collapsed, the links keep their names.
+    expect(sidebarLink(3)).toBeTruthy()
+
+    cleanup()
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeTruthy()
+  })
+
   it('shows how many items there are in the sidebar once loaded', async () => {
     stubItems(async () => json(ITEMS))
     renderPage()

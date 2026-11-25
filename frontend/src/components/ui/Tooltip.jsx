@@ -12,6 +12,10 @@ const EDGE = 8
  * by it, so screen readers read it too. An icon-only button still needs its own
  * aria-label. If the tooltip says the same as that label, it isn't repeated.
  *
+ * describes: false when the child's own text already says what the tooltip does,
+ * as with a link whose name is only visually hidden. The tooltip is then for
+ * sighted people only, so screen readers don't read the name twice.
+ *
  * placement: top (default) or bottom. It flips to the other side if there's no
  * room, and moves sideways to stay on screen.
  *
@@ -19,7 +23,7 @@ const EDGE = 8
  * off by a panel's edges. Disabled buttons get no pointer events, so wrap one in
  * a span to give it a tooltip.
  */
-export function Tooltip({ content, placement = 'top', children }) {
+export function Tooltip({ content, placement = 'top', describes = true, children }) {
   const id = useId()
   const triggerRef = useRef(null)
   const tipRef = useRef(null)
@@ -86,7 +90,7 @@ export function Tooltip({ content, placement = 'top', children }) {
 
   // A tooltip that repeats an icon button's label would be read out twice, so
   // it only becomes the description when it says something new.
-  const repeatsLabel = content === children.props['aria-label']
+  const repeatsLabel = !describes || content === children.props['aria-label']
   const describedBy = classNames(children.props['aria-describedby'], !repeatsLabel && id) || undefined
 
   return (

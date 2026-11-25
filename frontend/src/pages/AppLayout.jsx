@@ -10,6 +10,7 @@ import {
   SidebarGroup,
   SidebarLayout,
   SidebarLink,
+  useStoredChoice,
   useToast,
 } from '../components/index.js'
 import { BookIcon, CalendarIcon, GameIcon, LibraryIcon, ReflectionIcon, TimelineIcon } from '../components/icons.js'
@@ -35,6 +36,8 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
 
   const toast = useToast()
   const navigate = useNavigate()
+  // Remembered in this browser, so it stays as they left it on every page.
+  const [sidebar, setSidebar] = useStoredChoice('savepoint.sidebar', ['open', 'collapsed'], 'open')
 
   // Sign-in shows only once the API has deleted the cookie. Otherwise the next
   // reload would sign them straight back in, so they stay here and can retry.
@@ -86,7 +89,10 @@ export function AppLayout({ account, onSignedOut, current = 'library', counts = 
           <GlowFrame flush>
             <SidebarLayout
               sidebar={
-                <Sidebar>
+                <Sidebar
+                  collapsed={sidebar === 'collapsed'}
+                  onCollapsedChange={(collapsed) => setSidebar(collapsed ? 'collapsed' : 'open')}
+                >
                   <SidebarGroup>
                     <SidebarLink
                       href={LIBRARY_PATH}

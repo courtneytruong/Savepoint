@@ -693,6 +693,51 @@ describe('Sidebar', () => {
 
     expect(screen.getByRole('link', { name: /^Library\s*,\s*11$/ })).toBeTruthy()
   })
+
+  it('has no collapse toggle unless it can be collapsed', () => {
+    render(
+      <Sidebar>
+        <SidebarGroup>
+          <SidebarLink href="#library">Library</SidebarLink>
+        </SidebarGroup>
+      </Sidebar>,
+    )
+
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('asks to collapse or expand, saying what pressing the toggle does', () => {
+    const onCollapsedChange = vi.fn()
+    const { rerender } = render(<Sidebar onCollapsedChange={onCollapsedChange} />)
+
+    const toggle = screen.getByRole('button', { name: 'Collapse sidebar' })
+    expect(toggle.getAttribute('type')).toBe('button')
+    fireEvent.click(toggle)
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(true)
+
+    rerender(<Sidebar collapsed onCollapsedChange={onCollapsedChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Expand sidebar' }))
+    expect(onCollapsedChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('keeps each link named the same when collapsed, without reading the name twice', () => {
+    render(
+      <Sidebar collapsed onCollapsedChange={() => {}}>
+        <SidebarGroup title="Browse">
+          <SidebarLink href="#library" active count={7}>
+            Library
+          </SidebarLink>
+        </SidebarGroup>
+      </Sidebar>,
+    )
+
+    const link = screen.getByRole('link', { name: /^Library\s*,\s*7$/ })
+    expect(link.getAttribute('aria-current')).toBe('page')
+    // The tooltip shows the name, but only to people who can see it.
+    const tips = screen.getAllByRole('tooltip', { hidden: true }).map((tip) => tip.textContent)
+    expect(tips).toEqual(['Expand sidebar', 'Library'])
+    expect(link.getAttribute('aria-describedby')).toBeNull()
+  })
 })
 
 describe('FilterPill', () => {

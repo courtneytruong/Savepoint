@@ -44,6 +44,8 @@ export {
   LuList as ListIcon,
   LuListFilter as FilterIcon,
   LuNotebookPen as WriteReflectionIcon,
+  LuPanelLeftClose as CollapseSidebarIcon,
+  LuPanelLeftOpen as ExpandSidebarIcon,
   LuPencil as EditIcon,
   LuX as CloseIcon,
   LuSearch as SearchIcon,

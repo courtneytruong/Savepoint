@@ -1,6 +1,7 @@
 .layout {
   display: grid;
-  grid-template-columns: 216px minmax(0, 1fr);
+  /* The sidebar sets its own width, so the column follows it as it collapses. */
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .content {
@@ -13,6 +14,74 @@
   gap: var(--spacing-24);
   padding: var(--spacing-16) var(--spacing-12);
   border-right: 1px solid var(--color-hairline);
+}
+
+/* Only on wide screens: small screens show a strip of links instead. */
+@media (min-width: 801px) {
+  .sidebar {
+    width: 216px;
+    /* Hides the names while it widens, without cutting off focus rings. */
+    overflow-x: clip;
+    transition: width 200ms ease;
+  }
+
+  /* The links' padding either side of their icons, 64px in all. */
+  .collapsed {
+    width: 64px;
+  }
+
+  .collapsed .title {
+    display: none;
+  }
+
+  /* Without its title, a line keeps a group apart from the one above. */
+  .collapsed .group + .group {
+    padding-top: var(--spacing-16);
+    border-top: 1px solid var(--color-hairline);
+  }
+
+  /* Out of sight but still read, as VisuallyHidden does, so each link keeps its name. */
+  .collapsed .name,
+  .collapsed .count {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+/* Sits closer to the links than the groups sit to each other. */
+.toggleRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: calc(var(--spacing-8) - var(--spacing-24));
+}
+
+.collapsed .toggleRow {
+  justify-content: flex-start;
+}
+
+/* The same size as a collapsed link, so the icons line up in one column. */
+.toggle {
+  display: grid;
+  place-items: center;
+  padding: var(--spacing-8) var(--spacing-12);
+  border: 0;
+  border-radius: var(--radius-overlay-cards);
+  background: transparent;
+  color: var(--color-ash-lilac);
+  font-size: var(--text-body);
+  line-height: var(--leading-caption);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.toggle:hover {
+  background: var(--color-glass-white-04);
+  color: var(--color-soft-quartz);
 }
 
 .title {
@@ -96,7 +165,8 @@
     border-bottom: 1px solid var(--color-hairline);
   }
 
-  .title {
+  .title,
+  .toggleRow {
     display: none;
   }
 
